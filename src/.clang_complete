@@ -1,0 +1,5 @@
+-DDEBUG
+-include ../config.h
+-I../common
+-I/usr/include/c++/4.5.3/
+-I/usr/include/c++/4.5.3/x86_64-slackware-linux/

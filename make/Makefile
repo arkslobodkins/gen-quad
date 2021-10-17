@@ -1,0 +1,36 @@
+CC = gcc -std=c11 -DCONSTR_OPT#-pg -o1#-DQUAD_DEBUG_OFF #-DNDEBUG #uncomment "-DQUAD_DEBUG_OFF" to disable debug mode,\
+uncomment "-NDEBUG" to disable assert statements comment _DCONSTR_OPT to disable constrained optimization
+CFLAGS=-g #-Wall
+LIBSLA = -llapack
+LIBSBLAS= -lblas
+MATH= -lm
+RANLIB = ranlib
+VPATH= ../src:../src/Gauss_Lib:../results
+OBJS =  GaussCore.o Jacobi.o
+
+all : quad
+quad: Driver.o TestIntegral.o InsertionSort.o BasisIntegrals.o LeastSquaresNewton.o GaussTensor.o			\
+	GeneralizedGaussTensor.o GetJacobian.o GetFunction.o NodeElimination.o Phi.o     \
+	LegendrePoly.o BasisIndices.o Output.o JacobiPoly.o AddDimension.o InDomain.o ComputeDomain.o         \
+	ImplementDomain.o SetParams.o SetDomain.o SetConstraint.o Constraints.o SetQuadFuncs.o Vector.o Matrix.o Print.o     \
+	Quadrature.o LINALG.o libgaussq.a
+
+	$(CC)  $(CFLAGS) -o $@ $^ $(LIBSBLAS) $(LIBSLA)  $(MATH)
+
+libgaussq.a: $(OBJS)
+	$(AR) rv libgaussq.a $(OBJS)
+	$(RANLIB) libgaussq.a
+
+clean :
+	\rm -f *.o
+
+realclean : clean
+	\rm -f quad *~ *.a
+
+SUBDIR_ROOTS := ../results
+DIRS := . $(shell find $(SUBDIR_ROOTS) -type d)
+PATTERNS := *.txt
+TXT_FILES := $(foreach DIR,$(DIRS),$(addprefix $(DIR)/,$(PATTERNS)))
+txtclean:
+	rm -rf $(TXT_FILES)
+
