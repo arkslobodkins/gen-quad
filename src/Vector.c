@@ -31,8 +31,7 @@ void Vector_bool_realloc(int n, Vector_bool *V)
 
 void Vector_bool_free(Vector_bool V)
 {
-   if(V.id != NULL)
-   {
+   if(V.id != NULL) {
       free(V.id);
       V.id = NULL;
    }
@@ -56,8 +55,7 @@ void Vector_int_realloc(int n, Vector_int *V)
 
 void Vector_int_free(Vector_int V)
 {
-   if(V.id != NULL)
-   {
+   if(V.id != NULL) {
       free(V.id);
       V.id = NULL;
    }
@@ -88,8 +86,7 @@ void Vector_Assign(const Vector v1, Vector v2)
 
 void Vector_free(Vector V)
 {
-   if(V.id != NULL)
-   {
+   if(V.id != NULL) {
       free(V.id);
       V.id = NULL;
    }

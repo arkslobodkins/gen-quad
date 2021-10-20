@@ -10,11 +10,9 @@
 #include <math.h>
 #include <assert.h>
 
-/* BasisIndices
- * Recursively computes an array of power multi-indices for
- * generating polynomial basis of dimension
- * dim and degree deg.
- */
+// BasisIndices
+// Recursively computes an array of power multi-indices for
+// generating polynomial basis of dimension dim and degree deg.
 void BasisIndices(int deg, int dim, int_fast8_t *f)
 {
    assert(dim >= 0 && deg >= 0);
@@ -30,17 +28,13 @@ void BasisIndices(int deg, int dim, int_fast8_t *f)
    {
       for(int i = 0; i <= deg; ++i)
       {
-
-
          int size = BasisSize(j-1, deg-i);
          int dimxsize = dim*size;
          int_fast8_t* recursiveF = (int_fast8_t *)malloc(size*(j-1) * sizeof(int_fast8_t));
          BasisIndices(deg-i, j-1, recursiveF);
 
-         if(j == dim)
-         {
-            for(int k = 0; k < size; ++k)
-            {
+         if(j == dim) {
+            for(int k = 0; k < size; ++k) {
                int kxdim = k*dim;
                int kxdim_minus1 = k*(dim-1);
                for(int d = 0; d < dim-1; ++d)
@@ -51,7 +45,6 @@ void BasisIndices(int deg, int dim, int_fast8_t *f)
             counter += dimxsize;
          }
 
-
          free(recursiveF);
       }
    }
@@ -59,11 +52,9 @@ void BasisIndices(int deg, int dim, int_fast8_t *f)
 }
 
 
-/* BasisSize
- * Computes the minimum number of basis
- * functions to generate polynomial basis
- * of dimension dim and degree deg.
- */
+// BasisSize
+// Computes the minimum number of basis functions to generate
+// polynomial basis of dimension dim and degree deg.
 int BasisSize(int deg, int dim)
 {
    assert(dim >= 0 && deg >= 0);

@@ -44,7 +44,17 @@ void constraints_interval_realloc(constraints *constr, int dims[1])
 
 void get_constraints_interval(constraints *cons)
 {
+   int n_rows = cons->M.rows;
+   int n_cols = cons->M.cols;
 
+   for(int i = 0; i < n_rows; ++i) memset(cons->M.id[i], 0, SIZE_DOUBLE(n_cols));
+   memset(cons->b.id, 0, SIZE_DOUBLE(n_rows));
+
+   cons->M.id[0][0] = -1.0;
+   cons->M.id[1][0] = 1.0;
+
+   cons->b.id[0] = 0.0;
+   cons->b.id[1] = 1.0;
 }
 
 
@@ -370,7 +380,7 @@ constraints *constraints_cubesimplexsimplex_init(int dims[3])
    cons->dim = dim;
    cons->dims = dims;
 
-   int n_rows =  (dims[0] + ONE) + (dims[1]+ ONE) + (TWO * dims[2]); //double check the order
+   int n_rows =  (dims[0] + ONE) + (dims[1]+ ONE) + (TWO * dims[2]); // double check the order
    int n_cols = dim;
 	cons->M = Matrix_init(n_rows, n_cols);
    cons->b = Vector_init(n_rows);
@@ -383,7 +393,7 @@ void constraints_cubesimplexsimplex_realloc(constraints *cons, int dims[3])
 {
    assert( (dims[0] > 1) && (dims[1] > 1)  && (dims[2] > 0) );
 	int dim = dims[0] + dims[1] + dims[2];
-   int n_rows =  (dims[0] + ONE) + (dims[1]+ ONE) + (TWO * dims[2]); //double check the order
+   int n_rows =  (dims[0] + ONE) + (dims[1]+ ONE) + (TWO * dims[2]); // double check the order
    int n_cols = dim;
 
    Matrix_realloc(n_rows, n_cols, &cons->M);

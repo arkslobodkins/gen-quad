@@ -12,49 +12,52 @@
 #include <stdlib.h>
 #include <string.h>
 
-/* Routines that compute analytical integrals of all orthogonal basis functions
- * for respective domain and parameters.
- */
-void IntegralsCube(const quadParams *params, double *integrals)
+// Routines that compute analytical integrals of all orthogonal
+// basis functions for respective domains and parameters.
+
+void IntegralsCube(int *dims, int deg, double *integrals)
 {
-   int m = params->num_funs;
-   memset(integrals, 0, m*sizeof(integrals[0]));
+   int dim = dims[0];
+   int m = BasisSize(dim, deg);
+   memset(integrals, 0, SIZE_DOUBLE(m));
    integrals[0] = 1.0;
 }
 
 
-void IntegralsSimplex(const quadParams *params, double *integrals)
+void IntegralsSimplex(int *dims, int deg, double *integrals)
 {
-   int m = params->num_funs;
-   int dim1 = params->dims[0];
+   int dim = dims[0];
+   int m = BasisSize(dim, deg);
 
-   memset(integrals, 0, m*sizeof(integrals[0]));
+   memset(integrals, 0, SIZE_DOUBLE(m));
    integrals[0] = 1;
-   for(int i = 1; i <= dim1; ++i)
+   for(int i = 1; i <= dim; ++i)
       integrals[0] /= i;
 
 }
 
 
-void IntegralsCubeSimplex(const quadParams *params, double *integrals)
+void IntegralsCubeSimplex(int *dims, int deg, double *integrals)
 {
-   int m = params->num_funs;
-   int dim2 = params->dims[1];
+   int dim = dims[0]+dims[1];
+   int dim2 = dims[1];
+   int m = BasisSize(dim, deg);
 
-   memset(integrals, 0, m*sizeof(integrals[0]));
+   memset(integrals, 0, SIZE_DOUBLE(m));
    integrals[0] = 1;
    for(int i = 1; i <= dim2; ++i)
       integrals[0] /= i;
 }
 
 
-void IntegralsSimplexSimplex(const quadParams *params, double *integrals)
+void IntegralsSimplexSimplex(int *dims, int deg, double *integrals)
 {
-   int m = params->num_funs;
-   int dim1 = params->dims[0];
-   int dim2 = params->dims[1];
+   int dim = dims[0]+dims[1];
+   int dim1 = dims[0];
+   int dim2 = dims[1];
+   int m = BasisSize(dim, deg);
 
-   memset(integrals, 0, m*sizeof(integrals[0]));
+   memset(integrals, 0, SIZE_DOUBLE(m));
    integrals[0] = 1;
    for(int i = 1; i <= dim1; ++i)
       integrals[0] /= i;
@@ -65,19 +68,19 @@ void IntegralsSimplexSimplex(const quadParams *params, double *integrals)
 }
 
 
-void IntegralsCubeSimplexSimplex(const quadParams *params, double *integrals)
+void IntegralsCubeSimplexSimplex(int *dims, int deg, double *integrals)
 {
-   int m = params->num_funs;
-   int dim2 = params->dims[0];
+   int dim = dims[0]+dims[1]+dims[1];
+   int dim2 = dims[1];
+   int dim3 = dims[1];
+   int m = BasisSize(dim, deg);
 
-   int dim3 = params->dims[1];
-   memset(integrals, 0, m*sizeof(integrals[0]));
+   memset(integrals, 0, SIZE_DOUBLE(m));
    integrals[0] = 1;
    for(int i = 1; i <= dim2; ++i)
       integrals[0] /= i;
 
    for(int i = 1; i <= dim3; ++i)
       integrals[0] /= i;
-
 }
 

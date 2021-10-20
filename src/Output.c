@@ -11,18 +11,16 @@
 static char *get_domain_string(DOMAIN_TYPE D);
 
 
-/* Output
- * Prints history and quadrature parameters to a file.
- */
-void Output(int num_nodes_initial, double res, const quadrature q, const elim_history hist)
+// Prints history and quadrature parameters to a file.
+void Output(int num_nodes_initial, double res, const_quadrature *q, const elim_history hist)
 {
    char str[50];
    int i;
    int eliminations = hist.tot_elims;
-   int deg = q.params->deg;
-   int dim = q.params->dim;
-   int m = q.params->num_funs;
-   char *shape = get_domain_string(q.D);
+   int deg = q->deg;
+   int dim = q->dim;
+   int m = q->num_funcs;
+   char *shape = get_domain_string(q->D);
    sprintf(str, "../results/history_%s_dim%i_deg%i.txt", shape, dim, deg);
    FILE* FID;
    FID = fopen(str, "w");
@@ -30,7 +28,7 @@ void Output(int num_nodes_initial, double res, const quadrature q, const elim_hi
    fprintf(FID, "number of basis functions = %i\n", m);
    fprintf(FID, "dimension = %i\n", dim);
    fprintf(FID, "initial number of nodes = %i\n", num_nodes_initial);
-   fprintf(FID, "final number of nodes = %i\n", q.k);
+   fprintf(FID, "final number of nodes = %i\n", q->k);
    fprintf(FID, "final residual = %0.16f\n\n", res);
 
    for(i = 0; i < eliminations; ++i)
@@ -44,27 +42,25 @@ void Output(int num_nodes_initial, double res, const quadrature q, const elim_hi
 }
 
 
-/* DumpCubatureRule
- * prints final quadrature to a file
- */
-void DumpCubatureRule(const quadrature quad)
+// Prints final quadrature to a file
+void DumpCubatureRule(const_quadrature *quad)
 {
    int i = -1, j = -1;
    char str[50] = "0";
-   int dim = quad.params->dim;
-   int deg = quad.params->deg;
-   const char *shape = get_domain_string(quad.D);
+   int dim = quad->dim;
+   int deg = quad->deg;
+   const char *shape = get_domain_string(quad->D);
 
    sprintf(str, "../results/quadrature_%s_dim%i_deg%i.txt", shape, dim, deg);
    FILE *FID = fopen(str, "w");
-   fprintf(FID, "%i %i\n", dim, quad.k);
+   fprintf(FID, "%i %i\n", dim, quad->k);
 
-   for(i = 0; i < quad.k; ++i)
+   for(i = 0; i < quad->k; ++i)
    {
       for(j = 0; j < dim; ++j)
-         fprintf(FID, "%.16e  ", quad.x[dim*i+j]);
+         fprintf(FID, "%.16e  ", quad->x[dim*i+j]);
 
-      fprintf(FID, "%.16e\n", quad.w[i]);
+      fprintf(FID, "%.16e\n", quad->w[i]);
    }
 
    fclose(FID);

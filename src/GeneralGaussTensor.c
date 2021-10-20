@@ -44,13 +44,13 @@ void WeightsTensor2D(const_quadrature *quad1, const_quadrature *quad2, quadratur
 
 void GeneralizedNodesTensor(const_quadrature *quad_1D, quadrature *quad_gen)
 {
-   assert(quad_1D->params->dim == 1);
-   assert(quad_gen->params->dim > 1);
-   int dim = quad_gen->params->dim; assert(quad_gen->k = POW(quad_1D->k, dim));
+   assert(quad_1D->dim == 1);
+   assert(quad_gen->dim > 1);
+   int dim = quad_gen->dim; assert(quad_gen->k = POW(quad_1D->k, dim));
 
 
    int id1 = -1, id2 = -1;
-   int p = quad_1D->params->deg;
+   int p = quad_1D->deg;
    int n = quad_1D->k;
    int n_sq = SQUARE(n);
 
@@ -97,14 +97,14 @@ void GeneralizedNodesTensor(const_quadrature *quad_1D, quadrature *quad_gen)
 
 void GeneralizedWeightsTensor(const_quadrature *quad_1D, quadrature *quad_gen)
 {
-   assert(quad_1D->params->dim == 1);
-   assert(quad_gen->params->dim > 1);
-   int dim = quad_gen->params->dim;
+   assert(quad_1D->dim == 1);
+   assert(quad_gen->dim > 1);
+   int dim = quad_gen->dim;
    assert(quad_gen->k = pow(quad_1D->k, dim));
 
    int n = quad_1D->k;
    int n_sq = SQUARE(n);
-   int deg = quad_gen->params->deg;
+   int deg = quad_gen->deg;
 
    int dims_temp1[3] = {2};
    quadrature *quad_temp1 = quadrature_init(n_sq, 2, dims_temp1, deg, CUBE);

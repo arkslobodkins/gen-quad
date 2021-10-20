@@ -16,255 +16,32 @@
 #include <assert.h>
 #include <string.h>
 
+static inline int GetNumDims(DOMAIN_TYPE D);
+
+static void SetIntervalFuncs(quadrature *q);
+static void SetCubeFuncs(quadrature *q);
+static void SetSimplexFuncs(quadrature *q);
+static void SetCubeSimplexFuncs(quadrature *q);
+static void SetSimplexSimplexFuncs(quadrature *q);
+static void SetCubeSimplexSimplexFuncs(quadrature *q);
+
+static bool QuadInDomain(const_quadrature *q);
+static bool QuadInDomainElem(const_quadrature *q, int elem);
+
+static bool QuadPosWeights(const_quadrature *q);
 static inline bool QuadPosWeightsElem(const_quadrature *q, int elem);
 
-static inline void QuadSetParams(int dim, int num_dims, int *dims, int deg, quadrature *q)
-{
-   q->params->dim = dim;
-   q->params->num_dims = num_dims;
-   q->params->deg = deg;
-   q->params->num_funs = BasisSize(q->params->dim, deg);
-   for(int i = 0; i < num_dims; ++i)
-      q->params->dims[i] = dims[i];
-}
+static bool QuadInConstraint(const_quadrature *q);
+static bool QuadInConstraintElem(const_quadrature *quad, int elem);
+
+static bool QuadOnTheBoundary(const_quadrature *q, int elem);
+static bool QuadEqnOnTheBoundary(const_quadrature *q, int elem, int eqn);
+
+static void QuadSetFull_Constr(quadrature *q);
+static double QuadTestIntegral(const_quadrature *q);
 
 
-static void QuadSetFull_Constr(quadrature *q)
-{
-   if(q->cons == NULL || q->setFuncsFlag == 0)
-   {
-      PRINT_ERR("constraints have not been initialized", __LINE__, __FILE__);
-      return ;
-   }
-
-   Matrix A = q->cons->M;
-   Vector b = q->cons->b;
-   Matrix FULL_A = Matrix_init(A.rows+1, A.cols+1);
-   Vector FULL_b = Vector_init(b.len+1);
-
-   for(int i = 0; i < A.rows; ++i)
-      for(int j = 0; j < A.cols; ++j)
-         FULL_A.id[i+1][j+1] = A.id[i][j];
-   FULL_A.id[0][0] = -1.0;
-   for(int i = 0; i < b.len; ++i)
-      FULL_b.id[i+1] = b.id[i];
-   FULL_b.id[0] = 0.0;
-
-   q->FULL_A = FULL_A;
-   q->FULL_b = FULL_b;
-}
-
-
-static inline int GetNumDims(DOMAIN_TYPE D)
-{
-   switch(D)
-   {
-      case INTERVAL:           return ONE;
-      case CUBE:               return ONE;
-      case SIMPLEX:            return ONE;
-      case CUBESIMPLEX:        return TWO;
-      case SIMPLEXSIMPLEX:     return TWO;
-      case CUBESIMPLEXSIMPLEX: return THREE;
-      default: return -1;
-   }
-}
-
-
-void SetIntervalFuncs(quadrature *q)
-{
-   q->evalBasis        = &PhiCube;
-   q->evalBasisDer     = &PhiPrimeCube;
-   q->basisIntegrals   = &IntegralsCube;
-   q->constr_init      = &constraints_interval_init;
-   q->constr_realloc   = &constraints_interval_realloc;
-   q->get_constr       = &get_constraints_interval;
-   q->constr_free      = &constraints_interval_free;
-}
-
-
-void SetCubeFuncs(quadrature *q)
-{
-   q->evalBasis        = &PhiCube;
-   q->evalBasisDer     = &PhiPrimeCube;
-   q->basisIntegrals   = &IntegralsCube;
-   q->constr_init      = &constraints_cube_init;
-   q->constr_realloc   = &constraints_cube_realloc;
-   q->get_constr       = &get_constraints_cube;
-   q->constr_free      = &constraints_cube_free;
-}
-
-
-void SetSimplexFuncs(quadrature *q)
-{
-   q->evalBasis        = &PhiSimplex;
-   q->evalBasisDer     = &PhiPrimeSimplex;
-   q->basisIntegrals   = &IntegralsSimplex;
-   q->constr_init      = &constraints_simplex_init;
-   q->constr_realloc   = &constraints_simplex_realloc;
-   q->get_constr       = &get_constraints_simplex;
-   q->constr_free      = &constraints_simplex_free;
-}
-
-
-void SetCubeSimplexFuncs(quadrature *q)
-{
-   q->evalBasis        = &PhiCubeSimplex;
-   q->evalBasisDer     = &PhiPrimeCubeSimplex;
-   q->basisIntegrals   = &IntegralsCubeSimplex;
-   q->constr_init      = &constraints_cubesimplex_init;
-   q->constr_realloc   = &constraints_cubesimplex_realloc;
-   q->get_constr       = &get_constraints_cubesimplex;
-   q->constr_free      = &constraints_cubesimplex_free;
-}
-
-
-void SetSimplexSimplexFuncs(quadrature *q)
-{
-   q->evalBasis        = &PhiSimplexSimplex;
-   q->evalBasisDer     = &PhiPrimeSimplexSimplex;
-   q->basisIntegrals   = &IntegralsSimplexSimplex;
-   q->constr_init      = &constraints_simplexsimplex_init;
-   q->constr_realloc   = &constraints_simplexsimplex_realloc;
-   q->get_constr       = &get_constraints_simplexsimplex;
-   q->constr_free      = &constraints_simplexsimplex_free;
-}
-
-
-void SetCubeSimplexSimplexFuncs(quadrature *q)
-{
-   q->evalBasis        = &PhiCubeSimplexSimplex;
-   q->evalBasisDer     = &PhiPrimeCubeSimplexSimplex;
-   q->basisIntegrals   = &IntegralsCubeSimplexSimplex;
-   q->constr_init      = &constraints_cubesimplexsimplex_init;
-   q->constr_realloc   = &constraints_cubesimplexsimplex_realloc;
-   q->get_constr       = &get_constraints_cubesimplexsimplex;
-   q->constr_free      = &constraints_cubesimplexsimplex_free;
-}
-
-
-bool QuadInDomain(const_quadrature *q)
-{
-   if(q->cons == NULL)
-   {
-      PRINT_ERR("constraints have not been initialized", __LINE__, __FILE__);
-      return false;
-   }
-
-   int dim = q->params->dim;
-   Matrix M = q->cons->M;
-   Vector b = q->cons->b;
-
-   for(int i = 0; i < q->k; ++i)
-   {
-      double lhs[M.rows]; memset(lhs, 0, M.rows*size_double);
-      const double *X_ixdim = &q->x[i*dim];
-
-      for(int r = 0; r < M.rows; ++r)
-         for(int c = 0; c < M.cols; ++c)
-            lhs[r] += M.id[r][c] * X_ixdim[c];
-
-      for(int r = 0; r < M.rows; ++r)
-         if(lhs[r] > b.id[r])
-            return false;
-   }
-
-   return true;
-}
-
-
-
-bool QuadInDomainElem(const_quadrature *q, int elem)
-{
-   if(q->cons == NULL)
-   {
-      PRINT_ERR("constraints have not been initialized", __LINE__, __FILE__);
-      return false;
-   }
-
-   int dim = q->params->dim;
-   Matrix M = q->cons->M;
-   Vector b = q->cons->b;
-   const double *X_ixdim = &q->x[elem*dim];
-
-
-   double lhs[M.rows]; memset(lhs, 0, M.rows*size_double);
-
-   for(int r = 0; r < M.rows; ++r)
-      for(int c = 0; c < M.cols; ++c)
-         lhs[r] += M.id[r][c] * X_ixdim[c];
-
-   for(int r = 0; r < M.rows; ++r)
-      if(lhs[r] > b.id[r])
-         return false;
-
-   return true;
-}
-
-
-bool QuadPosWeights(const_quadrature *q)
-{
-   for(int i = 0; i < q->k; ++i)
-      if(q->w[i] < 0)
-         return false;
-
-   return true;
-}
-
-
-static inline bool QuadPosWeightsElem(const_quadrature *q, int elem)
-{
-   return q->w[elem] > 0 ? true : false;
-}
-
-
-bool QuadInConstraint(const_quadrature *q)
-{
-   return q->inDomain(q) & q->posWeights(q);
-}
-
-
-bool QuadInConstraintElem(const_quadrature *quad, int elem)
-{
-   return quad->inDomainElem(quad, elem) & quad->posWeightsElem(quad, elem);
-}
-
-
-double QuadTestIntegral(const_quadrature *q)
-{
-   int m = q->params->num_funs;
-   int dim = q->params->dim;
-   int deg = q->params->deg;
-   int_fast8_t *basis_id = (int_fast8_t *)malloc(m*dim *sizeof(int_fast8_t));
-   BasisIndices(deg, dim, basis_id);
-
-   Vector res_loc = Vector_init(m);
-   Vector phi = Vector_init(m);
-   Vector In = Vector_init(m);
-   Vector Ie = Vector_init(m);
-
-   q->basisIntegrals(q->params, Ie.id);
-
-   // approximate integrals of basis functions
-   for(int i = 0; i < q->k; ++i)
-   {
-      q->evalBasis(basis_id, &q->x[dim*i], q->params, phi.id);
-      for(int j = 0; j < m; ++j)
-         In.id[j] += phi.id[j] * q->w[i];
-   }
-
-   for(int j = 0; j < m; ++j) res_loc.id[j] = fabs(In.id[j]-Ie.id[j]);
-   double res = V_ScaledTwoNorm(res_loc);
-
-   Vector_free(Ie);
-   Vector_free(In);
-   Vector_free(phi);
-   Vector_free(res_loc);
-   free(basis_id);
-   return res;
-}
-
-
-quadrature *quadrature_init(int n, int dim, int *dims, int p, DOMAIN_TYPE D)
+quadrature *quadrature_init(int n, int dim, int *dims, int deg, DOMAIN_TYPE D)
 {
 
    // ensure DOMAIN is initialized with valid parameters
@@ -308,12 +85,14 @@ quadrature *quadrature_init(int n, int dim, int *dims, int p, DOMAIN_TYPE D)
    q->w = &q->z[0];
    q->x = &q->z[n];
 
-   q->setParams = QuadSetParams;
-   q->params = (quadParams *)malloc(size_quadParams);
    int num_dims = GetNumDims(D);
-   q->params->dims = (int *)malloc(SIZE_INT(num_dims));
-   q->setParams(dim, num_dims, dims, p, q);
-
+   q->dims      = (int *)malloc(num_dims*size_int);
+   for(int i = 0; i < num_dims; ++i)
+      q->dims[i] = dims[i];
+   q->dim       = dim;
+   q->num_dims  = num_dims;
+   q->deg       = deg;
+   q->num_funcs = BasisSize(dim, deg);
 
    switch(D)
    {
@@ -348,6 +127,8 @@ quadrature *quadrature_init(int n, int dim, int *dims, int p, DOMAIN_TYPE D)
    q->inConstraintElem = NULL;
    q->posWeights       = NULL;
    q->posWeightsElem   = NULL;
+   q->eqnOnTheBoundary = NULL;
+   q->onTheBoundary    = NULL;
    q->testIntegral     = NULL;
    q->constr_init      = NULL;
    q->constr_realloc   = NULL;
@@ -371,9 +152,11 @@ void quad_set_funcs_and_constr(quadrature *q)
    q->posWeights       = &QuadPosWeights;
    q->posWeightsElem   = &QuadPosWeightsElem;
    q->testIntegral     = &QuadTestIntegral;
+   q->onTheBoundary    = &QuadOnTheBoundary;
+   q->eqnOnTheBoundary = &QuadEqnOnTheBoundary;
 
    q->setFuncs(q);
-   q->cons = q->constr_init(q->params->dims);
+   q->cons = q->constr_init(q->dims);
    q->get_constr(q->cons);
    q->setFuncsFlag = 1;
 
@@ -384,7 +167,7 @@ void quad_set_funcs_and_constr(quadrature *q)
 // Routine that reallocates quadrature q and reinitializes its parameters,
 // except for parameters corresponding to the number of dimensions
 // (i.e. size of array dims remains unchanged) and DOMAIN_TYPE of q.
-void quadrature_realloc(int n, int dim, int *dims, int p, quadrature *q)
+void quadrature_realloc(int n, int dim, int *dims, int deg, quadrature *q)
 {
    q->k = n;
 
@@ -392,7 +175,11 @@ void quadrature_realloc(int n, int dim, int *dims, int p, quadrature *q)
    q->w = &q->z[0];
    q->x = &q->z[n];
 
-   q->setParams(dim, q->params->num_dims, dims, p, q);
+   q->dim = dim;
+   q->deg = deg;
+   q->num_funcs = BasisSize(dim, deg);
+   for(int i = 0; i < q->num_dims; ++i)
+      q->dims[i] = dims[i];
    q->setFuncs(q);
 }
 
@@ -405,7 +192,7 @@ void quadrature_reinit(int n, quadrature *q)
    assert(q->k >= n);
    q->k = n;
 
-   int dim = q->params->dim;
+   int dim = q->dim;
    double *x = (double *)malloc(SIZE_DOUBLE(n*dim));
    double *w = (double *)malloc(SIZE_DOUBLE(n));
    // temporarily store nodes and weights
@@ -429,8 +216,8 @@ void quadrature_reinit(int n, quadrature *q)
 void quadrature_assign(const quadrature *q1, quadrature *q2)
 {
    assert(q2->k == q1->k);
-   int k = q1->k;
-   int dim = q1->params->dim;
+   int k   = q1->k;
+   int dim = q1->dim;
 
    // assign only nodes and weights, other fields remain unchanged
    memcpy( q2->w, q1->w, SIZE_DOUBLE(k) );
@@ -442,15 +229,17 @@ void quadrature_remove_element(int index, quadrature *q)
 {
    assert(index <= q->k-1);
 
-   int k = q->k;
-   int dim = q->params->dim;
+   int k     = q->k;
+   int dim   = q->dim;
+   double *w = q->w;
+   double *x = q->x;
 
    for(int i = index; i < k-1; ++i)
-      q->w[i] = q->w[i+1];
+      w[i] = w[i+1];
 
    for(int i = index; i < k-1; ++i)
       for(int d = 0; d < dim; ++d)
-         q->x[i*dim+d] = q->x[(i+1)*dim+d];
+         x[i*dim+d] = x[(i+1)*dim+d];
 
    quadrature_reinit(k-1, q);
 }
@@ -458,10 +247,10 @@ void quadrature_remove_element(int index, quadrature *q)
 
 void quadrature_to_vector(const quadrature q, Vector v)
 {
-   assert( (q.k * (q.params->dim+1)) == v.len );
+   assert( (q.k * (q.dim+1)) == v.len );
 
    int k = q.k;
-   int dim = q.params->dim;
+   int dim = q.dim;
 
    memcpy( &v.id[0], q.w, SIZE_DOUBLE(k) );
    memcpy( &v.id[k], q.x, SIZE_DOUBLE(k*dim) );
@@ -470,7 +259,7 @@ void quadrature_to_vector(const quadrature q, Vector v)
 
 void quadrature_get_elem(const_quadrature *q, int i, Vector v)
 {
-   int dim = q->params->dim;
+   int dim = q->dim;
    memcpy( &v.id[0], &q->w[i], SIZE_DOUBLE(1) );
    memcpy( &v.id[1], &q->x[i*dim], SIZE_DOUBLE(dim) );
 }
@@ -478,10 +267,10 @@ void quadrature_get_elem(const_quadrature *q, int i, Vector v)
 
 void vector_to_quadrature(const Vector v, quadrature q)
 {
-   assert( (q.k * (q.params->dim+1)) == v.len );
+   assert( (q.k * (q.dim+1)) == v.len );
 
    int k = q.k;
-   int dim = q.params->dim;
+   int dim = q.dim;
 
    memcpy( q.w, v.id, SIZE_DOUBLE(k) );
    memcpy( q.x, &v.id[k], SIZE_DOUBLE(k*dim) );
@@ -495,11 +284,9 @@ void quadrature_free(quadrature *q)
    if(q->z != NULL) {
       free(q->z); q->z = NULL; }
 
-   if(q->params->dims != NULL) {
-      free(q->params->dims); q->params->dims = NULL; }
+   if(q->dims != NULL) {
+      free(q->dims); q->dims = NULL; }
 
-   if(q->params != NULL) {
-      free(q->params); q->params = NULL; }
 
    if(q->setFuncsFlag)
    {
@@ -507,7 +294,300 @@ void quadrature_free(quadrature *q)
       Matrix_free(q->FULL_A);
       Vector_free(q->FULL_b);
    }
+   if(q->dims != NULL) {
+      free(q->dims); q->dims = NULL;
+   }
 
 
    free(q); q = NULL;
+}
+
+
+static void QuadSetFull_Constr(quadrature *q)
+{
+   if(q->cons == NULL || q->setFuncsFlag == 0)
+   {
+      PRINT_ERR("constraints have not been initialized", __LINE__, __FILE__);
+      return ;
+   }
+
+   Matrix A = q->cons->M;
+   Vector b = q->cons->b;
+   Matrix FULL_A = Matrix_init(A.rows+1, A.cols+1);
+   Vector FULL_b = Vector_init(b.len+1);
+
+   for(int i = 0; i < A.rows; ++i)
+      for(int j = 0; j < A.cols; ++j)
+         FULL_A.id[i+1][j+1] = A.id[i][j];
+   FULL_A.id[0][0] = -1.0;
+   for(int i = 0; i < b.len; ++i)
+      FULL_b.id[i+1] = b.id[i];
+   FULL_b.id[0] = 0.0;
+
+   q->FULL_A = FULL_A;
+   q->FULL_b = FULL_b;
+}
+
+
+static bool QuadOnTheBoundary(const_quadrature *q, int elem)
+{
+   if(q->cons == NULL || q->setFuncsFlag == 0)
+   {
+      PRINT_ERR("constraints have not been initialized", __LINE__, __FILE__);
+      return false;
+   }
+   int dim = q->dim;
+   int node_index = elem*dim;
+   Vector b = q->cons->b;
+   Matrix A = q->cons->M;
+   int rows = A.rows;
+   int cols = A.cols;
+   double tol = pow(10, -12);
+
+   for(int i = 0; i < rows; ++i)
+   {
+      double b_elem = 0.0;
+      for(int d = 0; d < cols; ++d)
+         b_elem += A.id[i][d] * q->x[node_index+d];
+
+      if( fabs(b_elem - b.id[i]) <= tol )
+         return true;
+   }
+
+   return false;
+}
+
+
+static bool QuadEqnOnTheBoundary(const_quadrature *q, int elem, int eqn)
+{
+   if(q->cons == NULL || q->setFuncsFlag == 0)
+   {
+      PRINT_ERR("constraints have not been initialized", __LINE__, __FILE__);
+      return false;
+   }
+   int dim = q->dim;
+   int node_index = elem*dim;
+   Vector b = q->cons->b;
+   Matrix A = q->cons->M;
+   int cols = A.cols;
+   double tol = pow(10, -12);
+
+   double b_elem = 0.0;
+   for(int d = 0; d < cols; ++d)
+      b_elem += A.id[eqn][d] * q->x[node_index+d];
+
+   if( fabs(b_elem - b.id[eqn]) <= tol )
+      return true;
+
+   return false;
+
+}
+
+
+static inline int GetNumDims(DOMAIN_TYPE D)
+{
+   switch(D)
+   {
+      case INTERVAL:           return ONE;
+      case CUBE:               return ONE;
+      case SIMPLEX:            return ONE;
+      case CUBESIMPLEX:        return TWO;
+      case SIMPLEXSIMPLEX:     return TWO;
+      case CUBESIMPLEXSIMPLEX: return THREE;
+      default: return -1;
+   }
+}
+
+
+static void SetIntervalFuncs(quadrature *q)
+{
+   q->evalBasis        = &PhiCube;
+   q->evalBasisDer     = &PhiPrimeCube;
+   q->basisIntegrals   = &IntegralsCube;
+   q->constr_init      = &constraints_interval_init;
+   q->constr_realloc   = &constraints_interval_realloc;
+   q->get_constr       = &get_constraints_interval;
+   q->constr_free      = &constraints_interval_free;
+}
+
+
+static void SetCubeFuncs(quadrature *q)
+{
+   q->evalBasis        = &PhiCube;
+   q->evalBasisDer     = &PhiPrimeCube;
+   q->basisIntegrals   = &IntegralsCube;
+   q->constr_init      = &constraints_cube_init;
+   q->constr_realloc   = &constraints_cube_realloc;
+   q->get_constr       = &get_constraints_cube;
+   q->constr_free      = &constraints_cube_free;
+}
+
+
+static void SetSimplexFuncs(quadrature *q)
+{
+   q->evalBasis        = &PhiSimplex;
+   q->evalBasisDer     = &PhiPrimeSimplex;
+   q->basisIntegrals   = &IntegralsSimplex;
+   q->constr_init      = &constraints_simplex_init;
+   q->constr_realloc   = &constraints_simplex_realloc;
+   q->get_constr       = &get_constraints_simplex;
+   q->constr_free      = &constraints_simplex_free;
+}
+
+
+static void SetCubeSimplexFuncs(quadrature *q)
+{
+   q->evalBasis        = &PhiCubeSimplex;
+   q->evalBasisDer     = &PhiPrimeCubeSimplex;
+   q->basisIntegrals   = &IntegralsCubeSimplex;
+   q->constr_init      = &constraints_cubesimplex_init;
+   q->constr_realloc   = &constraints_cubesimplex_realloc;
+   q->get_constr       = &get_constraints_cubesimplex;
+   q->constr_free      = &constraints_cubesimplex_free;
+}
+
+
+static void SetSimplexSimplexFuncs(quadrature *q)
+{
+   q->evalBasis        = &PhiSimplexSimplex;
+   q->evalBasisDer     = &PhiPrimeSimplexSimplex;
+   q->basisIntegrals   = &IntegralsSimplexSimplex;
+   q->constr_init      = &constraints_simplexsimplex_init;
+   q->constr_realloc   = &constraints_simplexsimplex_realloc;
+   q->get_constr       = &get_constraints_simplexsimplex;
+   q->constr_free      = &constraints_simplexsimplex_free;
+}
+
+
+static void SetCubeSimplexSimplexFuncs(quadrature *q)
+{
+   q->evalBasis        = &PhiCubeSimplexSimplex;
+   q->evalBasisDer     = &PhiPrimeCubeSimplexSimplex;
+   q->basisIntegrals   = &IntegralsCubeSimplexSimplex;
+   q->constr_init      = &constraints_cubesimplexsimplex_init;
+   q->constr_realloc   = &constraints_cubesimplexsimplex_realloc;
+   q->get_constr       = &get_constraints_cubesimplexsimplex;
+   q->constr_free      = &constraints_cubesimplexsimplex_free;
+}
+
+
+static bool QuadInDomain(const_quadrature *q)
+{
+   if(q->cons == NULL)
+   {
+      PRINT_ERR("constraints have not been initialized", __LINE__, __FILE__);
+      return false;
+   }
+
+   int dim = q->dim;
+   Matrix M = q->cons->M;
+   Vector b = q->cons->b;
+
+   for(int i = 0; i < q->k; ++i)
+   {
+      double lhs[M.rows]; memset(lhs, 0, M.rows*size_double);
+      const double *X_ixdim = &q->x[i*dim];
+
+      for(int r = 0; r < M.rows; ++r)
+         for(int c = 0; c < M.cols; ++c)
+            lhs[r] += M.id[r][c] * X_ixdim[c];
+
+      for(int r = 0; r < M.rows; ++r)
+         if(lhs[r] > b.id[r])
+            return false;
+   }
+
+   return true;
+}
+
+
+static bool QuadInDomainElem(const_quadrature *q, int elem)
+{
+   if(q->cons == NULL)
+   {
+      PRINT_ERR("constraints have not been initialized", __LINE__, __FILE__);
+      return false;
+   }
+
+   int dim = q->dim;
+   Matrix M = q->cons->M;
+   Vector b = q->cons->b;
+   const double *X_ixdim = &q->x[elem*dim];
+
+
+   double lhs[M.rows]; memset(lhs, 0, M.rows*size_double);
+
+   for(int r = 0; r < M.rows; ++r)
+      for(int c = 0; c < M.cols; ++c)
+         lhs[r] += M.id[r][c] * X_ixdim[c];
+
+   for(int r = 0; r < M.rows; ++r)
+      if(lhs[r] > b.id[r])
+         return false;
+
+   return true;
+}
+
+
+static bool QuadPosWeights(const_quadrature *q)
+{
+   const_quadrature _q = *q;
+   for(int i = 0; i < _q.k; ++i)
+      if(_q.w[i] < 0)
+         return false;
+
+   return true;
+}
+
+
+static inline bool QuadPosWeightsElem(const_quadrature *q, int elem)
+{
+   return q->w[elem] > 0 ? true : false;
+}
+
+
+static bool QuadInConstraint(const_quadrature *q)
+{
+   return QuadInDomain(q) & QuadPosWeights(q);
+}
+
+
+static bool QuadInConstraintElem(const_quadrature *quad, int elem)
+{
+   return QuadInDomainElem(quad, elem) & QuadPosWeightsElem(quad, elem);
+}
+
+
+static double QuadTestIntegral(const_quadrature *q)
+{
+   int num_funcs   = q->num_funcs;
+   int dim = q->dim;
+   int deg = q->deg;
+   int_fast8_t *basis_id = (int_fast8_t *)malloc(num_funcs*dim *sizeof(int_fast8_t));
+   BasisIndices(deg, dim, basis_id);
+
+   Vector res_loc = Vector_init(num_funcs);
+   Vector phi = Vector_init(num_funcs);
+   Vector In = Vector_init(num_funcs);
+   Vector Ie = Vector_init(num_funcs);
+
+   q->basisIntegrals((int *)q->dims, q->deg, Ie.id);
+
+   // approximate integrals of basis functions
+   for(int i = 0; i < q->k; ++i)
+   {
+      q->evalBasis((int *)q->dims, q->deg, basis_id, &q->x[dim*i], phi.id);
+      for(int j = 0; j < num_funcs; ++j)
+         In.id[j] += phi.id[j] * q->w[i];
+   }
+
+   for(int j = 0; j < num_funcs; ++j) res_loc.id[j] = fabs(In.id[j]-Ie.id[j]);
+   double res = V_ScaledTwoNorm(res_loc);
+
+   Vector_free(Ie);
+   Vector_free(In);
+   Vector_free(phi);
+   Vector_free(res_loc);
+   free(basis_id);
+   return res;
 }

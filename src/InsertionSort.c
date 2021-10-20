@@ -6,9 +6,7 @@
 #include "InsertionSort.h"
 #include <stdlib.h>
 
-/* InsertionSort
- * Sorts current entries of array in ascending order
- */
+// Sorts current entries of array in ascending order
 void InsertionSort(int num_entries, double *array, int *arrayIndex)
 {
 

@@ -16,13 +16,10 @@
 int is_int(const char *number);
 int is_pos_int(int, char *);
 
-/* main
- * Receives dimension sizes and degree
- * of precision as command line arguments. Performs tests
- * to test appropriateness of the input arguments. If inputs are
- * valid, it proceeds to recursive initial guess procedure and Node Elimination
- * algorithm.
- */
+// main
+// Receives dimension sizes and degree of precision as command line arguments.
+// Performs tests to test appropriateness of the input arguments. If inputs are
+// valid, it proceeds to recursive initial guess procedure and Node Elimination algorithm.
 int main(int argc, char *argv[])
 {
    printf("\n");

@@ -30,12 +30,12 @@ static double TwoNorm(int n, double *z);
 static bool TestQR(int numRows, int qiCols, const double *Q);
 
 
-/* NodeElimination
- * Receives quadrature nodes, weights, domain and quadrature parameters and
- * uses the new node elimination scheme to eliminate one node to obtain initial guess for
- * Newton's method. Subsequently, routine calls Newton's method to obtain quadrature rule
- * with fewer nodes. The procedure is repeated until no more nodes can be eliminated.
- */
+/***************************************************************************************************
+ * A new node elimination scheme that eliminates one node at a time and computes
+ * the initial guess for constrained Newton's method. Subsequently, Newton's method is called
+ * to obtain quadrature rule with fewer nodes. The procedure is repeated
+ * until no more nodes can be eliminated.
+ ***************************************************************************************************/
 void NodeElimination(const quadrature *q_in, quadrature *q_final, elim_history *hist)
 {
    if(q_in->setFuncsFlag != 1)
@@ -46,12 +46,14 @@ void NodeElimination(const quadrature *q_in, quadrature *q_final, elim_history *
                 "q_final are not set",  __LINE__, __FILE__);
 
    int n_initial       = q_in->k;
-   int num_funs        = q_in->params->num_funs;
-   int deg             = q_in->params->deg;
-   int dim             = q_in->params->dim;
-   int *dims           = q_in->params->dims;
+   int num_funcs        = q_in->num_funcs;
+   int deg             = q_in->deg;
+   int dim             = q_in->dim;
+   int *dims           = q_in->dims;
    const DOMAIN_TYPE D = q_in->D;
    double tol          = QUAD_TOL; // 10^(-15);
+   int_fast8_t *basis = (int_fast8_t *)malloc( (num_funcs*dim)*sizeof(int_fast8_t) );
+   BasisIndices(deg, dim, basis);
 
    quadrature *q_temp = quadrature_init(n_initial, dim, dims, deg, D);
    quad_set_funcs_and_constr(q_temp);
@@ -61,23 +63,21 @@ void NodeElimination(const quadrature *q_in, quadrature *q_final, elim_history *
    quad_set_funcs_and_constr(q_new);
    quadrature_assign(q_in, q_new);
 
-   int_fast8_t *basis = (int_fast8_t *)malloc( (num_funs*dim)*sizeof(int_fast8_t) );
-   BasisIndices(deg, dim, basis);
-
    // test accuracy of the initial quadrature
    // if residual is too large, attempt to find quadrature using Newton's method.
    // if Newton's method finds a solution, proceed to Node elimination, otherwise return.
    double res = q_in->testIntegral( (const_quadrature *)q_in );
    PrintDouble(res, "initial residual in NodeElimination");
-   if(fabs(res) > tol)
-   {
+   if(fabs(res) > tol) {
       int its = -1; bool_enum CONSTR_FLAG = ON;
       bool SOL_FLAG = LeastSquaresNewton(CONSTR_FLAG, basis, q_temp, &its);
       if(SOL_FLAG == SOL_FOUND) {
+         n_initial = q_temp->k;
+         quadrature_realloc(q_temp->k, dim, dims, deg, q_new);
          quadrature_assign(q_temp, q_new);
       }
       else if(SOL_FLAG == SOL_NOT_FOUND) {
-         Print("Initial quadrature did not converge");
+         Print("Initial quadrature did not converge. The initial guess should be more accurate.\n");
          FreeMemory(basis, q_temp, q_new);
          return;
       }
@@ -85,17 +85,17 @@ void NodeElimination(const quadrature *q_in, quadrature *q_final, elim_history *
 
 
    // run Node Elimination Algorithm. Theoretical optimum is reached when
-   // (dim+1)*k = num_funs, but a few more iterations are allowed in case under
+   // (dim+1)*k = num_funcs, but one more iteration is allowed in case under
    // exceptional circumstances theoretical optimum is surpassed.
    int n_prev                   = -1;
    int n_cur                    = n_initial;
    bool_enum CONSTR_FLAG        = OFF;
    ATTR_UNUSED bool_enum REPEAT = OFF;
    bool SOL_FLAG                = SOL_NOT_FOUND;
-   double n_opt                 = ceil(1.0*num_funs/(dim+1));
+   double n_opt                 = ceil(1.0*num_funcs/(dim+1));
    double efficiency            = n_opt/n_initial;
    PrintElimInfo( dim, n_cur , n_opt, efficiency);
-   while( ((dim+1)*n_cur >= num_funs)  && (n_cur >= 1) )
+   while( ((dim+1)*n_cur >= num_funcs)  && (n_cur >= 1) )
    {
       if(n_cur <= 1) goto FREERETURN; // return if current number of nodes is 1
 
@@ -119,10 +119,10 @@ void NodeElimination(const quadrature *q_in, quadrature *q_final, elim_history *
       quadrature_reinit(n_cur-1, q_temp);
       quadrature_reinit(n_cur, q_new);
 
-      int ncols = (dim+1) * n_cur, nrows = num_funs, weight_cols = n_cur;
+      int ncols = (dim+1) * n_cur, nrows = num_funcs, weight_cols = n_cur;
 
       Vector JACOBIAN = Vector_init(nrows*ncols);
-      GetJacobian(basis, *q_new, JACOBIAN.id);
+      GetJacobian(basis, q_new, JACOBIAN.id);
 
       // construct QR factorization of transpose of the JACOBIAN
       int INFO = -1;
@@ -161,9 +161,9 @@ void NodeElimination(const quadrature *q_in, quadrature *q_final, elim_history *
       for(int i = 0; i < nrows_Q; ++i)
       {
          // extract i*(dim+1)th row of Q2 and compute its norm, where Q = [Q1, Q2]
-         for(int j = 0; j < num_funs; ++j) Q2_W_ROW.id[j] = 0.0;
-         for(int j = num_funs; j < ncols_Q; ++j) Q2_W_ROW.id[j] = QWEIGHT.id[i*ncols+j];
-         double norm_Q2_W_ROW = TwoNorm(ncols-num_funs, &Q2_W_ROW.id[num_funs]);
+         for(int j = 0; j < num_funcs; ++j) Q2_W_ROW.id[j] = 0.0;
+         for(int j = num_funcs; j < ncols_Q; ++j) Q2_W_ROW.id[j] = QWEIGHT.id[i*ncols+j];
+         double norm_Q2_W_ROW = TwoNorm(ncols-num_funcs, &Q2_W_ROW.id[num_funcs]);
 
          // multiply Q by i*(dim+1)th row of Q2
          TRANS = 'N'; char SIDE = 'L';
@@ -192,8 +192,6 @@ void NodeElimination(const quadrature *q_in, quadrature *q_final, elim_history *
          signif_ind[i] = TwoNorm(ncols, dZ.id[i]);
       }
       InsertionSort(n_cur, signif_ind, arrayIndex); // store indices of signif_ind in arrayIndex in ascending order
-//      for(int s = 0; s < n_cur; ++s)
-//         arrayIndex[s] = s;
 
       free(signif_ind);
       free(TAU);
@@ -207,8 +205,7 @@ void NodeElimination(const quadrature *q_in, quadrature *q_final, elim_history *
       // extract initial guesses and run Newton's method
       for(int i = 0; i < n_cur; ++i)
       {
-         for(int j = 0; j < n_cur-1; ++j)
-         {
+         for(int j = 0; j < n_cur-1; ++j) {
             for(int d = 0; d < dim; ++d)
                q_temp->x[j*dim+d] = Z.id[arrayIndex[i]][j*(dim+1) + d+1];
 
@@ -237,20 +234,19 @@ void NodeElimination(const quadrature *q_in, quadrature *q_final, elim_history *
             for(int l = 0; l < q_diff.len; ++l)
                q_diff.id[l] = q_prev->z[l] - q_temp->z[l];
             for(int l = 0; l < q_diff.len; ++l)
-               q_temp->z[l] = q_prev->z[l] + (-cNodeData.tMin + POW(10, -12))*q_diff.id[l];
+               q_temp->z[l] = q_prev->z[l] + (-cNodeData.tMin + POW(10, -15))*q_diff.id[l];
 
 
             Vector_free(q_diff);
             quadrature_free(q_prev);
          }
 
-
          SOL_FLAG = LeastSquaresNewton(CONSTR_FLAG, basis, q_temp, &its);
          // store nodes and weights if Newton's method succeeded, update history
          if(SOL_FLAG == SOL_FOUND)
          {
             n_cur = q_temp->k;
-            q_new->k = n_cur;
+            quadrature_realloc(q_temp->k, dim, dims, deg, q_new);
             quadrature_assign(q_temp, q_new);
             hist->nodes_tot[hist->tot_elims] = n_cur;
             hist->success_node[hist->tot_elims] = i;

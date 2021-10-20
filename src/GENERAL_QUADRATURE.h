@@ -24,28 +24,27 @@ extern "C" {
 #endif
 
 
-#define ij2(i, j, numCols) i*numCols+j // maps indices from 2-d layout to memory
+#define ONE 1
+#define TWO 2
+#define THREE 3
 #define POW(x,y) pow(x,y)
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 #define SQUARE(x) ((x)*(x))
-#define SQRT(x) sqrt(x)
+#define SQRT(x) sqrt((double)(x))
 #define QUAD_TOL POW(10, -15)
-#define ONE 1
-#define TWO 2
-#define THREE 3
-#define size_int sizeof(int)
+#define ij2(i, j, num_cols) i*num_cols+j // maps indices from 2-d layout to memory
 #define size_int sizeof(int)
 #define size_double sizeof(double)
-#define SIZE_INT(x) (x)*sizeof(int)
-#define SIZE_DOUBLE(x) (x)*sizeof(double)
+#define SIZE_INT(x) ((x)*sizeof(int))
+#define SIZE_DOUBLE(x) ((x)*sizeof(double))
 #define size_quadrature sizeof(quadrature)
-#define size_quadParams sizeof(quadParams)
 
 
 typedef enum { ON, OFF } bool_enum;
 typedef enum { INTERVAL, CUBE, SIMPLEX, CUBESIMPLEX, SIMPLEXSIMPLEX, CUBESIMPLEXSIMPLEX } DOMAIN_TYPE;
 typedef enum { NODE, WEIGHT, NONE } NODE_OR_WEIGHT;
+
 
 typedef struct
 {
@@ -78,16 +77,17 @@ typedef struct
 typedef struct quadrature quadrature;
 typedef struct const_quadrature const_quadrature;
 
-typedef struct quadParams quadParams;
-typedef void(*EvalBasis)(const int_fast8_t *basis, const double *x, const quadParams *params, double *phi);
-typedef void(*EvalBasisDer)(const int_fast8_t *basis, const double *x, const quadParams *params, double *phiPrime);
-typedef void(*BasisIntegrals)(const quadParams *params, double *integrals);
+typedef void(*EvalBasis)(int *dims, int deg, const int_fast8_t *basis, const double *x, double *phi);
+typedef void(*EvalBasisDer)(int *dims, int deg, const int_fast8_t *basis, const double *x, double *phiPrime);
+typedef void(*BasisIntegrals)(int *dims, int deg, double *integrals);
 typedef bool(*InDomain)(const_quadrature *quad);
 typedef bool(*InDomainElem)(const_quadrature *quad, int elem);
 typedef bool (*InConstraint)(const_quadrature *q);
 typedef bool (*InConstraintElem)(const_quadrature *quad, int elem);
 typedef bool (*PosWeights)(const_quadrature *q);
 typedef bool (*PosWeightsElem)(const_quadrature *q, int elem);
+typedef bool (*OnTheBoundary)(const_quadrature *q, int elem);
+typedef bool (*EqnOnTheBoundary)(const_quadrature *q, int elem, int eqn);
 typedef double(*TestIntegral)(const_quadrature *q);
 
 typedef struct constraints constraints;
@@ -99,14 +99,6 @@ typedef void (*constraints_free)(constraints *cons);
 typedef void(*SetFuncs)(quadrature *q);
 typedef void (*SetParams)(int dim, int num_dims, int *dims, int deg, quadrature *q);
 
-struct quadParams
-{
-   int dim;
-   int num_dims;
-   int *dims;
-   int deg;
-   int num_funs;
-};
 
 struct constraints
 {
@@ -121,17 +113,21 @@ struct constraints
 struct quadrature
 {
    DOMAIN_TYPE D;
+   int dim;
+   int num_dims;
+   int *dims;
+   int deg;
+   int num_funcs;
+
    int k;
    double *w;
    double *x;
    double *z;
-   quadParams *params;
    constraints *cons;
    Matrix FULL_A;
    Vector FULL_b;
 
-   SetParams setParams; // Function that sets up params structure for the appropriate domain
-   SetFuncs setFuncs;   // Function that sets up all domain functions to point to appropriate domain
+   SetFuncs setFuncs; // Function that sets up all domain functions to point to appropriate domain
    int setFuncsFlag;
 
    EvalBasis evalBasis;
@@ -143,6 +139,8 @@ struct quadrature
    InConstraintElem inConstraintElem;
    PosWeights posWeights;
    PosWeightsElem posWeightsElem;
+   OnTheBoundary onTheBoundary;
+   EqnOnTheBoundary eqnOnTheBoundary;
    TestIntegral testIntegral;
    constraints_init constr_init;
    constraints_realloc constr_realloc;
@@ -153,17 +151,21 @@ struct quadrature
 struct const_quadrature
 {
    const DOMAIN_TYPE D;
+   const int dim;
+   const int num_dims;
+   const int *dims;
+   const int deg;
+   const int num_funcs;
+
    const int k;
    const double *w;
    const double *x;
    const double *z;
-   const quadParams *params;
    const constraints *cons;
    const Matrix FULL_A;
    const Vector FULL_b;
 
-   const SetParams setParams;   // Function that sets up params structure for the appropriate domain
-   const SetFuncs setFuncs;     // Function that sets up all domain functions to point to appropriate domain
+   const SetFuncs setFuncs; // Function that sets up all domain functions to point to appropriate domain
    int setFuncsFlag;
 
    const EvalBasis evalBasis;
@@ -175,6 +177,8 @@ struct const_quadrature
    const InConstraintElem inConstraintElem;
    const PosWeights posWeights;
    const PosWeightsElem posWeightsElem;
+   const OnTheBoundary onTheBoundary;
+   const EqnOnTheBoundary eqnOnTheBoundary;
    const TestIntegral testIntegral;
    const constraints_init constr_init;
    const constraints_realloc constr_realloc;

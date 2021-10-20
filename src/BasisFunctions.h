@@ -8,43 +8,22 @@
 extern "C" {
 #endif
 
-void PhiCube(const int_fast8_t *basis_id, const double *x,
-             const quadParams *params, double *phi);
+void PhiCube(int *dims, int deg, const int_fast8_t *basis_id, const double *x, double *phi);
+void PhiPrimeCube(int *dims, int deg, const int_fast8_t *basis_id, const double *x, double *phiPrime);
 
-void PhiPrimeCube(const int_fast8_t *basis_id, const double *x,
-                  const quadParams *params, double *phiPrime);
+void PhiSimplex(int *dims, int deg, const int_fast8_t *basis_id, const double *x, double *phi);
+void PhiPrimeSimplex(int *dims, int deg, const int_fast8_t *basis_id, const double *x, double *phiPrime);
 
-void PhiSimplex(const int_fast8_t *basis_id, const double *x,
-                const quadParams *params, double *phi);
+void PhiCubeSimplex(int *dims, int deg, const int_fast8_t *basis_id, const double *x, double *phi);
+void PhiPrimeCubeSimplex(int *dims, int deg, const int_fast8_t *basis_id, const double *x, double *phiPrime);
 
-void PhiPrimeSimplex(const int_fast8_t *basis_id, const double *x,
-                     const quadParams *params, double *phiPrime);
+void PhiSimplexSimplex(int *dims, int deg, const int_fast8_t *basis_id, const double *x, double *phi);
+void PhiPrimeSimplexSimplex(int *dims, int deg, const int_fast8_t *basis_id, const double *x, double *phiPrime);
 
-void PhiCubeSimplex(const int_fast8_t *basis_id, const double *x,
-                    const quadParams *params, double *phi);
+void PhiCubeSimplexSimplex(int *dims, int deg, const int_fast8_t *basis_id, const double *x, double *phi);
+void PhiPrimeCubeSimplexSimplex(int *dims, int deg, const int_fast8_t *basis_id, const double *x, double *phiPrime);
 
-void PhiPrimeCubeSimplex(const int_fast8_t *basis_id, const double *x,
-                         const quadParams *params, double *phiPrime);
-
-void PhiSimplexSimplex(const int_fast8_t *basis_id, const double *x,
-                       const quadParams *params, double *phi);
-
-void PhiPrimeSimplexSimplex(const int_fast8_t *basis_id, const double *x,
-                            const quadParams *params, double *phiPrime);
-
-void PhiCubeSimplexSimplex(const int_fast8_t *basis_id, const double *x,
-                           const quadParams *params, double *phi);
-
-void PhiPrimeCubeSimplexSimplex(const int_fast8_t *basis_id, const double *x,
-                                const quadParams *params, double *phiPrime);
-
-void PhiMonomial(const int_fast8_t *basis_id, const double *x,
-                 const quadParams *params, double *phi);
-
-void PhiPrimeMonomial(const int_fast8_t *basis_id, const double *x,
-                      const quadParams *params, double *phiPrime);
-
-double  orthogonal_simplex_basis_test(const int_fast8_t *basis_id, const quadParams *params);
+double  orthogonal_simplex_basis_test(int *dims, int deg, const int_fast8_t *basis_id);
 
 #ifdef __cplusplus
 }
