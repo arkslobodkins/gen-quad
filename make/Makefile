@@ -1,4 +1,4 @@
-CC = gcc -std=c11 -DCONSTR_OPT#-pg -o1#-DQUAD_DEBUG_OFF #-DNDEBUG #uncomment "-DQUAD_DEBUG_OFF" to disable debug mode,\
+CC = gcc -std=c99 -DCONSTR_OPT#-pg -o1#-DQUAD_DEBUG_OFF #-DNDEBUG #uncomment "-DQUAD_DEBUG_OFF" to disable debug mode,\
 uncomment "-NDEBUG" to disable assert statements comment _DCONSTR_OPT to disable constrained optimization
 CFLAGS=-g #-Wall
 LIBSLA = -llapack
@@ -9,11 +9,10 @@ VPATH= ../src:../src/Gauss_Lib:../results
 OBJS =  GaussCore.o Jacobi.o
 
 all : quad
-quad: Driver.o TestIntegral.o InsertionSort.o BasisIntegrals.o LeastSquaresNewton.o GaussTensor.o			\
-	GeneralizedGaussTensor.o GetJacobian.o GetFunction.o NodeElimination.o Phi.o     \
-	LegendrePoly.o BasisIndices.o Output.o JacobiPoly.o AddDimension.o InDomain.o ComputeDomain.o         \
-	ImplementDomain.o SetParams.o SetDomain.o SetConstraint.o Constraints.o SetQuadFuncs.o Vector.o Matrix.o Print.o     \
-	Quadrature.o LINALG.o libgaussq.a
+quad: Driver.o InsertionSort.o BasisIntegrals.o LeastSquaresNewton.o GeneralGaussTensor.o                   \
+	   GetJacobian.o GetFunction.o NodeElimination.o BasisFunctions.o BasisIndices.o Output.o                \
+		AddDimension.o ComputeDomain.o ImplementDomain.o Constraints.o Vector.o Matrix.o Print.o Quadrature.o \
+	   LINALG.o libgaussq.a
 
 	$(CC)  $(CFLAGS) -o $@ $^ $(LIBSBLAS) $(LIBSLA)  $(MATH)
 

@@ -12,7 +12,6 @@
 #include <math.h>
 #include <time.h>
 #include <ctype.h>
-#include "LeastSquaresNewton.h"
 
 int is_int(const char *number);
 int is_pos_int(int, char *);
@@ -300,9 +299,8 @@ int main(int argc, char *argv[])
    time_t end = clock();
    double total = (double)(end - start)/CLOCKS_PER_SEC;
    extern double LSQ_TIME;
-   printf("total time for LAPACK routine in LeastSquaresNewton = %f\n", LSQ_TIME);
+   printf("total time for LAPACK routine in LeastSquaresNewton = %le\n", LSQ_TIME);
    printf("runtime = %le\n", total);
-   perror("perror message");
 
    return EXIT_SUCCESS;
 } //end main

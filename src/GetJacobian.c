@@ -16,7 +16,7 @@
  * column of X and entries in w correspond to ith node and weight
  * of the quadrature
  */
-void GetJacobian(const _DomainFuncs functions, const int_fast8_t *basis, const quadrature quad, double *jacobian)
+void GetJacobian(const int_fast8_t *basis, const quadrature quad, double *jacobian)
 {
    int dim = quad.params->dim;
    int n_nodes = quad.k;
@@ -30,8 +30,8 @@ void GetJacobian(const _DomainFuncs functions, const int_fast8_t *basis, const q
    for(int j = 0; j < n_nodes; ++j)
    {
       curNode = &quad.x[dim*j];
-      functions.evalBasisDer(basis, &curNode[0], quad.params, &phiPrime[0]);
-      functions.evalBasis(basis, &curNode[0], quad.params, &phi[0]);
+      quad.evalBasisDer(basis, &curNode[0], quad.params, &phiPrime[0]);
+      quad.evalBasis(basis, &curNode[0], quad.params, &phi[0]);
 
       for(int i = 0; i < n_rows; ++i)
       {

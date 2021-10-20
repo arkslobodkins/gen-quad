@@ -24,7 +24,6 @@ void BasisIndices(int deg, int dim, int_fast8_t *f)
       return;
    }
 
-
    int counter;
    // compute basis indices using nested recursion if dimension >= 2
    for(int j = 2; counter = 0, j <= dim; ++j)
@@ -57,8 +56,7 @@ void BasisIndices(int deg, int dim, int_fast8_t *f)
       }
    }
 
-
-}// end BasisIndices
+}
 
 
 /* BasisSize
@@ -79,4 +77,4 @@ int BasisSize(int deg, int dim)
       product = product * i/counter;
 
    return product;
-}// end BasisSize
+}

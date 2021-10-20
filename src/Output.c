@@ -14,8 +14,7 @@ static char *get_domain_string(DOMAIN_TYPE D);
 /* Output
  * Prints history and quadrature parameters to a file.
  */
-void Output(int num_nodes_initial, double res, const quadrature q,
-            const _DomainFuncs functions, const elim_history hist)
+void Output(int num_nodes_initial, double res, const quadrature q, const elim_history hist)
 {
    char str[50];
    int i;
@@ -88,7 +87,7 @@ static char *get_domain_string(DOMAIN_TYPE D)
          return  (char *)"simplexsimplex";
       case CUBESIMPLEXSIMPLEX:
          return (char *)"cubesimplexsimplex";
+      default:
+         return (char *)"0";
    }
-
-   return (char *)"0";
 }

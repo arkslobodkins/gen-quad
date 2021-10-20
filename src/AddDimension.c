@@ -5,7 +5,7 @@
 
 #include "AddDimension.h"
 
-#include "GaussTensor.h"
+#include "GeneralGaussTensor.h"
 #include "GENERAL_QUADRATURE.h"
 
 #include <assert.h>
@@ -38,8 +38,8 @@ void AddLineFirst(const_quadrature *q_gauss, const_quadrature *quad_prev, quadra
             quad_new->x[ind+d] = quad_prev->x[jxdim_minus_1+d-1];
       }
    }
-   WeightsTensor((const_quadrature *)q_gauss, quad_prev, quad_new);
-}// end AddLineFirst
+   WeightsTensor2D((const_quadrature *)q_gauss, quad_prev, quad_new);
+}
 
 
 
@@ -71,7 +71,7 @@ void AddLineSimplex(const_quadrature *q_gauss, const_quadrature *quad_prev, quad
       }
    }
 
-   WeightsTensor(q_gauss, quad_prev, quad_new);
+   WeightsTensor2D(q_gauss, quad_prev, quad_new);
    // apply Duffy Transformation
    for(int i = 0; i < n_new; ++i)
    {
@@ -82,7 +82,7 @@ void AddLineSimplex(const_quadrature *q_gauss, const_quadrature *quad_prev, quad
          quad_new->w[i] *= quad_new->x[ind];
       }
    }
-}// end AddLineSimplex
+}
 
 
 /* GeneralDuffy
@@ -103,4 +103,4 @@ void GeneralDuffy(quadrature *quad)
          quad->w[i] *= quad->x[ind+d-1];
       }
    }
-}// end GeneralDuffy
+}

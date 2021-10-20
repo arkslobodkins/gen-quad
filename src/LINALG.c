@@ -1,7 +1,7 @@
 #include "LINALG.h"
-
 #include "GENERAL_QUADRATURE.h"
 #include "Matrix.h"
+
 
 void MAT_MUL(int M, int K, int N, double *MAT1, double *MAT2, double *MAT3)
 {
@@ -47,4 +47,12 @@ void FORTRAN_TO_MATRIX(int M, int N, const double *A, Matrix B)
       for(int j = 0; j < N; ++j)
          B.id[i][j] = A[ ij2(j,i,M) ];
 
+}
+
+
+void Transpose(int M, int N, const double *A, double *B)
+{
+   for(int i = 0; i < M; ++i)
+      for(int j = 0; j < N; ++j)
+         B[i+j*M] = A[j+i*N];
 }

@@ -1,5 +1,5 @@
-#ifndef PHI_H
-#define PHI_H
+#ifndef BASIS_FUNCTIONS_H
+#define BASIS_FUNCTIONS_H
 
 #include "GENERAL_QUADRATURE.h"
 #include <stdint.h>

@@ -11,7 +11,6 @@ double LSQ_TIME = 0.0;
 
 #include "GetFunction.h"
 #include "GetJacobian.h"
-#include "TestIntegral.h"
 #include "Constraints.h"
 #include "Vector.h"
 #include "Matrix.h"
@@ -31,32 +30,17 @@ double LSQ_TIME = 0.0;
 #define MAX_ELIM_WEIGHTS 10
 
 
-//static inline bool InConstraintElem(const _DomainFuncs dom_funcs, const_quadrature *quad, int elem);
-//static inline bool PosWeightElem(const_quadrature *q, int elem);
-static bool PosWeights(const_quadrature *q);
-static bool InConstraint(const _DomainFuncs funcs, const_quadrature *quad);
 static bool CheckForFail(int info, double error_norm, double error_norm_prev, Vector least_sq_sol);
-static void Transpose(int M, int N, const double *A, double *B);
-
 
 #ifdef CONSTR_OPT
-static constr_vect_data constr_vect_data_init(int n_cols);
-static void constr_vect_data_reset(int n_cols, constr_vect_data  *C_V_DATA);
-// ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  || || ||  ||  ||  ||  ||  ||  ||  ||  || ||
-//static void constr_vect_data_realloc(int n_cols, constr_vect_data *C_V_DATA);
-//static void constr_vect_data_free(constr_vect_data C_V_DATA);
-//static void AppendJacobian(const int nRows, const int nCols, const double *eqnConstr, Vector jacobian);
-//static void AppendFunction(const int nRows, double *f);
-// ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  || || ||  ||  ||  ||  ||  ||  ||  ||  || ||
+static ConstrVectData ConstrVectDataInit();
+static void ConstrVectDataReset(ConstrVectData  *cVectData);
+static ConstrNodeData ConstrNodeDataInit();
+static void ConstrNodeDataReset(ConstrNodeData  *cNodeData);
 
-
-static void ConstrainedProjection(const _DomainFuncs dom_funcs, const_quadrature *q_prev, quadrature *q_next, const constraints *cons);
-static bool ConstrainedOptimization(const _DomainFuncs dom_funcs, const constraints *cons, const_quadrature *q_prev, quadrature *q_next, constr_vect_data *C_V_DATA);
-
-static constr_node_data constrain_vector(const Matrix A, const Vector b, const_quadrature *q_prev, const_quadrature *q_next);
-
-
-static constr_node_data ShortenNode(const Matrix A, const Vector b, const Vector z_old, const Vector z_new);
+static void ConstrainedProjection(const_quadrature *q_prev, quadrature *q_next);
+static bool ConstrainedOptimization(const_quadrature *q_prev, quadrature *q_next, ConstrVectData *cVecData);
+static ConstrNodeData ShortenNode(const Matrix A, const Vector b, const Vector z_old, const Vector z_new);
 static void ProjectNode(const Matrix eqn_matrix, const Vector dx, Vector x_projected);
 #endif
 
@@ -69,13 +53,11 @@ static void ProjectNode(const Matrix eqn_matrix, const Vector dx, Vector x_proje
  * squares sense. Returns success if algorithm converged
  * and all nodes are inside of the domain and if all nodes are positive..
  */
-bool LeastSquaresNewton(const BOOLEAN FLAG_CONSTR, const int_fast8_t *basis, const _DomainFuncs dom_funcs,
-      const constraints *cons, int *its, quadrature *q_orig)
+bool LeastSquaresNewton(const bool_enum FLAG_CONSTR, const int_fast8_t *basis, quadrature *q_orig, int *its)
 {
    assert(q_orig->k >= 0);
    int k = q_orig->k;
 
-   int WEIGHT_ELIM_FLAG = 0;
    bool SOL_FLAG = SOL_NOT_FOUND;
    int p = q_orig->params->deg;
    int num_funcs = q_orig->params->num_funs;
@@ -91,9 +73,13 @@ bool LeastSquaresNewton(const BOOLEAN FLAG_CONSTR, const int_fast8_t *basis, con
    Vector rhs = Vector_init(num_funcs);
 
    quadrature *q_prev = quadrature_init(k, dim, dims, p, D);
+   quad_set_funcs_and_constr(q_prev);
+
    quadrature *q_next = quadrature_init(k, dim, dims, p, D);
-   quadrature_assign(*q_orig, *q_prev);
-   quadrature_assign(*q_orig, *q_next);
+   quad_set_funcs_and_constr(q_next);
+
+   quadrature_assign(q_orig, q_prev);
+   quadrature_assign(q_orig, q_next);
 
    int its_loc = 0; int maxiter = 25;
    double error_norm = -1.0, error_norm_prev = -1.0, error_norm_update = -1;
@@ -109,21 +95,20 @@ bool LeastSquaresNewton(const BOOLEAN FLAG_CONSTR, const int_fast8_t *basis, con
 
 
 #ifdef CONSTR_OPT
-
    int elim_weights = 0;
    bool CONSTR_RETURN = CONSTRAINT_FAILURE;
-   constr_vect_data C_V_DATA = constr_vect_data_init(n_cols);
+   ConstrVectData cVectData = ConstrVectDataInit();
 #else
    if(FLAG_CONSTR == ON)
-      PRINT_ERR("constrained optimization is turned off and won't be performed", 1, __LINE__, __FILE__);
+      PRINT_ERR("constrained optimization is turned off and won't be performed", __LINE__, __FILE__);
 
 #endif
 
 
    // return if input is a satisfactory quadrature
-   GetFunction(dom_funcs, basis, *q_prev, rhs.id);
+   GetFunction(basis, *q_prev, rhs.id);
    error_norm = V_ScaledTwoNorm(rhs);
-   if( (error_norm < tol) && (InConstraint( dom_funcs, (const_quadrature *)q_prev ) == true) )
+   if( (error_norm < tol) && (q_prev->inConstraint( (const_quadrature *)q_prev ) == true) )
    {
       SOL_FLAG = SOL_FOUND;
       *its = 0;
@@ -135,51 +120,28 @@ bool LeastSquaresNewton(const BOOLEAN FLAG_CONSTR, const int_fast8_t *basis, con
    {
 
 #ifdef CONSTR_OPT
-      switch(C_V_DATA.ACTIVE_CONSTRAINTS)
+      if(cVectData.ACTIVE_CONSTRAINTS == ON)
       {
+         switch(cVectData.N_OR_W)
+         {
+            case WEIGHT:
+               ++elim_weights;
+               if(k == 1  || elim_weights > MAX_ELIM_WEIGHTS)
+               {
+                  SOL_FLAG = SOL_NOT_FOUND;
+                  goto FREERETURN;
+               }
 
-         case OFF:
-            n_rows = num_funcs;
-            n_cols = (dim+1)*k;
-            break;
+               --k;
+               n_cols = (dim+1)*k;
+               n_rows = num_funcs;
+               quadrature_remove_element(cVectData.boundaryNodeId, q_next);
+               quadrature_remove_element(cVectData.boundaryNodeId, q_prev);
+               break;
 
-         case ON:
-            switch(C_V_DATA.N_OR_W)
-            {
-
-               case NODE:
-                  n_rows = num_funcs;
-                  n_cols = (dim+1)*k;
-// ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  || || ||  ||  ||  ||  ||  ||  ||  ||  || ||
-//                  n_rows = num_funcs + 1;
-//                  n_cols = (dim+1)*k;
-// ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  || || ||  ||  ||  ||  ||  ||  ||  ||  || ||
-                  break;
-
-               case WEIGHT:
-
-                  ++elim_weights;
-                  if(k == 1  || elim_weights > MAX_ELIM_WEIGHTS)
-                  {
-                     SOL_FLAG = SOL_NOT_FOUND;
-                     goto FREERETURN;
-                  }
-
-                  WEIGHT_ELIM_FLAG = 1;
-                  --k;
-                  n_cols = (dim+1)*k;
-                  n_rows = num_funcs;
-                  quadrature_remove_element(C_V_DATA.boundary_node_id, q_next);
-                  quadrature_remove_element(C_V_DATA.boundary_node_id, q_prev);
-// ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  || || ||  ||  ||  ||  ||  ||  ||  ||  || ||
-//                  constr_vect_data_realloc((dim+1)*k, &C_V_DATA);
-// ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  || || ||  ||  ||  ||  ||  ||  ||  ||  || ||
-                  break;
-
-               default:
-                  break;
-
-            }
+            default:
+               break;
+         }
       }
 #endif
 
@@ -194,18 +156,8 @@ bool LeastSquaresNewton(const BOOLEAN FLAG_CONSTR, const int_fast8_t *basis, con
       Vector_realloc(lead_dim, &least_sq_sol);
 
       // Compute function and jacobian of a function to be solved
-      GetJacobian(dom_funcs, basis, *q_prev, jacobian.id);
-      GetFunction(dom_funcs, basis, *q_prev, rhs.id);
-
-// ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  || || ||  ||  ||  ||  ||  ||  ||  ||  || ||
-//#ifdef CONSTR_OPT
-//      if ( (C_V_DATA.ACTIVE_CONSTRAINTS == ON )  && (C_V_DATA.N_OR_W == NODE) ) // add additional equation if constrained optimization is set
-//      {
-//         AppendJacobian(n_rows, n_cols, C_V_DATA.additional_constr_eqn.id, jacobian);
-//         AppendFunction(n_rows, rhs.id);
-//      }
-//#endif
-// ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  || || ||  ||  ||  ||  ||  ||  ||  ||  || ||
+      GetJacobian(basis, *q_prev, jacobian.id);
+      GetFunction(basis, *q_prev, rhs.id);
 
       for(int i = 0; i < small_dim; ++i)
          least_sq_sol.id[i] = rhs.id[i];
@@ -225,7 +177,7 @@ bool LeastSquaresNewton(const BOOLEAN FLAG_CONSTR, const int_fast8_t *basis, con
          q_next->z[i] = q_prev->z[i] - least_sq_sol.id[i];
 
       error_norm_prev = error_norm;
-      GetFunction(dom_funcs, basis, *q_next, rhs.id);
+      GetFunction(basis, *q_next, rhs.id);
       error_norm = V_ScaledTwoNorm(rhs);
 
       bool check_values = CheckForFail(info, error_norm, error_norm_prev, least_sq_sol);
@@ -236,12 +188,11 @@ bool LeastSquaresNewton(const BOOLEAN FLAG_CONSTR, const int_fast8_t *basis, con
       }
 
 
-
 #ifdef CONSTR_OPT
       if(FLAG_CONSTR == ON)
       {
-         ConstrainedProjection(dom_funcs, (const_quadrature *)q_prev, q_next, cons);
-         CONSTR_RETURN = ConstrainedOptimization(dom_funcs, cons, (const_quadrature *)q_prev, q_next, &C_V_DATA);
+         ConstrainedProjection((const_quadrature *)q_prev, q_next);
+         CONSTR_RETURN = ConstrainedOptimization((const_quadrature *)q_prev, q_next, &cVectData);
 
          if(CONSTR_RETURN == CONSTRAINT_FAILURE)
          {
@@ -252,16 +203,16 @@ bool LeastSquaresNewton(const BOOLEAN FLAG_CONSTR, const int_fast8_t *basis, con
 #endif
 
 
-      GetFunction(dom_funcs, basis, *q_next, rhs.id);
+      GetFunction(basis, *q_next, rhs.id);
       error_norm_update = V_ScaledTwoNorm(rhs);
-      quadrature_assign(*q_next, *q_prev);
+      quadrature_assign(q_next, q_prev);
       ++its_loc;
 
    } while( (its_loc < maxiter) && (error_norm_update > tol) );
 
 
    // check if quadrature satisfies constraints
-   if( (InConstraint( dom_funcs,  (const_quadrature *)q_next ) == false) || (error_norm_update > tol) )
+   if( (q_next->inConstraint( (const_quadrature *)q_next ) == false) || (error_norm_update > tol) )
    {
       SOL_FLAG = SOL_NOT_FOUND;
       goto FREERETURN;
@@ -274,73 +225,37 @@ bool LeastSquaresNewton(const BOOLEAN FLAG_CONSTR, const int_fast8_t *basis, con
          && (error_norm_update <= tol) )
    {
       q_orig->k = k;
-      quadrature_assign(*q_next, *q_orig);
+      quadrature_assign(q_next, q_orig);
       *its = its_loc;
       SOL_FLAG = SOL_FOUND;
-      if(WEIGHT_ELIM_FLAG == 1)
-         PRINT((char *)"SUCCEEDED AFTER ELIMINATING WEIGHT", 0);
    }
    else
    {
-      *its = maxiter;
+      *its = its_loc;
       SOL_FLAG = SOL_NOT_FOUND;
    }
 
 FREERETURN:
    Vector_free(least_sq_sol);
    Vector_free(work);
-   quadrature_free(q_prev);
-   quadrature_free(q_next);
    Vector_free(rhs);
    Vector_free(jacobian_transpose);
    Vector_free(jacobian);
-
-// ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  || || ||  ||  ||  ||  ||  ||  ||  ||  || ||
-#ifdef CONSTR_OPT
-//   constr_vect_data_free(C_V_DATA);
-#endif
-// ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  || || ||  ||  ||  ||  ||  ||  ||  ||  || ||
+   quadrature_free(q_prev);
+   quadrature_free(q_next);
 
    return SOL_FLAG;
 }// end LeastSquaresNewton
 
 
-static bool InConstraint(const _DomainFuncs dom_funcs, const_quadrature *quad)
-{
-   return dom_funcs.inDomain(quad) & PosWeights(quad);
-}
-
-
-//static inline bool InConstraintElem(const domainFuncs dom_funcs, const_quadrature *quad, int elem)
-//{
-//   return dom_funcs.inDomainElem(quad, elem) & PosWeightElem(quad, elem);
-//}
-//
-//
-//static inline bool PosWeightElem(const_quadrature *q, int elem)
-//{
-//   return q->w[elem] > 0 ? true : false;
-//}
-
-
-static bool PosWeights(const_quadrature *q)
-{
-
-   for(int i = 0; i < q->k; ++i)
-      if(q->w[i] < 0)
-         return false;
-
-   return true;
-}
-
 
 static bool CheckForFail(int info, double error_norm, double error_norm_prev, Vector least_sq_sol)
 {
 
-   if( error_norm > (error_norm_prev+1) )      // return if Newton's method does not have reasonable convergence
+   if( error_norm > (error_norm_prev+10) )      // return if Newton's method does not have reasonable convergence
       return 1;
 
-   else if( V_InfNorm(least_sq_sol) > 20 )    // return if solution is exploding
+   else if( V_InfNorm(least_sq_sol) > 100 )    // return if solution is exploding
       return 1;
 
    else if(info > 0)                           // return if LAPACK routine has failed
@@ -354,95 +269,62 @@ static bool CheckForFail(int info, double error_norm, double error_norm_prev, Ve
 }
 
 
-static void Transpose(int M, int N, const double *A, double *B)
-{
-   for(int i = 0; i < M; ++i)
-   {
-      for(int j = 0; j < N; ++j)
-         B[i+j*M] = A[j+i*N];
-   }
-}
-
-
-
-
 #ifdef CONSTR_OPT
 
-static constr_vect_data constr_vect_data_init(int n_cols)
+static ConstrVectData ConstrVectDataInit()
 {
-   constr_vect_data C_V_DATA;
-   C_V_DATA.ACTIVE_CONSTRAINTS = OFF;
-   C_V_DATA.N_OR_W = NONE;
-   C_V_DATA.boundary_node_id = -1;
-   C_V_DATA.eqn_id = -1;
+   ConstrVectData cVectData;
+   cVectData.ACTIVE_CONSTRAINTS = OFF;
+   cVectData.N_OR_W             = NONE;
+   cVectData.boundaryNodeId     = -1;
+   cVectData.eqnId              = -1;
 
+   return cVectData;
+}
 
-// ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  || || ||  ||  ||  ||  ||  ||  ||  ||  || ||
-//   Vector_init(n_cols, &C_V_DATA->additional_constr_eqn);
-// ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  || || ||  ||  ||  ||  ||  ||  ||  ||  || ||
-   return C_V_DATA;
+static void ConstrVectDataReset(ConstrVectData *cVectData)
+{
+   cVectData->ACTIVE_CONSTRAINTS = OFF;
+   cVectData->N_OR_W             = NONE;
+   cVectData->boundaryNodeId     = -1;
+   cVectData->eqnId              = -1;
+
 }
 
 
-static void constr_vect_data_reset(int n_cols, constr_vect_data *C_V_DATA)
+static ConstrNodeData ConstrNodeDataInit()
 {
-   C_V_DATA->ACTIVE_CONSTRAINTS = OFF;
-   C_V_DATA->N_OR_W = NONE;
-   C_V_DATA->boundary_node_id = -1;
-   C_V_DATA->eqn_id = -1;
+   ConstrNodeData cNodeData;
+   cNodeData.eqnId  = -1;
+   cNodeData.nodeId = -1;
+   cNodeData.tMin   = 1.0;
+   cNodeData.flag    = 0;
+   cNodeData.N_OR_W  = NONE;
 
-// ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  || || ||  ||  ||  ||  ||  ||  ||  ||  || ||
-//   memset(C_V_DATA->additional_constr_eqn.id, 0, n_cols*sizeof(double));
-// ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  || || ||  ||  ||  ||  ||  ||  ||  ||  || ||
+   return cNodeData;
+}
+
+static void ConstrNodeDataReset(ConstrNodeData *cNodeData)
+{
+   cNodeData->eqnId  = -1;
+   cNodeData->nodeId = -1;
+   cNodeData->tMin   = 1.0;
+   cNodeData->flag   = 0;
+   cNodeData->N_OR_W = NONE;
 }
 
 
-// ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  || || ||  ||  ||  ||  ||  ||  ||  ||  || ||
-//static void constr_vect_data_realloc(int n_cols, constr_vect_data *C_V_DATA)
-//{
-//
-//   Vector_realloc(n_cols, &C_V_DATA->additional_constr_eqn);
-//}
-// ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  || || ||  ||  ||  ||  ||  ||  ||  ||  || ||
-
-
-// ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  || || ||  ||  ||  ||  ||  ||  ||  ||  || ||
-//static void constr_vect_data_free(constr_vect_data C_V_DATA)
-//{
-//   Vector_free(C_V_DATA.additional_constr_eqn);
-//}
-// ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  || || ||  ||  ||  ||  ||  ||  ||  ||  || ||
-
-
-// ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  || || ||  ||  ||  ||  ||  ||  ||  ||  || ||
-//static void AppendJacobian(int n_rows, int n_cols, const double *eqnConstr, Vector jacobian)
-//{
-//   assert(jacobian.len == n_rows*n_cols);
-//   int last_row = n_rows-1;
-//   for(int j = 0; j < n_cols; ++j)
-//      jacobian.id[ij2(last_row, j, n_cols)] = eqnConstr[j];
-//
-//}
-//
-//
-//static void AppendFunction(int len, double *f)
-//{
-//   f[len-1] = 0.0;
-//}
-// ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  || || ||  ||  ||  ||  ||  ||  ||  ||  || ||
-
-
-static void ConstrainedProjection(const _DomainFuncs dom_funcs, const_quadrature *q_prev, quadrature *q_next, const constraints *cons)
+static void ConstrainedProjection(const_quadrature *q_prev, quadrature *q_next)
 
 {
    int k = q_prev->k;
    int dim = q_prev->params->dim;
-   assert(dim == cons->M.cols);
+   assert(dim == q_next->cons->M.cols);
    double tol = pow(10, -12);
 
-   int num_eqns = cons->M.rows;
-   Matrix M = cons->M;
-   Vector b = cons->b;
+   int num_eqns = q_next->cons->M.rows;
+   Matrix M = q_next->cons->M;
+   Vector b = q_next->cons->b;
 
    Vector node_change = Vector_init(dim);
    Vector node_projected = Vector_init(dim);
@@ -455,18 +337,16 @@ static void ConstrainedProjection(const _DomainFuncs dom_funcs, const_quadrature
 
       for(int j = 0; j < num_eqns; ++j)
       {
-         double lhs = 0.0, lhs_prev = 0.0;
+         double lhs_prev = 0.0;
          for(int d = 0; d < dim; ++d)
             lhs_prev += M.id[j][d] * q_prev->x[node_index+d];
-         for(int d = 0; d < dim; ++d)
-            lhs += M.id[j][d] * q_next->x[node_index+d];
 
          if( fabs( lhs_prev - b.id[j] ) <= tol )
          {
             ++active_eqn_count;
             eqn_flags[j] = true;
             if( ! do_project)
-               if( lhs  >= b.id[j] ) do_project = true;
+               if( ! q_next->inDomainElem((const_quadrature *)q_next, i) ) do_project = true;
          }
       }
 
@@ -504,292 +384,214 @@ static void ConstrainedProjection(const _DomainFuncs dom_funcs, const_quadrature
 }
 
 
-static bool ConstrainedOptimization(const _DomainFuncs dom_funcs, const constraints *cons, const_quadrature *q_prev, quadrature *q_next, constr_vect_data *C_V_DATA)
+bool ConstrainedOptimization(const_quadrature *q_prev, quadrature *q_next, ConstrVectData *cVectData)
 {
    assert(q_prev->k == q_next->k);
 
    int k = q_prev->k;
    int dim = q_prev->params->dim;
-   int n_cols = (dim+1)*k;
+   int q_len = (dim+1)*k;
 
-
-   bool constrNext_id[k], constr_prev_id[k];
-
-   double q_diff_id[n_cols];
-   Vector q_diff = {0};
-   q_diff.len = k; q_diff.id = q_diff_id;
-   for(int i = 0; i < n_cols; ++i)
+   Vector q_diff = Vector_init(q_len);
+   for(int i = 0; i < q_len; ++i)
       q_diff.id[i] = q_prev->z[i] - q_next->z[i];
 
-   int A_rows = cons->M.rows+1, A_cols = cons->M.cols+1;
-   Matrix A = {0};
-   A.rows = A_rows; A.cols = A_cols;
-   double A_id[A_rows][A_cols]; double *A_id_ptr[A_rows]; A.id = A_id_ptr;
-   for(int i = 0; i < A.rows; ++i)
-   {
-      A.id[i] = A_id[i];
-      memset(A.id[i], 0, A_cols*sizeof(double));
-   }
-
-   for(int i = 0; i < A.rows-1; ++i)
-      for(int j = 0; j < A.cols-1; ++j)
-         A.id[i+1][j+1] = cons->M.id[i][j];
-   A.id[0][0] = -1.0;
-
-   Vector b = {0};
-   b.len = cons->b.len+1;
-   double b_id[b.len]; b.id = b_id;
-   for(int i = 0; i < b.len-1; ++i)
-      b.id[i+1] = cons->b.id[i];
-   b.id[0] = 0.0;
-
    // Compute only if equations at the previous iteration satisfy constraints
-   if( ( InConstraint(dom_funcs, (const_quadrature *)q_next) == false )
-         && ( InConstraint(dom_funcs, q_prev ) == true ) )
+   if( ( q_next->inConstraint( (const_quadrature *)q_next) == false )
+         && ( q_prev->inConstraint(q_prev ) == true ) )
    {
-      constr_node_data constr_node_d = constrain_vector(A, b, q_prev, (const_quadrature *)q_next);
+      ConstrNodeData cNodeData = constrain_vector(q_prev->FULL_A, q_prev->FULL_b,
+                                                  q_prev, (const_quadrature *)q_next);
       COND_TEST_2;
 
-      if(constr_node_d.flag == 0)
+      if(cNodeData.flag == 0) {
+         ConstrVectDataReset(cVectData);
+         Vector_free(q_diff);
          return CONSTRAINT_FAILURE;
+      }
 
-      switch(constr_node_d.N_OR_W)
+      switch(cNodeData.N_OR_W)
       {
+      case NODE:
+         for(int i = 0; i < q_len; ++i)
+            q_next->z[i] = q_prev->z[i] + (-cNodeData.tMin + POW(10, -12) ) * q_diff.id[i];
 
-         case NODE:
-            for(int i = 0; i < n_cols; ++i)
-               q_next->z[i] = q_prev->z[i] + (-constr_node_d.t_min + POW(10, -12) ) * q_diff.id[i];
+         cVectData->ACTIVE_CONSTRAINTS = ON;
+         cVectData->N_OR_W = NODE;
+         cVectData->boundaryNodeId = cNodeData.nodeId;
+         cVectData->eqnId = cNodeData.eqnId;
+         break;
 
-// ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  || || ||  ||  ||  ||  ||  ||  ||  ||  || ||
-//            // compute entries of additional equation for constraining the boundary
-//            int index = -1;
-//            int eqn = constr_node_d.eqn_id;
-//            memset(C_V_DATA->additional_constr_eqn.id, 0, n_cols * sizeof(double));
-//            for(int j = 0; j < cons.M.cols; ++j)
-//            {
-//               if(j == 0)  index = constr_node_d.node_id;
-//               else        index = k + constr_node_d.node_id * dim-1;
-//               C_V_DATA->additional_constr_eqn.id[index+j] = cons.M.id[eqn][j];
-//            }
-// ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  || || ||  ||  ||  ||  ||  ||  ||  ||  || ||
+      case WEIGHT:
+         for(int i = 0; i < q_len; ++i)
+            q_next->z[i] = q_prev->z[i] + (-cNodeData.tMin + POW(10, -12) ) * q_diff.id[i];
 
-            C_V_DATA->ACTIVE_CONSTRAINTS = ON;
-            C_V_DATA->N_OR_W = NODE;
-            C_V_DATA->boundary_node_id = constr_node_d.node_id;
-            C_V_DATA->eqn_id = constr_node_d.eqn_id;
+         cVectData->ACTIVE_CONSTRAINTS = ON;
+         cVectData->N_OR_W = WEIGHT;
+         cVectData->boundaryNodeId = cNodeData.nodeId;
+         cVectData->eqnId = cNodeData.eqnId;
+         break;
 
-            break;
-
-         case WEIGHT:
-            for(int i = 0; i < n_cols; ++i)
-               q_next->z[i] = q_prev->z[i] + (-constr_node_d.t_min + POW(10, -13) ) * q_diff.id[i];
-
-// ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  || || ||  ||  ||  ||  ||  ||  ||  ||  || ||
-//            memset(C_V_DATA->additional_constr_eqn.id, 0, n_cols*sizeof(double));
-// ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  || || ||  ||  ||  ||  ||  ||  ||  ||  || ||
-            C_V_DATA->ACTIVE_CONSTRAINTS = ON;
-            C_V_DATA->N_OR_W = WEIGHT;
-            C_V_DATA->boundary_node_id = constr_node_d.node_id;
-            C_V_DATA->eqn_id = constr_node_d.eqn_id;
-            break;
-
-         default:
-            constr_vect_data_reset(n_cols, C_V_DATA);
-            break;
+      default:
+         ConstrVectDataReset(cVectData);
+         break;
       }
       COND_TEST_3;
 
-      assert(InConstraint(dom_funcs, (const_quadrature *)q_next) == 1);
-
+      if(q_next->inConstraint( (const_quadrature *)q_next) == 1) {
+         Vector_free(q_diff);
+         return CONSTRAINT_SUCCESS;
+      }
+      else {
+         Vector_free(q_diff);
+         return CONSTRAINT_FAILURE;
+      }
    }
-   else
-      constr_vect_data_reset(n_cols, C_V_DATA);
+   else if( ( q_next->inConstraint( (const_quadrature *)q_next) == true )
+              && ( q_prev->inConstraint(q_prev ) == true ) ) {
+      ConstrVectDataReset(cVectData);
+      Vector_free(q_diff);
+      return CONSTRAINT_SUCCESS;
+   }
+   else {
+      ConstrVectDataReset(cVectData);
+      Vector_free(q_diff);
+      return CONSTRAINT_FAILURE;
+   }
 
-
-
-   return CONSTRAINT_SUCCESS;
 }
 
 
-static constr_node_data constrain_vector(const Matrix A, const Vector b, const_quadrature *q_prev, const_quadrature *q_next)
+ConstrNodeData constrain_vector(const Matrix A, const Vector b, const_quadrature *q_prev, const_quadrature *q_next)
 {
    assert(A.cols == q_prev->params->dim+1);
    assert(q_prev->k == q_next->k);
 
    int k = q_prev->k;
    int dim = q_prev->params->dim;
-   constr_node_data *C_N_DATA_loc = (constr_node_data *)malloc( k* sizeof(constr_node_data) );
+   ConstrNodeData *cNodeDataArr = (ConstrNodeData *)malloc( k* sizeof(ConstrNodeData) );
 
    int *eqn = (int *)calloc( k, sizeof(int) );
    for(int i = 0; i < k; ++i)
-   {
-      C_N_DATA_loc[i].N_OR_W = NONE;
-      C_N_DATA_loc[i].eqn_id = -1;
-      C_N_DATA_loc[i].node_id = -1;
-      C_N_DATA_loc[i].flag = 0;
-      C_N_DATA_loc[i].t_min = 1.0;
-   }
+      cNodeDataArr[i] = ConstrNodeDataInit();
 
-   Vector z_prev_node = {0}, z_next_node = {0};
-   z_prev_node.len = dim+1; z_next_node.len = dim+1;
-   double z_prev_id[dim+1], z_next_id[dim+1];
-   z_prev_node.id = z_prev_id; z_next_node.id = z_next_id;
+   // allocate vectors on the stack
+   Vector z_prev_node = {0}; z_prev_node.len = dim+1; double z_prev_id[dim+1]; z_prev_node.id = z_prev_id;
+   Vector z_next_node = {0}; z_next_node.len = dim+1; double z_next_id[dim+1]; z_next_node.id = z_next_id;
 
    int i, count;
-   for(count = 0, i = 0; i < k; ++i)
-   {
-      z_prev_node.id[0] = q_prev->w[i];
-      z_next_node.id[0] = q_next->w[i];
-      for(int d = 0; d < dim; ++d)
-      {
-         z_prev_node.id[d+1] = q_prev->x[i*dim+d];
-         z_next_node.id[d+1] = q_next->x[i*dim+d];
-      }
+   ConstrNodeData cNodeData;
+   for(count = 0, i = 0; i < k; ++i) {
+      quadrature_get_elem(q_prev, i, z_prev_node);
+      quadrature_get_elem(q_next, i, z_next_node);
 
-      double lhs[A.rows];
-      for(int r = 0; r < A.rows; ++r)
-         lhs[r] = A.id[r][0] * q_next->w[i];
-
-      for(int r = 0; r < A.rows; ++r)
-         for(int c = 0; c < A.cols-1; ++c)
-            lhs[r] += A.id[r][c+1] * q_next->x[i*dim+c];
-
-      bool shorten = false;
-      for(int r = 0; r < A.rows; ++r)
-      {
-         if(lhs[r] > b.id[r])
+      if(q_next->inConstraintElem(q_next, i) == false) {
+         cNodeDataArr[i] = ShortenNode(A, b, z_prev_node, z_next_node);
+         if(cNodeDataArr[i].flag == 1) // store equations if succeeded
+            ++count;
+         else if(cNodeDataArr[i].flag == 0)
          {
-            shorten = true;
-            break;
+            ConstrNodeDataReset(&cNodeData);
+            goto FREERETURN;
          }
       }
-
-
-      if( shorten )
-      {
-         C_N_DATA_loc[i] = ShortenNode(A, b, z_prev_node, z_next_node);
-
-         if( C_N_DATA_loc[i].flag == 1 ) // store equations if succeeded
-            ++count;
-      }
    }
 
-
-   Vector t_vec = Vector_init(k);
+   Vector tVec = Vector_init(k);
    for(int i = 0; i < k; ++i)
-      t_vec.id[i] = C_N_DATA_loc[i].t_min;
+      tVec.id[i] = cNodeDataArr[i].tMin;
 
    int min_index = -1;
-   V_min v_min = {0};
-   constr_node_data C_N_DATA;
-
+   VMin vMin = {0};
    if(count > 0) // compute minimum t for mapping nodes to the boundary, defaults to 1
    {
-      v_min = VectorMin(t_vec);
-      min_index = v_min.min_index;
-      C_N_DATA.N_OR_W = C_N_DATA_loc[min_index].N_OR_W;
-      C_N_DATA.eqn_id = C_N_DATA_loc[min_index].eqn_id;
-      C_N_DATA.node_id = min_index;
-      C_N_DATA.t_min = v_min.min_value;
-      C_N_DATA.flag = 1;
-
-      assert(v_min.min_value < 1.0001  && v_min.min_value >= 0);
+      vMin = VectorMin(tVec);
+      min_index        = vMin.min_index;
+      cNodeData.N_OR_W = cNodeDataArr[min_index].N_OR_W;
+      cNodeData.eqnId  = cNodeDataArr[min_index].eqnId;
+      cNodeData.nodeId = min_index;
+      cNodeData.tMin   = vMin.min_value;
+      cNodeData.flag   = 1;
    }
    else
-   {
-      C_N_DATA.N_OR_W = NONE;
-      C_N_DATA.eqn_id = -1;
-      C_N_DATA.node_id = -1;
-      C_N_DATA.t_min = 1.0;
-      C_N_DATA.flag = 0;
+      ConstrNodeDataReset(&cNodeData);
 
-   }
-
-   free(C_N_DATA_loc);
+FREERETURN:
+   Vector_free(tVec);
+   free(cNodeDataArr);
    free(eqn);
-   Vector_free(t_vec);
 
-   return C_N_DATA;
+   return cNodeData;
 }
 
 
-static constr_node_data ShortenNode(const Matrix A, const Vector b_bound, const Vector z_old, const Vector z_new)
+static ConstrNodeData ShortenNode(const Matrix A, const Vector b_bound, const Vector z_old, const Vector z_new)
 {
    assert(A.rows == b_bound.len);
 
    int i = -1, j = -1;
    int out_count = -1;
-   int n_rows = A.rows;
-   int n_cols = A.cols;
-   int coord_num[n_rows];
-   constr_node_data cnd;
+   int nrows = A.rows;
+   int ncols = A.cols;
+   int bound_eqn[nrows];
+   ConstrNodeData cNodeData;
 
    // Allocate vectors on the stack
    Vector b_old, b_new, b_diff, t, dz;
-   b_old.len = n_rows; b_new.len = n_rows; b_diff.len = n_rows; t.len = n_rows; dz.len = n_cols;
-   double b_old_id[n_rows], b_new_id[n_rows], b_diff_id[n_rows], t_id[n_rows], dz_id[n_cols];
+   b_old.len = nrows; b_new.len = nrows; b_diff.len = nrows; t.len = nrows; dz.len = ncols;
+   double b_old_id[nrows], b_new_id[nrows], b_diff_id[nrows], t_id[nrows], dz_id[ncols];
    b_old.id = b_old_id; b_new.id = b_new_id; b_diff.id = b_diff_id; t.id = t_id; dz.id = dz_id;
-   memset(t.id, 0, n_rows*sizeof(double));
-   memset(b_old.id, 0, n_rows*sizeof(double));
-   memset(b_diff.id, 0, n_rows*sizeof(double));
-   memset(b_new.id, 0, n_rows*sizeof(double));
-   memset(coord_num, -1, n_rows*sizeof(int));
+   memset(t.id, 0, nrows*sizeof(double));
+   memset(b_old.id, 0, nrows*sizeof(double));
+   memset(b_diff.id, 0, nrows*sizeof(double));
+   memset(b_new.id, 0, nrows*sizeof(double));
+   memset(bound_eqn, -1, nrows*sizeof(int));
 
 
-   V_AddScale(1.0, z_new, -1.0, z_old, dz);
+   VectorAddScale(1.0, z_new, -1.0, z_old, dz);
+   MatVec(A, dz, b_diff);
    MatVec(A, z_new, b_new);
+   MatVec(A, z_old, b_old);
+   for (i = 0; i < nrows; ++i) {
+      if(b_old.id[i] > b_bound.id[i]) {
+         ConstrNodeDataReset(&cNodeData);
+         return cNodeData;
+      }
+   }
 
-   for (out_count = 0, i = 0; i < n_rows; ++i)
-   {
-      if (b_new.id[i] > b_bound.id[i])
-      {
-         for (j = 0; j < n_cols; ++j)
-            b_old.id[i] += A.id[i][j] * z_old.id[j];
-         for (j = 0; j < n_cols; ++j)
-            b_diff.id[i] += A.id[i][j] * dz.id[j];
-
+   for (out_count = 0, i = 0; i < nrows; ++i) {
+      if ( b_new.id[i] > b_bound.id[i] ) {
          t.id[i] = (b_bound.id[i] - b_old.id[i]) / b_diff.id[i];
-         if(t.id[i] > 0.0)
-         {
-            coord_num[out_count] = i;
-            ++out_count;
-         }
+         bound_eqn[out_count] = i;
+         ++out_count;
       }
    }
 
-   // exit if all nodes already satisfy constraints
-   if(out_count == 0)
+
+   if(out_count == 0)  // exit if all nodes already satisfy constraints
    {
-      cnd.eqn_id = -1;
-      cnd.node_id = -1;
-      cnd.flag = 0;
-      cnd.t_min = 1.0;
-      cnd.N_OR_W = NONE;
-      return cnd;
+      ConstrNodeDataReset(&cNodeData);
+      return cNodeData;
    }
-   else
+   else // compute minimum t
    {
-      // compute minimum t
-      int eqn_id = coord_num[0];
-      double t_min = t.id[coord_num[0]];
-      for(i = 1; i < out_count; ++i)
-      {
-         if (t.id[coord_num[i]] < t_min)
-         {
-            t_min = t.id[coord_num[i]];
-            t_min -= 1.0*POW(10, -15);
-            eqn_id = coord_num[i];
+
+      int eqnId = bound_eqn[0];
+      double tMin = t.id[bound_eqn[0]];
+      for(i = 1; i < out_count; ++i) {
+         if (t.id[bound_eqn[i]] < tMin) {
+            tMin = t.id[bound_eqn[i]];
+            eqnId = bound_eqn[i];
          }
       }
+      cNodeData.nodeId = 0;
+      cNodeData.eqnId  = eqnId;
+      cNodeData.tMin   = tMin;
+      cNodeData.flag    = 1;
+      if(cNodeData.eqnId == 0) cNodeData.N_OR_W = WEIGHT;
+      else if(cNodeData.eqnId > 0) cNodeData.N_OR_W = NODE;
 
-      cnd.node_id = 0;
-      cnd.eqn_id = eqn_id;
-      cnd.t_min = t_min;
-      cnd.flag = 1;
-      if(cnd.eqn_id == 0) cnd.N_OR_W = WEIGHT;
-      else if(cnd.eqn_id > 0) cnd.N_OR_W = NODE;
-
-      return cnd;
+      return cNodeData;
    }
 
 }

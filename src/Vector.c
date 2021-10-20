@@ -39,8 +39,6 @@ void Vector_bool_free(Vector_bool V)
 }
 
 
-
-
 Vector_int Vector_int_init(int n)
 {
    Vector_int V = {0};
@@ -64,7 +62,6 @@ void Vector_int_free(Vector_int V)
       V.id = NULL;
    }
 }
-
 
 
 Vector Vector_init(int n)
@@ -105,7 +102,7 @@ void Vector_Print(const Vector V)
    printf("\n");
 }
 
-double V_dot(const Vector a, const Vector b)
+double VDot(const Vector a, const Vector b)
 {
    assert(a.len == b.len && b.len > 0);
 
@@ -116,33 +113,30 @@ double V_dot(const Vector a, const Vector b)
    return dot;
 }
 
-void V_AddScale(double c1, const Vector V1, double c2, const Vector V2, Vector V3)
+void VectorAddScale(double c1, const Vector V1, double c2, const Vector V2, Vector V3)
 {
    assert(V1.len == V2.len  && V2.len == V3.len  && V3.len > 0);
    for(int i = 0; i < V3.len; ++i)
       V3.id[i] = c1*V1.id[i] + c2*V2.id[i];
 }
 
-
-V_min VectorMin(const Vector v)
+VMin VectorMin(const Vector v)
 {
-   V_min v_min = {0};
-   v_min.min_index = -1;
-   v_min.min_value = 1.0;
+   VMin vMin = {0};
+   vMin.min_index = -1;
+   vMin.min_value = 1.0;
 
-   for(int i = 0; i < v.len; ++i)
-   {
-         if(v.id[i] < v_min.min_value)
-         {
-            v_min.min_value = v.id[i];
-            v_min.min_index = i;
-         }
-
+   for(int i = 0; i < v.len; ++i)  {
+      if(v.id[i] < vMin.min_value) {
+         vMin.min_value = v.id[i];
+         vMin.min_index = i;
+      }
    }
-   return v_min;
+   return vMin;
 }
 
-void V_RemoveElement(int index, Vector *z)
+
+void VRemoveElement(int index, Vector *z)
 {
    assert(index <= z->len-1);
 
@@ -152,7 +146,7 @@ void V_RemoveElement(int index, Vector *z)
    Vector_realloc(z->len-1, z);
 }
 
-void V_int_RemoveElement(int index, Vector_int *z)
+void VIntRemoveElement(int index, Vector_int *z)
 {
    assert(index <= z->len-1);
 

@@ -11,8 +11,7 @@ extern "C" {
 #define PASSED true
 #define FAILED false
 
-void NodeElimination(const quadrature *quad_initial, quadrature *quad_final, const _DomainFuncs functions,
-                     const ConstraintFuncs constr, elim_history *history);
+void NodeElimination(const quadrature *quad_initial, quadrature *quad_final, elim_history *history);
 
 #ifdef __cplusplus
 }

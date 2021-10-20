@@ -8,13 +8,11 @@
 #include "ComputeDomain.h"
 #include "GENERAL_QUADRATURE.h"
 
-#include <stdlib.h>
 #include <stdio.h>
 
 void ImplementDomain(int deg, int *dims, DOMAIN_TYPE D)
 {
 
-#include "GENERAL_QUADRATURE.h"
 #ifdef QUAD_DEBUG_ON
    printf("DEBUG MODE ON\n\n");
 #else

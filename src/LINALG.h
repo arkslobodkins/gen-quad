@@ -17,6 +17,7 @@ void C_TO_FORTRAN(int M, int N, const double *A, double *B);
 void FORTRAN_TO_C(int M, int N, const double *A, double *B);
 void MATRIX_TO_FORTRAN(int M, int N, const Matrix A, double *B);
 void FORTRAN_TO_MATRIX(int M, int N, const double *A, Matrix B);
+void Transpose(int M, int N, const double *A, double *B);
 
 #ifdef __cplusplus
 }

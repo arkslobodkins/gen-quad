@@ -6,16 +6,12 @@
 #include "ComputeDomain.h"
 
 #include "AddDimension.h"
-#include "Phi.h"
+#include "BasisFunctions.h"
 #include "BasisIndices.h"
-#include "GaussTensor.h"
+#include "GeneralGaussTensor.h"
 #include "Gauss_Lib/Jacobi.h"
 #include "NodeElimination.h"
-#include "SetDomain.h"
-#include "SetParams.h"
-#include "SetConstraint.h"
 #include "Quadrature.h"
-#include "TestIntegral.h"
 #include "Output.h"
 #include "GENERAL_QUADRATURE.h"
 
@@ -25,6 +21,7 @@
 #include <stdbool.h>
 #include <math.h>
 
+int MAX_DIM;
 static void history_init(int k, elim_history *hist);
 static void history_realloc(int k, elim_history *hist);
 static void history_free(elim_history hist);
@@ -62,6 +59,8 @@ void ComputeCube(int degree, int dim)
    assert(degree > 0);
    assert(dim > 1);
 
+   MAX_DIM = dim;
+
    int deg = degree;
    int n_nodes_init = -1, n_nodes_next = -1;
 
@@ -72,11 +71,6 @@ void ComputeCube(int degree, int dim)
    // generate Gaussian nodes and weights in 1-d on [0, 1]
    double p1 = 0.0, p2 = 0.0;
    Jacobi(q_gauss->k, p1, p2, q_gauss->x, q_gauss->w);
-
-   ConstraintFuncs constr_funcs = {0};
-   _DomainFuncs dom_funcs = {0};
-   SetCube(&dom_funcs);
-   SetConstraintCube(&constr_funcs);
 
 
    quadrature *q_init = NULL, *q_new = NULL;
@@ -90,12 +84,12 @@ void ComputeCube(int degree, int dim)
          n_nodes_next = q_gauss->k * q_gauss->k;
          int d_init[1] = {d};
          q_init = quadrature_init(n_nodes_next, d, d_init, deg, CUBE);
-         quadSetFuncsAndConstr(q_init);
+         quad_set_funcs_and_constr(q_init);
          AddLineFirst( (const_quadrature *)q_gauss, (const_quadrature *)q_gauss, q_init );
 
          int d_new[1] = {d};
          q_new = quadrature_init(n_nodes_next, d, d_new, deg, CUBE);
-         quadSetFuncsAndConstr(q_new);
+         quad_set_funcs_and_constr(q_new);
          history_init(n_nodes_next, &hist_cube);
       }
       else if(d > 2) // set up parameters initial guess for d-dim CUBE
@@ -113,13 +107,13 @@ void ComputeCube(int degree, int dim)
       if(d == dim)
          n_nodes_init = q_init->k;
       // perform Node Elimination
-      NodeElimination(q_init, q_new, dom_funcs, constr_funcs, &hist_cube);
+      NodeElimination(q_init, q_new, &hist_cube);
 
    }
 
    // print results to results.txt and quadRule.txt
-   double res = TestIntegral( (const_quadrature *)q_new, dom_funcs );
-   Output(n_nodes_init, res, *q_new, dom_funcs, hist_cube);
+   double res = q_new->testIntegral( (const_quadrature *)q_new );
+   Output(n_nodes_init, res, *q_new, hist_cube);
    DumpCubatureRule(*q_new);
 
    quadrature_free(q_gauss);
@@ -146,6 +140,8 @@ void ComputeSimplex(int degree, int dim)
 {
    assert(degree > 0);
    assert(dim > 1);
+
+   MAX_DIM = dim;
 
    // test orthogonality of basis functions
    {
@@ -177,11 +173,6 @@ void ComputeSimplex(int degree, int dim)
    int deg = degree;
    int n_nodes_init = -1, n_nodes_next = -1;
 
-   _DomainFuncs dom_funcs = {0};
-   SetSimplex(&dom_funcs);
-   ConstraintFuncs constr_funcs = {0};
-   SetConstraintSimplex(&constr_funcs);
-
 
    quadrature *q_init = NULL, *q_new = NULL;
    elim_history hist_simplex = { -1, NULL, NULL, NULL };
@@ -206,10 +197,12 @@ void ComputeSimplex(int degree, int dim)
          n_nodes_next = q_gauss_1->k * q_gauss_2->k;
          int d_init[1] = {d};
          q_init = quadrature_init(n_nodes_next, d,  d_init, deg, SIMPLEX);
+         quad_set_funcs_and_constr(q_init);
          AddLineSimplex( (const_quadrature *)q_gauss_1, (const_quadrature *)q_gauss_2, q_init);
 
          int d_new[1] = {d};
          q_new = quadrature_init(n_nodes_next, d,  d_new, deg, SIMPLEX);
+         quad_set_funcs_and_constr(q_new);
          history_init(n_nodes_next, &hist_simplex);
          quadrature_free(q_gauss_1);
          quadrature_free(q_gauss_2);
@@ -238,13 +231,13 @@ void ComputeSimplex(int degree, int dim)
 
       if(d == dim)
          n_nodes_init = q_init->k;
-      NodeElimination(q_init, q_new, dom_funcs, constr_funcs, &hist_simplex);
+      NodeElimination(q_init, q_new, &hist_simplex);
 
    }
 
    // print results to results.txt and quadRule.txt
-   double res = TestIntegral( (const_quadrature *)q_new, dom_funcs );
-   Output(n_nodes_init, res, *q_new, dom_funcs, hist_simplex);
+   double res = q_new->testIntegral( (const_quadrature *)q_new );
+   Output(n_nodes_init, res, *q_new, hist_simplex);
    DumpCubatureRule(*q_new);
 
    quadrature_free(q_init);
@@ -272,6 +265,7 @@ void ComputeCubeSimplex(int degree, int dim1, int dim2)
    assert( (dim1 > 0) && (dim2 > 1) );
 
    int dim = dim1 + dim2;
+   MAX_DIM = dim;
    int p = degree;
    int dim_cube = -1, dim_simplex = -1;
    int dim_simplex_max = dim2;
@@ -279,8 +273,6 @@ void ComputeCubeSimplex(int degree, int dim1, int dim2)
 
 
    quadrature *q_init_s = NULL, *q_new_s = NULL, *q_init_cs = NULL, *q_new_cs = NULL;
-   _DomainFuncs dom_funcs = {0};
-   ConstraintFuncs constr_funcs = {0};
    elim_history hist = { -1, NULL, NULL, NULL };
 
 
@@ -294,8 +286,6 @@ void ComputeCubeSimplex(int degree, int dim1, int dim2)
       if(dim_cube == 0)
       {
 
-         SetSimplex(&dom_funcs);
-         SetConstraintSimplex(&constr_funcs);
 
          if(d == 2) // set up initial guess for 2-d SIMPLEX
          {
@@ -317,10 +307,12 @@ void ComputeCubeSimplex(int degree, int dim1, int dim2)
             int d_init[1] = {d};
             n_nodes_next = q_gauss_1->k * q_gauss_2->k;
             q_init_s = quadrature_init(n_nodes_next, d, d_init, p, SIMPLEX);
+            quad_set_funcs_and_constr(q_init_s);
             AddLineSimplex( (const_quadrature *)q_gauss_1, (const_quadrature *)q_gauss_2, q_init_s);
 
             int d_new[1] = {d};
             q_new_s = quadrature_init(n_nodes_next, d, d_new, p, SIMPLEX);
+            quad_set_funcs_and_constr(q_new_s);
             history_init(n_nodes_next, &hist);
             quadrature_free(q_gauss_1);
             quadrature_free(q_gauss_2);
@@ -347,14 +339,11 @@ void ComputeCubeSimplex(int degree, int dim1, int dim2)
             quadrature_free(q_gauss);
          }
          n_nodes_init = q_init_s->k;
-         NodeElimination(q_init_s, q_new_s, dom_funcs, constr_funcs, &hist);
+         NodeElimination(q_init_s, q_new_s, &hist);
 
       }
       else if(dim_cube > 0) // set up initial guess for CUBESIMPLEX
       {
-
-         SetCubeSimplex(&dom_funcs);
-         SetConstraintCubeSimplex(&constr_funcs);
 
          quadrature *q_gauss = NULL;
          int n = ceil( (p+1)/2.0 );
@@ -371,9 +360,11 @@ void ComputeCubeSimplex(int degree, int dim1, int dim2)
          {
             n_nodes_next = q_new_s->k * q_gauss->k;
             q_init_cs = quadrature_init(n_nodes_next, d, d_init, p, CUBESIMPLEX);
+            quad_set_funcs_and_constr(q_init_cs);
             AddLineFirst( (const_quadrature *)q_gauss, (const_quadrature *)q_new_s, q_init_cs );
 
             q_new_cs = quadrature_init(n_nodes_next, d, d_new, p, CUBESIMPLEX);
+            quad_set_funcs_and_constr(q_new_cs);
          }
          else if(dim_cube > 1)
          {
@@ -389,15 +380,15 @@ void ComputeCubeSimplex(int degree, int dim1, int dim2)
 
          if(d == dim)
             n_nodes_init = q_init_cs->k;
-         NodeElimination(q_init_cs, q_new_cs, dom_funcs, constr_funcs, &hist);
+         NodeElimination(q_init_cs, q_new_cs, &hist);
 
       }
 
    }
 
    // print results to results.txt and quadRule.txt
-   double res = TestIntegral( (const_quadrature *)q_new_cs, dom_funcs );
-   Output(n_nodes_init, res, *q_new_cs, dom_funcs, hist);
+   double res = q_new_cs->testIntegral( (const_quadrature *)q_new_cs );
+   Output(n_nodes_init, res, *q_new_cs, hist);
    DumpCubatureRule(*q_new_cs);
 
    quadrature_free(q_init_s);
@@ -427,6 +418,7 @@ void ComputeSimplexSimplex(int degree, int dim1, int dim2)
    assert( (dim1 > 1) && (dim2 > 1) );
 
    int dim = dim1 + dim2;
+   MAX_DIM = dim;
    int p = degree;
    int dim_s1 = -1;
    int  n_nodes_init_ss = -1, n_nodes_next_s1 = -1, n_nodes_next_s2 = -1, n_nodes_next_ss = -1;
@@ -445,10 +437,6 @@ void ComputeSimplexSimplex(int degree, int dim1, int dim2)
 
    quadrature *q_init_s1 = NULL, *q_init_ss = NULL, *q_new_s1 = NULL, *q_new_s2 = NULL, *q_new_ss = NULL;
    elim_history hist = { -1, NULL, NULL, NULL };
-   _DomainFuncs dom_funcs = {0};
-   ConstraintFuncs constr_funcs = {0};
-   SetSimplex(&dom_funcs);
-   SetConstraintSimplex(&constr_funcs);
    // implement recursive scheme for computing the initial guess and run Node Elimination algorithm
    for(int d = 2; d <= dim_s1_max; ++d)
    {
@@ -472,10 +460,12 @@ void ComputeSimplexSimplex(int degree, int dim1, int dim2)
 
          int d_init[1] = {dim_s1};
          q_init_s1 = quadrature_init(n_nodes_next_s1, dim_s1, d_init, p, SIMPLEX);
+         quad_set_funcs_and_constr(q_init_s1);
          AddLineSimplex( (const_quadrature *)q_gauss_1, (const_quadrature *)q_gauss_2, q_init_s1 );
 
          int d_new[1] = {dim_s1};
          q_new_s1 = quadrature_init(n_nodes_next_s1, dim_s1, d_new, p, SIMPLEX);
+         quad_set_funcs_and_constr(q_new_s1);
 
          history_init(n_nodes_next_s1, &hist);
          quadrature_free(q_gauss_1);
@@ -505,7 +495,7 @@ void ComputeSimplexSimplex(int degree, int dim1, int dim2)
       }
 
 
-      NodeElimination(q_init_s1, q_new_s1, dom_funcs, constr_funcs, &hist);
+      NodeElimination(q_init_s1, q_new_s1, &hist);
       n_nodes_next_s1 = q_new_s1->k;
 
       if(dim_s1 == dim_s2_max)
@@ -513,7 +503,8 @@ void ComputeSimplexSimplex(int degree, int dim1, int dim2)
          n_nodes_next_s2 = q_new_s1->k;
          int d_s2[1] = {d};
          q_new_s2 = quadrature_init(n_nodes_next_s2, d, d_s2, p, SIMPLEX);
-         quadrature_assign(*q_new_s1, *q_new_s2);
+         quad_set_funcs_and_constr(q_new_s2);
+         quadrature_assign(q_new_s1, q_new_s2);
       }
 
    }
@@ -522,10 +513,12 @@ void ComputeSimplexSimplex(int degree, int dim1, int dim2)
    n_nodes_next_ss = n_nodes_next_s1 * n_nodes_next_s2;
    int d_ss[2] = {dim_s1_max, dim_s2_max};
    q_init_ss = quadrature_init(n_nodes_next_ss, dim, d_ss, p, SIMPLEXSIMPLEX);
+   quad_set_funcs_and_constr(q_init_ss);
+
    q_new_ss = quadrature_init(n_nodes_next_ss, dim, d_ss, p, SIMPLEXSIMPLEX);
-   SetSimplexSimplex(&dom_funcs);
-   SetConstraintSimplexSimplex(&constr_funcs);
-   quadrature_assign(*q_new_ss, *q_init_ss);//??????????????
+   quad_set_funcs_and_constr(q_new_ss);
+
+   quadrature_assign(q_new_ss, q_init_ss);//??????????????
 
    // compute initial guess for SIMPLEXSIMPLEX
    for(int i = 0; i < n_nodes_next_s1; ++i)
@@ -544,19 +537,19 @@ void ComputeSimplexSimplex(int degree, int dim1, int dim2)
          }
       }
    }
-   WeightsTensor( (const_quadrature *)q_new_s1, (const_quadrature *)q_new_s2, q_init_ss );
-   quadrature_assign(*q_init_ss, *q_new_ss);
+   WeightsTensor2D( (const_quadrature *)q_new_s1, (const_quadrature *)q_new_s2, q_init_ss );
+   quadrature_assign(q_init_ss, q_new_ss);
    history_realloc(q_init_ss->k, &hist);
 
 
    // perform node elimination for SIMPLEXSIMPLEX
    n_nodes_init_ss = q_init_ss->k;
-   NodeElimination(q_init_ss, q_new_ss, dom_funcs, constr_funcs, &hist);
+   NodeElimination(q_init_ss, q_new_ss, &hist);
 
 
    // print results to results.txt and quadRule.txt
-   double res = TestIntegral( (const_quadrature *)q_new_ss, dom_funcs );
-   Output(n_nodes_init_ss, res, *q_new_ss, dom_funcs, hist);
+   double res = q_new_ss->testIntegral( (const_quadrature *)q_new_ss );
+   Output(n_nodes_init_ss, res, *q_new_ss, hist);
    DumpCubatureRule(*q_new_ss);
 
    quadrature_free(q_init_s1);

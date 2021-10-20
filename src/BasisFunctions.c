@@ -3,14 +3,11 @@
  * August 2021
  */
 
-#include "Phi.h"
+#include "BasisFunctions.h"
 
-#include "LegendrePoly.h"
 #include "BasisIndices.h"
-#include "JacobiPoly.h"
-#include "SetParams.h"
+#include "GeneralGaussTensor.h"
 #include "Gauss_Lib/Jacobi.h"
-#include "GeneralizedGaussTensor.h"
 #include "Quadrature.h"
 #include "AddDimension.h"
 #include "GENERAL_QUADRATURE.h"
@@ -39,6 +36,79 @@ typedef void(*PhiFunc)(const int_fast8_t *basis_id, const double *x, const quadP
 
 static int finite_difference_test(const int_fast8_t *basis_id, const double *x,
                                   const quadParams *params, const double *phi_prime, PhiFunc func);
+
+static void LegendrePoly(int order, double x, double *p, double *dp);
+static void LegendrePoly(int order, double x, double *p, double *dp)
+{
+   int k;
+   double fac1 = 0.0, fac2 = 0.0;
+
+   p[0] = 1.0;
+   dp[0] = 0.0;
+   p[1] = x;
+   dp[1] = 1.0;
+
+   for( k = 1; k < order-1; ++k)
+   {
+      fac1 = (2.0*k+1.0)/(k+1.0);
+      fac2 =k/(k+1.0);
+      p[k+1] = fac1*x*p[k] - fac2*p[k-1];
+      dp[k+1] = fac1*(p[k] + x*dp[k]) - fac2*dp[k-1];
+   }
+
+}
+
+
+#define SQUARE(x) ((x)*(x))
+#define ADD(x, y) (x)+(y)
+#define SUB(x, y) (x)-(y)
+
+static void JacobiPoly(int order, double x, double alpha, double beta, double *p);
+static void JacobiPolyPrime(int order, double x, double alpha, double beta, double *dp);
+static void JacobiPoly(int order, double x, double alpha, double beta, double *p)
+{
+   // compute constants to be used inside a for loop for improved performance
+   double fac1 = 0.0, fac2 = 0.0, fac3 = 0.0;
+   double alpha_sq = SQUARE(alpha);
+   double beta_sq = SQUARE(beta);
+   double a_plus_b = ADD(alpha, beta);
+   double a_plus_b_minus_1 = SUB(a_plus_b, 1.0);
+   double a_plus_b_minus_2 = SUB(a_plus_b, 2.0);
+   double alpha_sq_minus_beta_sq = SUB(alpha_sq, beta_sq);
+   double a_minus_1 = SUB(alpha, 1.0);
+   double b_minus_1 = SUB(beta, 1.0);
+
+   p[0] = 1.0;
+   if(order > 1)
+      p[1] = 0.5*(x-1.0) * (alpha+beta+2.0) + alpha+1.0;
+
+   for (int k = 1; k < order-1; ++k)
+   {
+      int k_plus_1 = k+1;
+      int two_n = 2*k_plus_1;
+      int two_n_plus_a_plus_b = ADD(two_n, a_plus_b);
+      fac1 = (2.0*k_plus_1+a_plus_b_minus_1) * (two_n_plus_a_plus_b * (two_n_plus_a_plus_b-2.0) * x + alpha_sq_minus_beta_sq);
+      fac2 = -2.0 * (k_plus_1+a_minus_1) * (k_plus_1+b_minus_1) * two_n_plus_a_plus_b;
+      fac3 = 1.0 / (two_n*(k_plus_1+a_plus_b) * (two_n+a_plus_b_minus_2));
+      p[k_plus_1] = fac3 * (fac1*p[k] + fac2*p[k-1]);
+   }
+
+}
+
+
+static void JacobiPolyPrime(int order, double x, double alpha, double beta, double *dp)
+{
+   double p[order];
+   double a_plus_b_plus1 = 1.0+alpha+beta;
+
+   JacobiPoly(order, x, alpha+1.0, beta+1.0, p);
+   dp[0] = 0.0;
+   dp[1] = 0.5 * (alpha+beta+2.0);
+
+   for(int k = 2; k < order; ++k)
+      dp[k] = 0.5*(a_plus_b_plus1+k) * p[k-1];
+
+}
 
 
 /* PhiCube
@@ -117,8 +187,8 @@ void PhiPrimeCube(const int_fast8_t *basis_id, const double* x, const quadParams
 #ifdef QUAD_DEBUG_ON
    PhiFunc phi_func = &PhiCube;
    int flag = finite_difference_test(basis_id, x, params, phiPrime, phi_func);
-   if(flag == 1)
-      PRINT_ERR((char *)"failed finite_difference_test", 1, __LINE__, __FILE__);
+//   if(flag == 1)
+//      PRINT_ERR("failed finite_difference_test", __LINE__, __FILE__);
 #endif
 
 }// end PhiPrimeCube
@@ -425,8 +495,8 @@ void PhiPrimeSimplex(const int_fast8_t *basis_id, const double *x, const quadPar
    int flag = finite_difference_test(basis_id, x, params, phiPrime, phi_func);
    if(flag == 1)
    {
-      PRINT_ERR((char *)"failed finite_difference_test", 1, __LINE__, __FILE__);
-      printf("%lf, %lf\n", x[0], x[1]);
+//      PRINT_ERR("failed finite_difference_test", __LINE__, __FILE__);
+//      printf("%lf, %lf\n", x[0], x[1]);
    }
    free(phi);
 #endif
@@ -514,7 +584,7 @@ void PhiPrimeCubeSimplex(const int_fast8_t *basis_id, const double *x, const qua
    PhiFunc phi_func = &PhiCubeSimplex;
    int flag = finite_difference_test(basis_id, x, params, phiPrime, phi_func);
    if(flag == 1)
-      PRINT_ERR((char *)"failed finite_difference_test", 1, __LINE__, __FILE__);
+      PRINT_ERR("failed finite_difference_test", __LINE__, __FILE__);
 #endif
 
 }// end PhiPrimeCubeSimplex
@@ -572,7 +642,7 @@ void PhiPrimeSimplexSimplex(const int_fast8_t *basis_id, const double *x, const 
    PhiFunc phi_func = &PhiSimplexSimplex;
    int flag = finite_difference_test(basis_id, x, params, phiPrime, phi_func);
    if(flag == 1)
-      PRINT_ERR((char *)"failed finite_difference_test", 1, __LINE__, __FILE__);
+      PRINT_ERR("failed finite_difference_test", __LINE__, __FILE__);
 #endif
 
    free(phiPrimeSimplex);
@@ -584,47 +654,47 @@ void PhiPrimeSimplexSimplex(const int_fast8_t *basis_id, const double *x, const 
  */
 void PhiCubeSimplexSimplex(const int_fast8_t *basis_id, const double *x, const quadParams *params, double *phi)
 {
-   assert(params->num_funs == BasisSize(params->dim, params->deg));
-   int k, d;
-   int p = params->deg;
-   int order = p+1;
-   int m = params->num_funs;
-   int dimSimplex1 = params->dims[0];
-   int dimSimplex2 = params->dims[1];
-   int dimCube = params->dims[2];
-   int twoDims = dimSimplex1+dimSimplex2;
-   int dim = params->dim;
-   quadParams *newParams = (quadParams *)malloc(sizeof(quadParams));
-   newParams->dims = (int *)malloc(3*sizeof(int));
-   SetParams(dim, 3, newParams->dims, p, newParams);
-   int size = BasisSize(dim, p); //number of basis functions in dim-dimensions
-   double phiSimplex[m];
-
-   for(k = 0; k < m; ++k)
-      phi[k] = 1.0;
-
-   PhiSimplexPolyhedralOne(basis_id, x, newParams, phiSimplex);
-   for(k = 0; k < m; ++k)
-      phi[k] *= phiSimplex[k];
-
-   PhiSimplexPolyhedralTwo(basis_id, x, newParams, phiSimplex);
-   for(k = 0; k < m; ++k)
-      phi[k] *= phiSimplex[k];
-
-   double* legendre = (double *)malloc(order*dimCube*sizeof(double));
-   double* dxlegendre = (double *)malloc(order*dimCube*sizeof(double));
-   for(d = 0; d < dimCube; ++d)
-      LegendrePoly(order, 2*x[twoDims+d]-1, &legendre[(d)*order], &dxlegendre[d*order]);
-
-   for(k = 0; k < m; ++k)
-   {
-      for(d = 0; d < dimCube; ++d)
-         phi[k] = phi[k] * legendre[basis_id[k*dim+twoDims+d]+order*d];
-   }
-   free(legendre);
-   free(dxlegendre);
-   free(newParams->dims);
-   free(newParams);
+//   assert(params->num_funs == BasisSize(params->dim, params->deg));
+//   int k, d;
+//   int p = params->deg;
+//   int order = p+1;
+//   int m = params->num_funs;
+//   int dimSimplex1 = params->dims[0];
+//   int dimSimplex2 = params->dims[1];
+//   int dimCube = params->dims[2];
+//   int twoDims = dimSimplex1+dimSimplex2;
+//   int dim = params->dim;
+//   quadParams *newParams = (quadParams *)malloc(sizeof(quadParams));
+//   newParams->dims = (int *)malloc(3*sizeof(int));
+//   SetParams(dim, 3, newParams->dims, p, newParams);
+//   int size = BasisSize(dim, p); //number of basis functions in dim-dimensions
+//   double phiSimplex[m];
+//
+//   for(k = 0; k < m; ++k)
+//      phi[k] = 1.0;
+//
+//   PhiSimplexPolyhedralOne(basis_id, x, newParams, phiSimplex);
+//   for(k = 0; k < m; ++k)
+//      phi[k] *= phiSimplex[k];
+//
+//   PhiSimplexPolyhedralTwo(basis_id, x, newParams, phiSimplex);
+//   for(k = 0; k < m; ++k)
+//      phi[k] *= phiSimplex[k];
+//
+//   double* legendre = (double *)malloc(order*dimCube*sizeof(double));
+//   double* dxlegendre = (double *)malloc(order*dimCube*sizeof(double));
+//   for(d = 0; d < dimCube; ++d)
+//      LegendrePoly(order, 2*x[twoDims+d]-1, &legendre[(d)*order], &dxlegendre[d*order]);
+//
+//   for(k = 0; k < m; ++k)
+//   {
+//      for(d = 0; d < dimCube; ++d)
+//         phi[k] = phi[k] * legendre[basis_id[k*dim+twoDims+d]+order*d];
+//   }
+//   free(legendre);
+//   free(dxlegendre);
+//   free(newParams->dims);
+//   free(newParams);
 }//end PhiCubeSimplexSimplex
 
 

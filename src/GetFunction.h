@@ -8,7 +8,7 @@
 extern "C" {
 #endif
 
-void GetFunction(const _DomainFuncs functions, const int_fast8_t *basis, const quadrature quad, double *f);
+void GetFunction(const int_fast8_t *basis, const quadrature quad, double *f);
 
 #ifdef __cplusplus
 }

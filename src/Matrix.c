@@ -69,7 +69,7 @@ void PrintMatrix(const Matrix M)
    for(int i = 0; i < M.rows; ++i)
    {
       for(int j = 0; j < M.cols; ++j)
-         printf("M[%i][%i] = %f \n", i, j, M.id[i][j]);
+         printf("M[%i][%i] = %.10e \n", i, j, M.id[i][j]);
 
       printf("\n");
    }

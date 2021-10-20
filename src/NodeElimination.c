@@ -8,8 +8,6 @@
 #include "GetJacobian.h"
 #include "InsertionSort.h"
 #include "LeastSquaresNewton.h"
-#include "TestIntegral.h"
-#include "InDomain.h"
 #include "Quadrature.h"
 #include "Matrix.h"
 #include "BasisIndices.h"
@@ -26,17 +24,11 @@
 #include <stdint.h>
 #include <string.h>
 
-static void free_memory(int_fast8_t *basis, quadrature *q_temp, quadrature *q_new,
-                        constraints *cons, ConstraintFuncs constrFuncs)
-{
-   free(basis);
-   quadrature_free(q_temp);
-   quadrature_free(q_new);
-   constrFuncs.constr_free(cons);
-
-}
-static bool TestQR(int numRows, int qiCols, const double *Q);
+extern int MAX_DIM;
+static void FreeMemory(int_fast8_t *basis, quadrature *q_temp, quadrature *q_new);
 static double TwoNorm(int n, double *z);
+static bool TestQR(int numRows, int qiCols, const double *Q);
+
 
 /* NodeElimination
  * Receives quadrature nodes, weights, domain and quadrature parameters and
@@ -44,76 +36,82 @@ static double TwoNorm(int n, double *z);
  * Newton's method. Subsequently, routine calls Newton's method to obtain quadrature rule
  * with fewer nodes. The procedure is repeated until no more nodes can be eliminated.
  */
-void NodeElimination(const quadrature *q_in, quadrature *q_final, const _DomainFuncs dom_funcs, const ConstraintFuncs constr_funcs, elim_history *hist)
+void NodeElimination(const quadrature *q_in, quadrature *q_final, elim_history *hist)
 {
+   if(q_in->setFuncsFlag != 1)
+      PRINT_ERR("Error in NodeElimination, functions and constraints for "
+                "q_in are not set", __LINE__, __FILE__);
+   if(q_final->setFuncsFlag != 1)
+      PRINT_ERR("Error in NodeElimination, functions and constraints for "
+                "q_final are not set",  __LINE__, __FILE__);
 
-   int n_initial = q_in->k;
-   int num_funs = q_in->params->num_funs;
-   int deg = q_in->params->deg;
-   int dim = q_in->params->dim;
-   int dim_plus_1 = dim+1;
-   int *dims = q_in->params->dims;
+   int n_initial       = q_in->k;
+   int num_funs        = q_in->params->num_funs;
+   int deg             = q_in->params->deg;
+   int dim             = q_in->params->dim;
+   int *dims           = q_in->params->dims;
    const DOMAIN_TYPE D = q_in->D;
-
-   double tol = QUAD_TOL; // 10^(-15);
-   double opt_factor = (double) num_funs/(dim_plus_1 * n_initial);
+   double tol          = QUAD_TOL; // 10^(-15);
 
    quadrature *q_temp = quadrature_init(n_initial, dim, dims, deg, D);
+   quad_set_funcs_and_constr(q_temp);
+   quadrature_assign(q_in, q_temp);
+
    quadrature *q_new = quadrature_init(n_initial, dim, dims, deg, D);
-   quadrature_assign(*q_in, *q_new);
-   quadrature_assign(*q_in, *q_temp);
+   quad_set_funcs_and_constr(q_new);
+   quadrature_assign(q_in, q_new);
 
    int_fast8_t *basis = (int_fast8_t *)malloc( (num_funs*dim)*sizeof(int_fast8_t) );
    BasisIndices(deg, dim, basis);
 
-   constraints *cons = constr_funcs.constr_init(dims);
-   constr_funcs.get_constr(cons);
-
    // test accuracy of the initial quadrature
    // if residual is too large, attempt to find quadrature using Newton's method.
    // if Newton's method finds a solution, proceed to Node elimination, otherwise return.
-   double res = TestIntegral( (const_quadrature *)q_in, dom_funcs );
-   PRINT(res, "initial residual in NodeElimination");
-   if( fabs(res) > tol )
+   double res = q_in->testIntegral( (const_quadrature *)q_in );
+   PrintDouble(res, "initial residual in NodeElimination");
+   if(fabs(res) > tol)
    {
-      int its = -1;
-      BOOLEAN CONSTR_FLAG = OFF;
-      bool SOL_FLAG = SOL_NOT_FOUND;
-      SOL_FLAG = LeastSquaresNewton(CONSTR_FLAG, basis, dom_funcs, cons, &its, q_temp);
-      if(SOL_FLAG == SOL_FOUND)
-      {
-         quadrature_assign(*q_temp, *q_new);
+      int its = -1; bool_enum CONSTR_FLAG = ON;
+      bool SOL_FLAG = LeastSquaresNewton(CONSTR_FLAG, basis, q_temp, &its);
+      if(SOL_FLAG == SOL_FOUND) {
+         quadrature_assign(q_temp, q_new);
       }
-      else if(SOL_FLAG == SOL_NOT_FOUND)
-      {
-         PRINT((char *)"Initial quadrature did not converge", 1);
-         free_memory(basis, q_temp, q_new, cons, constr_funcs);
+      else if(SOL_FLAG == SOL_NOT_FOUND) {
+         Print("Initial quadrature did not converge");
+         FreeMemory(basis, q_temp, q_new);
          return;
       }
    }
 
+
    // run Node Elimination Algorithm. Theoretical optimum is reached when
    // (dim+1)*k = num_funs, but a few more iterations are allowed in case under
    // exceptional circumstances theoretical optimum is surpassed.
-   int n_prev = -1;
-   int n_next = n_initial-1;
-   int n_cur = n_initial;
-   BOOLEAN REPEAT = OFF;
-   BOOLEAN CONSTR_FLAG = OFF;
-   bool SOL_FLAG = SOL_NOT_FOUND;
-   while( (dim_plus_1*n_cur >= num_funs)  && (n_cur >= 1) )
+   int n_prev                   = -1;
+   int n_cur                    = n_initial;
+   bool_enum CONSTR_FLAG        = OFF;
+   ATTR_UNUSED bool_enum REPEAT = OFF;
+   bool SOL_FLAG                = SOL_NOT_FOUND;
+   double n_opt                 = ceil(1.0*num_funs/(dim+1));
+   double efficiency            = n_opt/n_initial;
+   PrintElimInfo( dim, n_cur , n_opt, efficiency);
+   while( ((dim+1)*n_cur >= num_funs)  && (n_cur >= 1) )
    {
       if(n_cur <= 1) goto FREERETURN; // return if current number of nodes is 1
 
 #ifdef CONSTR_OPT
-      if(n_cur == n_prev)
-      {
-         CONSTR_FLAG = ON; REPEAT = ON;
+      if(dim == MAX_DIM) {
+         if(n_cur == n_prev) {
+            CONSTR_FLAG = ON; REPEAT = ON;
+         }
+         else {
+            CONSTR_FLAG = OFF; REPEAT = OFF;
+         }
       }
-      else
-      {
+      else {
          CONSTR_FLAG = OFF; REPEAT = OFF;
       }
+
 #endif
       n_prev = n_cur;
 
@@ -121,10 +119,10 @@ void NodeElimination(const quadrature *q_in, quadrature *q_final, const _DomainF
       quadrature_reinit(n_cur-1, q_temp);
       quadrature_reinit(n_cur, q_new);
 
-      int ncols = dim_plus_1 * n_cur, nrows = num_funs, weight_cols = n_cur;
+      int ncols = (dim+1) * n_cur, nrows = num_funs, weight_cols = n_cur;
 
       Vector JACOBIAN = Vector_init(nrows*ncols);
-      GetJacobian(dom_funcs, basis, *q_new, JACOBIAN.id);
+      GetJacobian(basis, *q_new, JACOBIAN.id);
 
       // construct QR factorization of transpose of the JACOBIAN
       int INFO = -1;
@@ -137,11 +135,11 @@ void NodeElimination(const quadrature *q_in, quadrature *q_final, const _DomainF
       dgeqr2_(&J_trans_rows, &J_trans_cols, JACOBIAN_TRANS_F->id, &LDJ, TAU, WORK, &INFO);
 
       // initialize i*(dim+1)th rows of Q. Entries that correspond to weight indices are initialized to 1
-      int nrows_Q = n_cur, ncols_Q = dim_plus_1 * n_cur;
+      int nrows_Q = n_cur, ncols_Q = (dim+1) * n_cur;
       Vector QWEIGHT = Vector_init(nrows_Q*ncols_Q);
       memset(QWEIGHT.id, 0, SIZE_DOUBLE(nrows_Q*ncols_Q));
       for(int i = 0; i < nrows_Q; ++i)
-         QWEIGHT.id[i*ncols + i*dim_plus_1] = 1.0;
+         QWEIGHT.id[i*ncols + i*(dim+1)] = 1.0;
 
       // obtain i*(dim+1)th rows of Q explicitly and store them in QWEIGHT
       // QWEIGHT has c memory layout, since transpose was applied from the left side
@@ -151,6 +149,8 @@ void NodeElimination(const quadrature *q_in, quadrature *q_final, const _DomainF
       double *workQR = (double *) malloc( SIZE_DOUBLE(lworkQR));
       dormqr_(&SIDE, &TRANS, &J_trans_rows, &weight_cols, &J_trans_cols, JACOBIAN_TRANS_F->id, &LDJ, TAU, QWEIGHT.id, &LDQ, workQR, &lworkQR, &INFO);
       COND_TEST_4;
+
+
 
       Vector Q2_W_ROW = Vector_init(ncols);
       int *arrayIndex = (int *) malloc( SIZE_INT(n_cur) );
@@ -182,18 +182,18 @@ void NodeElimination(const quadrature *q_in, quadrature *q_final, const _DomainF
          {
             if(i == j) continue;
 
-            Z.id[i][dim_plus_1*count] = q_new->w[j] - dZ.id[i][dim_plus_1*j];
+            Z.id[i][(dim+1)*count] = q_new->w[j] - dZ.id[i][(dim+1)*j];
             for(int d = 0; d < dim; ++d)
-               Z.id[i][count*dim_plus_1 + 1+d] = q_new->x[j*dim+d] - dZ.id[i][j*dim_plus_1 + d+1];
+               Z.id[i][count*(dim+1) + 1+d] = q_new->x[j*dim+d] - dZ.id[i][j*(dim+1) + d+1];
 
             ++count;
          }
 
          signif_ind[i] = TwoNorm(ncols, dZ.id[i]);
       }
-
-      for(int j = 0; j < n_cur; ++j) arrayIndex[j] = j;
       InsertionSort(n_cur, signif_ind, arrayIndex); // store indices of signif_ind in arrayIndex in ascending order
+//      for(int s = 0; s < n_cur; ++s)
+//         arrayIndex[s] = s;
 
       free(signif_ind);
       free(TAU);
@@ -210,19 +210,48 @@ void NodeElimination(const quadrature *q_in, quadrature *q_final, const _DomainF
          for(int j = 0; j < n_cur-1; ++j)
          {
             for(int d = 0; d < dim; ++d)
-               q_temp->x[j*dim+d] = Z.id[arrayIndex[i]][j*dim_plus_1 + d+1];
-            q_temp->w[j] = Z.id[arrayIndex[i]][j*dim_plus_1];
+               q_temp->x[j*dim+d] = Z.id[arrayIndex[i]][j*(dim+1) + d+1];
 
+            q_temp->w[j] = Z.id[arrayIndex[i]][j*(dim+1)];
          }
 
          int its = -1;
-         SOL_FLAG = LeastSquaresNewton(CONSTR_FLAG, basis, dom_funcs, cons, &its, q_temp);
+
+         ConstrNodeData cNodeData;
+         if(q_temp->inConstraint((const_quadrature *)q_temp) == false)
+         {
+            quadrature *q_prev = quadrature_init(n_cur-1, dim, dims, deg, D);
+            int count = 0;
+            for(int r = 0; r < n_cur; ++r)
+            {
+               if(r == arrayIndex[i]) continue;
+               q_prev->w[count] = q_new->w[r];
+               for(int d = 0; d < dim; ++d)
+                  q_prev->x[count*dim+d] = q_new->x[r*dim+d];
+               ++count;
+            }
+
+            cNodeData = constrain_vector(q_temp->FULL_A, q_temp->FULL_b,
+                  (const_quadrature *)q_prev, (const_quadrature *)q_temp);
+            Vector q_diff = Vector_init((n_cur-1)*(dim+1));
+            for(int l = 0; l < q_diff.len; ++l)
+               q_diff.id[l] = q_prev->z[l] - q_temp->z[l];
+            for(int l = 0; l < q_diff.len; ++l)
+               q_temp->z[l] = q_prev->z[l] + (-cNodeData.tMin + POW(10, -12))*q_diff.id[l];
+
+
+            Vector_free(q_diff);
+            quadrature_free(q_prev);
+         }
+
+
+         SOL_FLAG = LeastSquaresNewton(CONSTR_FLAG, basis, q_temp, &its);
          // store nodes and weights if Newton's method succeeded, update history
          if(SOL_FLAG == SOL_FOUND)
          {
             n_cur = q_temp->k;
             q_new->k = n_cur;
-            quadrature_assign(*q_temp, *q_new);
+            quadrature_assign(q_temp, q_new);
             hist->nodes_tot[hist->tot_elims] = n_cur;
             hist->success_node[hist->tot_elims] = i;
             hist->success_its[hist->tot_elims] = its;
@@ -235,21 +264,19 @@ void NodeElimination(const quadrature *q_in, quadrature *q_final, const _DomainF
       free(arrayIndex);
 
 
+
       if(SOL_FLAG == SOL_FOUND && CONSTR_FLAG == ON)
-         PRINT((char *)"Solution found using constraint", 0);
+         Print("Solution found using constraint");
 
       // end NodeElimination if repeat flag is off and all iterations were unsuccessful
       if (SOL_FLAG == SOL_FOUND)
-         PrintElimInfo( dim, n_cur , (int)ceil(1.0*num_funs/(dim+1.0)) );
+         PrintElimInfo(dim, n_cur, n_opt, n_opt/n_cur);
 #ifdef CONSTR_OPT
-      else if( (SOL_FLAG == SOL_NOT_FOUND) && (REPEAT != ON) )
-      {
-         PRINT((char *)"rerunning with constrained optimization", 3);
-      }
+      else if( (SOL_FLAG == SOL_NOT_FOUND) && (REPEAT != ON)  && (dim == MAX_DIM) )
+         Print("rerunning with constrained optimization");
 #endif
-      else if( SOL_FLAG == SOL_NOT_FOUND )
-      {
-         PRINT((char *)"Last iteration did not converge", 0);
+      else if( SOL_FLAG == SOL_NOT_FOUND ) {
+         Print("Last iteration did not converge");
          break;
       }
 
@@ -258,17 +285,20 @@ void NodeElimination(const quadrature *q_in, quadrature *q_final, const _DomainF
 FREERETURN:
    // save nodes and weights
    q_final->k = n_cur;
-   quadrature_assign(*q_new, *q_final);
-   res = TestIntegral( (const_quadrature *)q_final, dom_funcs );
-   PRINT(res, "Final residual in NodeElimination");
-   printf("\n");
+   quadrature_assign(q_new, q_final);
+   res = q_final->testIntegral( (const_quadrature *)q_final );
+   PrintDouble(res, "Final residual in NodeElimination"); printf("\n");
 
+   FreeMemory(basis, q_temp, q_new);
+}// end NodeElimination
+
+
+static void FreeMemory(int_fast8_t *basis, quadrature *q_temp, quadrature *q_new)
+{
    free(basis);
    quadrature_free(q_temp);
    quadrature_free(q_new);
-   constr_funcs.constr_free(cons);
-
-}// end NodeElimination
+}
 
 
 static double TwoNorm(int n, double *z)
@@ -284,31 +314,31 @@ static double TwoNorm(int n, double *z)
 }
 
 
-static bool TestQR(int ncols, int qi_cols, const double *Q)
+static bool TestQR(int rows, int cols, const double *Q)
 {
-   char t1 = 'T', t2 = 'N';
-   double alpha = 1.0, beta = 0.0;
 
    double max_non_diag = 0.0, max_diag = 1.0;
    double non_diag = 0.0, diag = 0.0;
    double temp = -1.0, tol = POW(10, -12);
 
-   double *I = (double *)malloc( qi_cols*qi_cols*sizeof(double) );
-   double *Q_COPY = (double *)malloc( ncols*qi_cols*sizeof(double) );
-   memcpy(Q_COPY, Q, SIZE_DOUBLE(ncols*qi_cols));
+   double *Q_COPY = (double *)calloc( rows*cols, sizeof(double) );
+   memcpy(Q_COPY, Q, SIZE_DOUBLE(rows*cols));
 
-   dgemm_(&t1, &t2, &qi_cols, &qi_cols, &ncols, &alpha, Q_COPY,
-          &ncols, Q_COPY, &ncols, &beta, I, &qi_cols);
+   double *Q_COPY_TRANS = (double *)calloc( cols*rows, sizeof(double) );
+   Transpose(cols, rows, Q_COPY, Q_COPY_TRANS);
 
-   for(int i = 0; i < qi_cols; ++i)
+   double *I = (double *)calloc( cols*cols, sizeof(double) );
+   MAT_MUL(cols, rows, cols, Q_COPY_TRANS, Q_COPY, I);
+
+   for(int i = 0; i < cols; ++i)
    {
-      temp = fabs(I[i*qi_cols+i]);
+      temp = fabs(I[i*cols+i]);
       diag = MAX(temp, diag);
 
-      for(int j = 0; j < qi_cols; ++j)
+      for(int j = 0; j < cols; ++j)
       {
          if(j == i) continue;
-         temp = fabs(I[i*qi_cols+j]);
+         temp = fabs(I[i*cols+j]);
          non_diag = MAX(temp, non_diag);
       }
 
@@ -316,6 +346,7 @@ static bool TestQR(int ncols, int qi_cols, const double *Q)
 
    free(I);
    free(Q_COPY);
+   free(Q_COPY_TRANS);
 
    double err1 = fabs(diag - max_diag);
    double err2 = fabs(non_diag - max_non_diag);

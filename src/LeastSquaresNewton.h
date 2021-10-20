@@ -15,11 +15,9 @@ extern "C" {
 #define CONSTRAINT_SUCCESS true
 #define CONSTRAINT_FAILURE false
 
+bool LeastSquaresNewton(const bool_enum FLAG_CONSTR, const int_fast8_t *basis, quadrature *q_orig, int *its);
 
-bool LeastSquaresNewton(const BOOLEAN FLAG_CONSTR, const int_fast8_t *basis,
-                        const _DomainFuncs funcs, const constraints *cons,
-                        int *its, quadrature *q_orig);
-
+ConstrNodeData constrain_vector(const Matrix A, const Vector b, const_quadrature *q_prev, const_quadrature *q_next);
 #ifdef __cplusplus
 }
 #endif

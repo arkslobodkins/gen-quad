@@ -20,7 +20,6 @@ void PrintNodes(const_quadrature *q, const char *name)
    printf("\n");
 }
 
-
 void PrintNodeAndWeight(int id, const_quadrature *q, const char *name)
 {
    int dim = q->params->dim;
@@ -32,7 +31,6 @@ void PrintNodeAndWeight(int id, const_quadrature *q, const char *name)
 
    printf("\n\n");
 }
-
 
 void PrintNodesAndWeights(const_quadrature *q, const char *name)
 {
@@ -51,88 +49,46 @@ void PrintNodesAndWeights(const_quadrature *q, const char *name)
    printf("\n");
 }
 
-
-void PrintNodeInfo(int iters, double error_norm, const _DomainFuncs dom_funcs, const_quadrature *q, const char *name)
+void PrintNodeInfo(int iters, double error_norm, const_quadrature *q, const char *name)
 {
    printf("quadrature info for %s during iteration of LSQ\n", name);
-   printf("iterations = %i error_norm = %.16le InDomain = %i\n\n", iters, error_norm, dom_funcs.inDomain(q));
+   printf("iterations = %i error_norm = %.16le InDomain = %i\n\n", iters, error_norm, q->inDomain(q));
 }
 
-
-void PrintElimInfo(int dim, int num_nodes, int opt)
+void PrintElimInfo(int dim, int num_nodes, int opt, double opt_factor)
 {
-   printf("dimension = %i, current number of nodes = %i, optimal = %i\n", dim, num_nodes, opt);
+   printf("dimension = %i, current number of nodes = %i, optimal = %i, efficiency = %f\n", dim, num_nodes, opt, opt_factor);
 
 }
 
-
-void print_int(int x, const char *name)
+void PrintInt(int x, const char *name)
 {
    printf("%s = %i\n", name, x);
 }
 
-void print_bool(bool x, const char *name)
+void PrintBool(bool x, const char *name)
 {
    printf("%s = %d\n", name, x);
 }
 
-void print_float(float x, const char *name)
+void PrintFloat(float x, const char *name)
 {
    printf("%s = %f\n", name, x);
 }
 
-void print_double(double x, const char *name)
+void PrintDouble(double x, const char *name)
 {
    printf("%s = %.16e\n", name, x);
 }
 
-void print_string(const char *x, int format)
+void Print(const char *x)
 {
-   if (format == 0)
-      printf("%s\n", x);
-   if (format == 1)
-      printf("\n%s\n\n", x);
-   if (format == 2)
-      printf("\n\n%s\n\n\n", x);
-   else if(format == 3)
-      printf("\n%s\n", x);
-   else if(format == 4)
-      printf("%s\n\n", x);
+   printf("%s\n", x);
 }
 
-
-void print_int_err(int x, const char *name, int line_num, const char *file_name)
+void PRINT_ERR(const char *x, int line_num, const char *file_name)
 {
-   fprintf(stderr, "error on line %d in %s, %s = %i\n", line_num, file_name, name, x);
-}
-
-void print_bool_err(bool x, const char *name, int line_num, const char *file_name)
-{
-   fprintf(stderr, "error on line %d in %s, %s = %d\n", line_num, file_name, name, x);
-}
-
-void print_float_err(float x, const char *name, int line_num, const char *file_name)
-{
-   fprintf(stderr, "error on line %d in %s, %s = %f\n", line_num, file_name, name, x);
-}
-
-void print_double_err(double x, const char *name, int line_num, const char *file_name)
-{
-   fprintf(stderr, "error on line %d in %s, %s = %.16e\n", line_num, file_name, name, x);
-}
-
-void print_string_err(const char *x, int format, int line_num, const char *file_name)
-{
-   if (format == 0)
-      fprintf(stderr, "error on line %d in %s, %s\n", line_num, file_name, x);
-   if (format == 1)
       fprintf(stderr, "\nerror on line %d in %s, %s\n\n", line_num, file_name, x);
-   if (format == 2)
-      fprintf(stderr, "\n\nerror on line %d in %s, %s\n\n\n", line_num, file_name, x);
-   else if(format == 3)
-      fprintf(stderr, "\nerror on line %d in %s, %s\n", line_num, file_name, x);
-   else if(format == 4)
-      fprintf(stderr, "error on line %d in %s, %s \n\n", line_num, file_name, x);
 }
 
 
