@@ -57,6 +57,9 @@ double V_TwoNorm(const Vector z);
 double V_InfNorm(const Vector z);
 bool V_CheckInfAndNan(const Vector z);
 
+
+int IntPower(int x, int power);
+
 #ifdef __cplusplus
 }
 #endif

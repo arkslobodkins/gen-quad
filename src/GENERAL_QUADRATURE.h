@@ -8,6 +8,7 @@
 #include <stdint.h>
 #include <math.h>
 
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -27,13 +28,17 @@ extern "C" {
 #define ONE 1
 #define TWO 2
 #define THREE 3
-#define POW(x,y) pow(x,y)
+#define QUAD_HUGE 10.0
+#define QUAD_TOL  POW_DOUBLE(10.0, -15)
+#define BOUND_TOL POW_DOUBLE(10.0, -12)
+#define POW_DOUBLE(x,y) pow(x,y)
+#define POW_INT(x,y)    IntPower(x,y)
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
+#define is_greater_than_zero(x) ((x) > 0 ? true : false)
 #define SQUARE(x) ((x)*(x))
 #define SQRT(x) sqrt((double)(x))
-#define QUAD_TOL POW(10, -15)
-#define ij2(i, j, num_cols) i*num_cols+j // maps indices from 2-d layout to memory
+#define ij2(i, j, num_cols) ((i)*(num_cols)+j) // maps indices from 2-d layout to memory
 #define size_int sizeof(int)
 #define size_double sizeof(double)
 #define SIZE_INT(x) ((x)*sizeof(int))
@@ -57,57 +62,60 @@ typedef struct
 
 typedef struct
 {
+   int            nodeId;
+   int            eqnId;
+   double         tMin;
+   bool_enum      ACTIVE;
    NODE_OR_WEIGHT N_OR_W;
-   int nodeId;
-   int eqnId;
-   double tMin;
-   int flag;
 } ConstrNodeData;
 
 
 typedef struct
 {
-   bool_enum ACTIVE_CONSTRAINTS;
+   int            boundaryNodeId;
+   int            eqnId;
+   double         tMin;
+   bool_enum      ACTIVE;
    NODE_OR_WEIGHT N_OR_W;
-   int boundaryNodeId;
-   int  eqnId;
 } ConstrVectData;
 
 
 typedef struct quadrature quadrature;
 typedef struct const_quadrature const_quadrature;
 
-typedef void(*EvalBasis)(int *dims, int deg, const int_fast8_t *basis, const double *x, double *phi);
-typedef void(*EvalBasisDer)(int *dims, int deg, const int_fast8_t *basis, const double *x, double *phiPrime);
+typedef void   (*EvalBasis)       (int *dims, int deg, const int_fast8_t *basis, const double *x, double *phi);
+typedef void   (*EvalBasisDer)    (int *dims, int deg, const int_fast8_t *basis, const double *x, double *phiPrime);
 typedef void(*BasisIntegrals)(int *dims, int deg, double *integrals);
 typedef bool(*InDomain)(const_quadrature *quad);
 typedef bool(*InDomainElem)(const_quadrature *quad, int elem);
-typedef bool (*InConstraint)(const_quadrature *q);
-typedef bool (*InConstraintElem)(const_quadrature *quad, int elem);
-typedef bool (*PosWeights)(const_quadrature *q);
-typedef bool (*PosWeightsElem)(const_quadrature *q, int elem);
-typedef bool (*OnTheBoundary)(const_quadrature *q, int elem);
-typedef bool (*EqnOnTheBoundary)(const_quadrature *q, int elem, int eqn);
+typedef bool(*InConstraint)(const_quadrature *q);
+typedef bool(*InConstraintElem)(const_quadrature *quad, int elem);
+typedef bool(*PosWeights)(const_quadrature *q);
+typedef bool(*PosWeightsElem)(const_quadrature *q, int elem);
+typedef bool(*OnTheBoundary)(const_quadrature *q, int elem);
+typedef bool(*EqnOnTheBoundary)(const_quadrature *q, int elem, int eqn);
 typedef double(*TestIntegral)(const_quadrature *q);
+typedef void(*SetFuncs)(quadrature *q);
+typedef void(*SetParams)(int dim, int num_dims, int *dims, int deg, quadrature *q);
+typedef void(*FreePtr)(quadrature *quad);
 
 typedef struct constraints constraints;
 typedef constraints*(*constraints_init)(int *dims);
 typedef void (*constraints_realloc)(constraints *cons, int *dims);
-typedef void (*get_constraints)(constraints *cons);
-typedef void (*constraints_free)(constraints *cons);
+typedef void (*get_constraints)    (constraints *cons);
+typedef void (*constraints_free)   (constraints *cons);
 
-typedef void(*SetFuncs)(quadrature *q);
-typedef void (*SetParams)(int dim, int num_dims, int *dims, int deg, quadrature *q);
 
 
 struct constraints
 {
    int dim;
    int *dims;
-   Matrix M;
+   RMatrix M;
    Vector b;
+   RMatrix M_FULL;
+   Vector b_FULL;
 };
-
 
 
 struct quadrature
@@ -122,30 +130,21 @@ struct quadrature
    int k;
    double *w;
    double *x;
-   double *z;
-   constraints *cons;
-   Matrix FULL_A;
-   Vector FULL_b;
+   Vector z;
+   constraints *constr;
 
+   int setFuncsConstrFlag;
    SetFuncs setFuncs; // Function that sets up all domain functions to point to appropriate domain
-   int setFuncsFlag;
 
-   EvalBasis evalBasis;
-   EvalBasisDer evalBasisDer;
-   BasisIntegrals basisIntegrals;
-   InDomain inDomain;
-   InDomainElem inDomainElem;
-   InConstraint inConstraint;
-   InConstraintElem inConstraintElem;
-   PosWeights posWeights;
-   PosWeightsElem posWeightsElem;
-   OnTheBoundary onTheBoundary;
-   EqnOnTheBoundary eqnOnTheBoundary;
-   TestIntegral testIntegral;
-   constraints_init constr_init;
+   EvalBasis           evalBasis;
+   EvalBasisDer        evalBasisDer;
+   BasisIntegrals      basisIntegrals;
+   constraints_init    constr_init;
    constraints_realloc constr_realloc;
-   get_constraints get_constr;
-   constraints_free constr_free;
+   get_constraints     get_constr;
+   constraints_free    constr_free;
+
+   FreePtr free_ptr;
 };
 
 struct const_quadrature
@@ -160,32 +159,38 @@ struct const_quadrature
    const int k;
    const double *w;
    const double *x;
-   const double *z;
-   const constraints *cons;
-   const Matrix FULL_A;
-   const Vector FULL_b;
+   const Vector z;
+   const constraints *constr;
 
+   int            setFuncsConstrFlag;
    const SetFuncs setFuncs; // Function that sets up all domain functions to point to appropriate domain
-   int setFuncsFlag;
 
-   const EvalBasis evalBasis;
-   const EvalBasisDer evalBasisDer;
-   const BasisIntegrals basisIntegrals;
-   const InDomain inDomain;
-   const InDomainElem inDomainElem;
-   const InConstraint inConstraint;
-   const InConstraintElem inConstraintElem;
-   const PosWeights posWeights;
-   const PosWeightsElem posWeightsElem;
-   const OnTheBoundary onTheBoundary;
-   const EqnOnTheBoundary eqnOnTheBoundary;
-   const TestIntegral testIntegral;
-   const constraints_init constr_init;
+   const EvalBasis           evalBasis;
+   const EvalBasisDer        evalBasisDer;
+   const BasisIntegrals      basisIntegrals;
+   const constraints_init    constr_init;
    const constraints_realloc constr_realloc;
-   const get_constraints get_constr;
-   const constraints_free constr_free;
+   const get_constraints     get_constr;
+   const constraints_free    constr_free;
+
+   const FreePtr free_ptr;
 };
 
+#define Q_SUCCESS       0
+#define NULL_VAL       -1
+#define ALLOC_FAIL     -2
+#define ILL_INPUT      -3
+#define INF_VAL        -4
+#define NAN_VAL        -5
+#define QUAD_HUGE_ERR  -6
+#define LAPACK_ERR     -7
+
+#define STR_NULL_VAL     "Pointer is NULL"
+#define STR_ALLOC_FAIL   "Memory allocation failed"
+#define STR_ILL_INPUT    "Encountered illegal input to the function"
+#define STR_INF_VAL      "Encountered infinity"
+#define STR_NAN_VAL      "Encountered not a number"
+#define STR_LAPACK_ERROR "LAPACK routine did not return success"
 
 #ifdef __cplusplus
 }

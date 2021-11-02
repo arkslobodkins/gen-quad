@@ -12,12 +12,16 @@ extern "C" {
 #define SOL_FOUND true
 #define SOL_NOT_FOUND false
 
-#define CONSTRAINT_SUCCESS true
-#define CONSTRAINT_FAILURE false
+#define CONSTR_SUCCESS  0
+#define CONSTR_FAILURE -1
 
 bool LeastSquaresNewton(const bool_enum FLAG_CONSTR, const int_fast8_t *basis, quadrature *q_orig, int *its);
 
-ConstrNodeData constrain_vector(const Matrix A, const Vector b, const_quadrature *q_prev, const_quadrature *q_next);
+#ifdef CONSTR_OPT
+ConstrVectData ConstrVectDataInit();
+int ConstrainedOptimization(const_quadrature *q_prev, quadrature *q_next, ConstrVectData *cVecData);
+#endif
+
 #ifdef __cplusplus
 }
 #endif

@@ -7,7 +7,7 @@
 extern "C" {
 #endif
 
-void ImplementDomain(int deg, int *dims, DOMAIN_TYPE D);
+void QuadDriver(int argc, char **argv);
 
 #ifdef __cplusplus
 }

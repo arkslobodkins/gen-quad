@@ -7,11 +7,11 @@
 extern "C" {
 #endif
 
-void IntegralsCube(int *dims, int deg, double *integrals);
-void IntegralsSimplex(int *dims, int deg, double *integrals);
-void IntegralsCubeSimplex(int *dims, int deg, double *integrals);
-void IntegralsSimplexSimplex(int *dims, int deg, double *integrals);
-void IntegralsCubeSimplexSimplex(int *dims, int deg, double *integrals);
+void BasisIntegralsCube(int *dims, int deg, double *integrals);
+void BasisIntegralsSimplex(int *dims, int deg, double *integrals);
+void BasisIntegralsCubeSimplex(int *dims, int deg, double *integrals);
+void BasisIntegralsSimplexSimplex(int *dims, int deg, double *integrals);
+void BasisIntegralsCubeSimplexSimplex(int *dims, int deg, double *integrals);
 
 #ifdef __cplusplus
 }

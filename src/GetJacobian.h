@@ -8,7 +8,7 @@
 extern "C" {
 #endif
 
-void GetJacobian(const int_fast8_t *basis, quadrature *q, double *jacobian);
+void GetJacobian(const int_fast8_t *basis, quadrature *q, CMatrix);
 
 #ifdef __cplusplus
 }

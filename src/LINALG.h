@@ -13,10 +13,6 @@ void dormqr_(char *, char *, int *, int *, int *, double *, int *, double *, dou
 void dgels_(char *, int *, int *, int *, double *, int *, double*, int *, double *, int *, int *);
 
 void MAT_MUL(int M, int K, int N, double *MAT1, double *MAT2, double *MAT3);
-void C_TO_FORTRAN(int M, int N, const double *A, double *B);
-void FORTRAN_TO_C(int M, int N, const double *A, double *B);
-void MATRIX_TO_FORTRAN(int M, int N, const Matrix A, double *B);
-void FORTRAN_TO_MATRIX(int M, int N, const double *A, Matrix B);
 void Transpose(int M, int N, const double *A, double *B);
 
 #ifdef __cplusplus

@@ -32,13 +32,13 @@ void AddLineFirst(const_quadrature *q_gauss, const_quadrature *quad_prev, quadra
       {
          int ind = i*dim*n_prev + j*dim;
          int jxdim_minus_1 = j*(dim-1);
-         x_new[ind] = q_gauss->x[i];
 
+         x_new[ind] = q_gauss->x[i];
          for(int d = 1; d < dim; ++d)
             x_new[ind+d] = x_prev[jxdim_minus_1+d-1];
       }
    }
-   WeightsTensor2D((const_quadrature *)q_gauss, quad_prev, quad_new);
+   WeightsTensor2D( (const_quadrature *)q_gauss, quad_prev, quad_new );
 }
 
 
@@ -66,10 +66,10 @@ void AddLineSimplex(const_quadrature *q_gauss, const_quadrature *quad_prev, quad
       for(int j = 0; j < n_prev; ++j)
       {
          int ind = i*dim*n_prev + j*dim;
+
          x_new[ind] = q_gauss->x[i];
          for(int d = 1; d < dim; ++d)
             x_new[ind+d] = x_prev[j*(dim-1)+d-1];
-
       }
    }
 
@@ -81,7 +81,7 @@ void AddLineSimplex(const_quadrature *q_gauss, const_quadrature *quad_prev, quad
       for(int d = 1; d < dim; ++d)
       {
          x_new[ind+d] *= x_new[ind];
-         w_new[i] *= x_new[ind];
+         w_new[i]     *= x_new[ind];
       }
    }
 
@@ -92,8 +92,8 @@ void AddLineSimplex(const_quadrature *q_gauss, const_quadrature *quad_prev, quad
 // simplex of dimension dim using generalized Duffy transformation.
 void GeneralDuffy(quadrature *quad)
 {
-   int dim = quad->dim;
-   int N = quad->k;
+   int dim   = quad->dim;
+   int N     = quad->k;
    double *x = quad->x;
    double *w = quad->w;
 
@@ -103,7 +103,7 @@ void GeneralDuffy(quadrature *quad)
       for(int d = 1; d < dim; ++d)
       {
          x[ind+d] *= x[ind+d-1];
-         w[i] *= x[ind+d-1];
+         w[i]     *= x[ind+d-1];
       }
    }
 

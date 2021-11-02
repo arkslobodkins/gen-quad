@@ -1,0 +1,479 @@
+degree of precision = 12
+number of basis functions = 455
+dimension = 3
+initial number of nodes = 264
+final number of nodes = 146
+final residual = 0.0000000000000000
+
+total number of nodes[0] = 263
+success_node[0] = 0
+Converged in 1 iterations
+
+total number of nodes[1] = 262
+success_node[1] = 0
+Converged in 1 iterations
+
+total number of nodes[2] = 261
+success_node[2] = 0
+Converged in 1 iterations
+
+total number of nodes[3] = 260
+success_node[3] = 0
+Converged in 2 iterations
+
+total number of nodes[4] = 259
+success_node[4] = 0
+Converged in 1 iterations
+
+total number of nodes[5] = 258
+success_node[5] = 0
+Converged in 2 iterations
+
+total number of nodes[6] = 257
+success_node[6] = 0
+Converged in 2 iterations
+
+total number of nodes[7] = 256
+success_node[7] = 0
+Converged in 2 iterations
+
+total number of nodes[8] = 255
+success_node[8] = 0
+Converged in 2 iterations
+
+total number of nodes[9] = 254
+success_node[9] = 0
+Converged in 2 iterations
+
+total number of nodes[10] = 253
+success_node[10] = 0
+Converged in 2 iterations
+
+total number of nodes[11] = 252
+success_node[11] = 0
+Converged in 2 iterations
+
+total number of nodes[12] = 251
+success_node[12] = 0
+Converged in 2 iterations
+
+total number of nodes[13] = 250
+success_node[13] = 0
+Converged in 2 iterations
+
+total number of nodes[14] = 249
+success_node[14] = 0
+Converged in 2 iterations
+
+total number of nodes[15] = 248
+success_node[15] = 0
+Converged in 2 iterations
+
+total number of nodes[16] = 247
+success_node[16] = 0
+Converged in 2 iterations
+
+total number of nodes[17] = 246
+success_node[17] = 0
+Converged in 2 iterations
+
+total number of nodes[18] = 245
+success_node[18] = 0
+Converged in 2 iterations
+
+total number of nodes[19] = 244
+success_node[19] = 0
+Converged in 2 iterations
+
+total number of nodes[20] = 243
+success_node[20] = 0
+Converged in 2 iterations
+
+total number of nodes[21] = 242
+success_node[21] = 0
+Converged in 2 iterations
+
+total number of nodes[22] = 241
+success_node[22] = 0
+Converged in 2 iterations
+
+total number of nodes[23] = 240
+success_node[23] = 0
+Converged in 1 iterations
+
+total number of nodes[24] = 239
+success_node[24] = 0
+Converged in 2 iterations
+
+total number of nodes[25] = 238
+success_node[25] = 0
+Converged in 2 iterations
+
+total number of nodes[26] = 237
+success_node[26] = 0
+Converged in 2 iterations
+
+total number of nodes[27] = 236
+success_node[27] = 0
+Converged in 2 iterations
+
+total number of nodes[28] = 235
+success_node[28] = 0
+Converged in 2 iterations
+
+total number of nodes[29] = 234
+success_node[29] = 0
+Converged in 2 iterations
+
+total number of nodes[30] = 233
+success_node[30] = 0
+Converged in 2 iterations
+
+total number of nodes[31] = 232
+success_node[31] = 2
+Converged in 2 iterations
+
+total number of nodes[32] = 231
+success_node[32] = 1
+Converged in 2 iterations
+
+total number of nodes[33] = 230
+success_node[33] = 2
+Converged in 2 iterations
+
+total number of nodes[34] = 229
+success_node[34] = 2
+Converged in 2 iterations
+
+total number of nodes[35] = 228
+success_node[35] = 2
+Converged in 2 iterations
+
+total number of nodes[36] = 227
+success_node[36] = 1
+Converged in 2 iterations
+
+total number of nodes[37] = 226
+success_node[37] = 5
+Converged in 2 iterations
+
+total number of nodes[38] = 225
+success_node[38] = 2
+Converged in 2 iterations
+
+total number of nodes[39] = 224
+success_node[39] = 5
+Converged in 2 iterations
+
+total number of nodes[40] = 223
+success_node[40] = 5
+Converged in 2 iterations
+
+total number of nodes[41] = 222
+success_node[41] = 2
+Converged in 2 iterations
+
+total number of nodes[42] = 221
+success_node[42] = 8
+Converged in 3 iterations
+
+total number of nodes[43] = 220
+success_node[43] = 0
+Converged in 2 iterations
+
+total number of nodes[44] = 219
+success_node[44] = 3
+Converged in 2 iterations
+
+total number of nodes[45] = 218
+success_node[45] = 2
+Converged in 3 iterations
+
+total number of nodes[46] = 217
+success_node[46] = 1
+Converged in 2 iterations
+
+total number of nodes[47] = 216
+success_node[47] = 0
+Converged in 4 iterations
+
+total number of nodes[48] = 215
+success_node[48] = 9
+Converged in 3 iterations
+
+total number of nodes[49] = 214
+success_node[49] = 0
+Converged in 3 iterations
+
+total number of nodes[50] = 213
+success_node[50] = 2
+Converged in 4 iterations
+
+total number of nodes[51] = 212
+success_node[51] = 0
+Converged in 3 iterations
+
+total number of nodes[52] = 211
+success_node[52] = 1
+Converged in 3 iterations
+
+total number of nodes[53] = 210
+success_node[53] = 0
+Converged in 3 iterations
+
+total number of nodes[54] = 209
+success_node[54] = 1
+Converged in 3 iterations
+
+total number of nodes[55] = 208
+success_node[55] = 2
+Converged in 4 iterations
+
+total number of nodes[56] = 207
+success_node[56] = 8
+Converged in 4 iterations
+
+total number of nodes[57] = 206
+success_node[57] = 1
+Converged in 3 iterations
+
+total number of nodes[58] = 205
+success_node[58] = 1
+Converged in 4 iterations
+
+total number of nodes[59] = 204
+success_node[59] = 59
+Converged in 3 iterations
+
+total number of nodes[60] = 203
+success_node[60] = 9
+Converged in 5 iterations
+
+total number of nodes[61] = 202
+success_node[61] = 42
+Converged in 3 iterations
+
+total number of nodes[62] = 201
+success_node[62] = 103
+Converged in 4 iterations
+
+total number of nodes[63] = 200
+success_node[63] = 56
+Converged in 4 iterations
+
+total number of nodes[64] = 199
+success_node[64] = 18
+Converged in 4 iterations
+
+total number of nodes[65] = 198
+success_node[65] = 22
+Converged in 4 iterations
+
+total number of nodes[66] = 197
+success_node[66] = 95
+Converged in 4 iterations
+
+total number of nodes[67] = 196
+success_node[67] = 1
+Converged in 4 iterations
+
+total number of nodes[68] = 195
+success_node[68] = 15
+Converged in 3 iterations
+
+total number of nodes[69] = 194
+success_node[69] = 3
+Converged in 4 iterations
+
+total number of nodes[70] = 193
+success_node[70] = 1
+Converged in 3 iterations
+
+total number of nodes[71] = 192
+success_node[71] = 6
+Converged in 5 iterations
+
+total number of nodes[72] = 191
+success_node[72] = 27
+Converged in 3 iterations
+
+total number of nodes[73] = 190
+success_node[73] = 60
+Converged in 6 iterations
+
+total number of nodes[74] = 189
+success_node[74] = 72
+Converged in 4 iterations
+
+total number of nodes[75] = 188
+success_node[75] = 84
+Converged in 4 iterations
+
+total number of nodes[76] = 187
+success_node[76] = 10
+Converged in 5 iterations
+
+total number of nodes[77] = 186
+success_node[77] = 10
+Converged in 5 iterations
+
+total number of nodes[78] = 185
+success_node[78] = 13
+Converged in 3 iterations
+
+total number of nodes[79] = 184
+success_node[79] = 45
+Converged in 3 iterations
+
+total number of nodes[80] = 183
+success_node[80] = 70
+Converged in 3 iterations
+
+total number of nodes[81] = 182
+success_node[81] = 24
+Converged in 5 iterations
+
+total number of nodes[82] = 181
+success_node[82] = 69
+Converged in 5 iterations
+
+total number of nodes[83] = 180
+success_node[83] = 82
+Converged in 4 iterations
+
+total number of nodes[84] = 179
+success_node[84] = 37
+Converged in 5 iterations
+
+total number of nodes[85] = 178
+success_node[85] = 0
+Converged in 5 iterations
+
+total number of nodes[86] = 177
+success_node[86] = 32
+Converged in 5 iterations
+
+total number of nodes[87] = 176
+success_node[87] = 46
+Converged in 5 iterations
+
+total number of nodes[88] = 175
+success_node[88] = 73
+Converged in 5 iterations
+
+total number of nodes[89] = 174
+success_node[89] = 87
+Converged in 6 iterations
+
+total number of nodes[90] = 173
+success_node[90] = 78
+Converged in 4 iterations
+
+total number of nodes[91] = 172
+success_node[91] = 110
+Converged in 5 iterations
+
+total number of nodes[92] = 171
+success_node[92] = 104
+Converged in 5 iterations
+
+total number of nodes[93] = 170
+success_node[93] = 30
+Converged in 6 iterations
+
+total number of nodes[94] = 169
+success_node[94] = 11
+Converged in 6 iterations
+
+total number of nodes[95] = 168
+success_node[95] = 5
+Converged in 5 iterations
+
+total number of nodes[96] = 167
+success_node[96] = 24
+Converged in 3 iterations
+
+total number of nodes[97] = 166
+success_node[97] = 90
+Converged in 4 iterations
+
+total number of nodes[98] = 165
+success_node[98] = 120
+Converged in 4 iterations
+
+total number of nodes[99] = 164
+success_node[99] = 117
+Converged in 5 iterations
+
+total number of nodes[100] = 163
+success_node[100] = 78
+Converged in 6 iterations
+
+total number of nodes[101] = 162
+success_node[101] = 83
+Converged in 5 iterations
+
+total number of nodes[102] = 161
+success_node[102] = 92
+Converged in 4 iterations
+
+total number of nodes[103] = 160
+success_node[103] = 114
+Converged in 6 iterations
+
+total number of nodes[104] = 159
+success_node[104] = 100
+Converged in 4 iterations
+
+total number of nodes[105] = 158
+success_node[105] = 115
+Converged in 6 iterations
+
+total number of nodes[106] = 157
+success_node[106] = 104
+Converged in 5 iterations
+
+total number of nodes[107] = 156
+success_node[107] = 54
+Converged in 5 iterations
+
+total number of nodes[108] = 155
+success_node[108] = 42
+Converged in 6 iterations
+
+total number of nodes[109] = 154
+success_node[109] = 106
+Converged in 4 iterations
+
+total number of nodes[110] = 153
+success_node[110] = 126
+Converged in 6 iterations
+
+total number of nodes[111] = 152
+success_node[111] = 129
+Converged in 5 iterations
+
+total number of nodes[112] = 151
+success_node[112] = 138
+Converged in 5 iterations
+
+total number of nodes[113] = 150
+success_node[113] = 95
+Converged in 4 iterations
+
+total number of nodes[114] = 149
+success_node[114] = 124
+Converged in 5 iterations
+
+total number of nodes[115] = 148
+success_node[115] = 123
+Converged in 5 iterations
+
+total number of nodes[116] = 147
+success_node[116] = 128
+Converged in 5 iterations
+
+total number of nodes[117] = 146
+success_node[117] = 143
+Converged in 5 iterations
+

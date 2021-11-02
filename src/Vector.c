@@ -120,15 +120,16 @@ void VectorAddScale(double c1, const Vector V1, double c2, const Vector V2, Vect
 VMin VectorMin(const Vector v)
 {
    VMin vMin = {0};
-   vMin.min_index = -1;
-   vMin.min_value = 1.0;
+   vMin.min_index = 0;
+   vMin.min_value = v.id[0];
 
-   for(int i = 0; i < v.len; ++i)  {
-      if(v.id[i] < vMin.min_value) {
+   for(int i = 1; i < v.len; ++i)
+      if(v.id[i] < vMin.min_value)
+      {
          vMin.min_value = v.id[i];
          vMin.min_index = i;
       }
-   }
+
    return vMin;
 }
 
@@ -200,3 +201,11 @@ bool V_CheckInfAndNan(const Vector z)
    return false;
 }
 
+int IntPower(int x, int power)
+{
+   int result = 1;
+   for(int i = 0; i < power; ++i)
+      result *= x;
+
+   return result;
+}

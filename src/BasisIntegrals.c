@@ -15,19 +15,19 @@
 // Routines that compute analytical integrals of all orthogonal
 // basis functions for respective domains and parameters.
 
-void IntegralsCube(int *dims, int deg, double *integrals)
+void BasisIntegralsCube(int *dims, int deg, double *integrals)
 {
    int dim = dims[0];
-   int m = BasisSize(dim, deg);
+   int m = BasisSize(deg, dim);
    memset(integrals, 0, SIZE_DOUBLE(m));
    integrals[0] = 1.0;
 }
 
 
-void IntegralsSimplex(int *dims, int deg, double *integrals)
+void BasisIntegralsSimplex(int *dims, int deg, double *integrals)
 {
    int dim = dims[0];
-   int m = BasisSize(dim, deg);
+   int m = BasisSize(deg, dim);
 
    memset(integrals, 0, SIZE_DOUBLE(m));
    integrals[0] = 1;
@@ -37,11 +37,11 @@ void IntegralsSimplex(int *dims, int deg, double *integrals)
 }
 
 
-void IntegralsCubeSimplex(int *dims, int deg, double *integrals)
+void BasisIntegralsCubeSimplex(int *dims, int deg, double *integrals)
 {
    int dim = dims[0]+dims[1];
    int dim2 = dims[1];
-   int m = BasisSize(dim, deg);
+   int m = BasisSize(deg, dim);
 
    memset(integrals, 0, SIZE_DOUBLE(m));
    integrals[0] = 1;
@@ -50,12 +50,12 @@ void IntegralsCubeSimplex(int *dims, int deg, double *integrals)
 }
 
 
-void IntegralsSimplexSimplex(int *dims, int deg, double *integrals)
+void BasisIntegralsSimplexSimplex(int *dims, int deg, double *integrals)
 {
    int dim = dims[0]+dims[1];
    int dim1 = dims[0];
    int dim2 = dims[1];
-   int m = BasisSize(dim, deg);
+   int m = BasisSize(deg, dim);
 
    memset(integrals, 0, SIZE_DOUBLE(m));
    integrals[0] = 1;
@@ -68,12 +68,12 @@ void IntegralsSimplexSimplex(int *dims, int deg, double *integrals)
 }
 
 
-void IntegralsCubeSimplexSimplex(int *dims, int deg, double *integrals)
+void BasisIntegralsCubeSimplexSimplex(int *dims, int deg, double *integrals)
 {
    int dim = dims[0]+dims[1]+dims[1];
    int dim2 = dims[1];
    int dim3 = dims[1];
-   int m = BasisSize(dim, deg);
+   int m = BasisSize(deg, dim);
 
    memset(integrals, 0, SIZE_DOUBLE(m));
    integrals[0] = 1;

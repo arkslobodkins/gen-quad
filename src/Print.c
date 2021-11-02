@@ -1,5 +1,6 @@
 #include "Print.h"
 #include "GENERAL_QUADRATURE.h"
+#include "Quadrature.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -52,7 +53,7 @@ void PrintNodesAndWeights(const_quadrature *q, const char *name)
 void PrintNodeInfo(int iters, double error_norm, const_quadrature *q, const char *name)
 {
    printf("quadrature info for %s during iteration of LSQ\n", name);
-   printf("iterations = %i error_norm = %.16le InDomain = %i\n\n", iters, error_norm, q->inDomain(q));
+   printf("iterations = %i error_norm = %.16le InDomain = %i\n\n", iters, error_norm, QuadInDomain(q));
 }
 
 void PrintElimInfo(int dim, int num_nodes, int opt, double opt_factor)

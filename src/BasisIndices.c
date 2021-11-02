@@ -28,7 +28,7 @@ void BasisIndices(int deg, int dim, int_fast8_t *f)
    {
       for(int i = 0; i <= deg; ++i)
       {
-         int size = BasisSize(j-1, deg-i);
+         int size = BasisSize(deg-i, j-1);
          int dimxsize = dim*size;
          int_fast8_t* recursiveF = (int_fast8_t *)malloc(size*(j-1) * sizeof(int_fast8_t));
          BasisIndices(deg-i, j-1, recursiveF);

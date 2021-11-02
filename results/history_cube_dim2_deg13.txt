@@ -1,0 +1,51 @@
+degree of precision = 13
+number of basis functions = 105
+dimension = 2
+initial number of nodes = 49
+final number of nodes = 37
+final residual = 0.0000000000000000
+
+total number of nodes[0] = 48
+success_node[0] = 2
+Converged in 9 iterations
+
+total number of nodes[1] = 47
+success_node[1] = 2
+Converged in 6 iterations
+
+total number of nodes[2] = 46
+success_node[2] = 0
+Converged in 4 iterations
+
+total number of nodes[3] = 45
+success_node[3] = 1
+Converged in 6 iterations
+
+total number of nodes[4] = 44
+success_node[4] = 5
+Converged in 5 iterations
+
+total number of nodes[5] = 43
+success_node[5] = 1
+Converged in 4 iterations
+
+total number of nodes[6] = 42
+success_node[6] = 6
+Converged in 5 iterations
+
+total number of nodes[7] = 41
+success_node[7] = 3
+Converged in 5 iterations
+
+total number of nodes[8] = 40
+success_node[8] = 4
+Converged in 6 iterations
+
+total number of nodes[9] = 39
+success_node[9] = 1
+Converged in 5 iterations
+
+total number of nodes[10] = 37
+success_node[10] = 1
+Converged in 6 iterations
+

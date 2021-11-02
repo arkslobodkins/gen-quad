@@ -3,24 +3,23 @@
  * August 2021
  */
 
-#include "GENERAL_QUADRATURE.h"
+#include "QuadDriver.h"
 #include "ComputeDomain.h"
-#include "ImplementDomain.h"
-#include <stdlib.h>
-#include <stdio.h>
-#include <strings.h>
-#include <math.h>
-#include <time.h>
+#include "GENERAL_QUADRATURE.h"
+
 #include <ctype.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <strings.h>
+#include <time.h>
 
-int is_int(const char *number);
-int is_pos_int(int, char *);
+static int is_int(const char *number);
+static int is_pos_int(int, char *);
 
-// main
 // Receives dimension sizes and degree of precision as command line arguments.
 // Performs tests to test appropriateness of the input arguments. If inputs are
 // valid, it proceeds to recursive initial guess procedure and Node Elimination algorithm.
-int main(int argc, char *argv[])
+void QuadDriver(int argc, char **argv)
 {
    printf("\n");
 
@@ -207,7 +206,7 @@ int main(int argc, char *argv[])
          {
             deg = atoi(argv[2]);
             test = 1;
-            if (!is_pos_int(2, argv[2]))
+            if ( !is_pos_int(2, argv[2]))
             {
                fprintf(stderr, "Degree of precision should be integer >= 1.\n");
                test = 0;
@@ -291,19 +290,43 @@ int main(int argc, char *argv[])
       ++counter;
    }
 
+#ifdef QUAD_DEBUG_ON
+   printf("DEBUG MODE ON\n\n");
+#else
+   printf("DEBUG MODE OFF\n\n");
+#endif
+
    time_t start = clock();
-   ImplementDomain(deg, dims, D);
+   switch(D)
+   {
+      case INTERVAL:
+         ComputeInterval(deg);
+         break;
+      case CUBE:
+         ComputeCube(deg, dims[0]);
+         break;
+      case SIMPLEX:
+         ComputeSimplex(deg, dims[0]);
+         break;
+      case CUBESIMPLEX:
+         ComputeCubeSimplex(deg, dims[0], dims[1]);
+         break;
+      case SIMPLEXSIMPLEX:
+         ComputeSimplexSimplex(deg, dims[0], dims[1]);
+         break;
+      case CUBESIMPLEXSIMPLEX:
+         ComputeCubeSimplexSimplex(deg, dims[0], dims[1], dims[2]);
+         break;
+   }
    time_t end = clock();
    double total = (double)(end - start)/CLOCKS_PER_SEC;
    extern double LSQ_TIME;
-   printf("total time for LAPACK routine in LeastSquaresNewton = %le\n", LSQ_TIME);
    printf("runtime = %le\n", total);
+   printf("total time for LAPACK routine in LeastSquaresNewton = %le\n", LSQ_TIME);
+}
 
-   return EXIT_SUCCESS;
-} //end main
 
-
-int is_int(const char *number)
+static int is_int(const char *number)
 {
    int i;
    int neg = 0;
@@ -338,12 +361,11 @@ int is_int(const char *number)
 }
 
 
-int is_pos_int(int index, char *number)
+static int is_pos_int(int index, char *number)
 {
-   int pos_int = 1;
    if( (is_int(number) != 1) && (is_int(number) != -1) )
-      pos_int = 0;
+      return 0;
    else if( (is_int(number) == -1) || (atoi(number) == 0) )
-      pos_int = 0;
-   return pos_int;
+      return 0;
+   return 1;
 }
