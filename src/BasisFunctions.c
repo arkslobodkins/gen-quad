@@ -32,6 +32,8 @@ static int finite_difference_test(int dim, int *dims, int deg, const int_fast8_t
                                   const double *x, const double *phi_prime, BasisFunc func);
 
 static void LegendrePoly(int order, double x, double *p, double *dp);
+
+
 static void LegendrePoly(int order, double x, double *p, double *dp)
 {
    int k;
@@ -49,7 +51,6 @@ static void LegendrePoly(int order, double x, double *p, double *dp)
       p[k+1] = fac1*x*p[k] - fac2*p[k-1];
       dp[k+1] = fac1*(p[k] + x*dp[k]) - fac2*dp[k-1];
    }
-
 }
 
 
@@ -170,15 +171,17 @@ void BasisPrimeCube(int *dims, int deg, const int_fast8_t *basis_id, const doubl
 
    }
 
-//#ifdef QUAD_DEBUG_ON
+#ifdef QUAD_DEBUG_ON
    BasisFunc phi_func = &BasisCube;
    int flag = finite_difference_test(dim, dims, deg, basis_id, x, phiPrime, phi_func);
    if(flag == 1)
    {
       PRINT_ERR("failed finite_difference_test", __LINE__, __FILE__);
-      printf("%lf, %lf\n", x[0], x[1]);
+      for(int d = 0; d < dim; ++d)
+         printf("x[%i] = %lf  ", d, x[d]);
+      printf("\n");
    }
-//#endif
+#endif
 
 }// BasisPrimeCube
 
@@ -470,7 +473,9 @@ void BasisPrimeSimplex(int *dims, int deg, const int_fast8_t *basis_id, const do
    if(flag == 1)
    {
       PRINT_ERR("failed finite_difference_test", __LINE__, __FILE__);
-      printf("%lf, %lf\n", x[0], x[1]);
+      for(int d = 0; d < dim; ++d)
+         printf("x[%i] = %lf  ", d, x[d]);
+      printf("\n");
    }
    free(phi);
 #endif
@@ -550,7 +555,12 @@ void BasisPrimeCubeSimplex(int *dims, int deg, const int_fast8_t *basis_id, cons
    BasisFunc phi_func = &BasisCubeSimplex;
    int flag = finite_difference_test(dim, dims, deg, basis_id, x, phiPrime, phi_func);
    if(flag == 1)
+   {
       PRINT_ERR("failed finite_difference_test", __LINE__, __FILE__);
+      for(int d = 0; d < dim; ++d)
+         printf("x[%i] = %lf  ", d, x[d]);
+      printf("\n");
+   }
 #endif
 
 }// BasisPrimeCubeSimplex
@@ -602,7 +612,12 @@ void BasisPrimeSimplexSimplex(int *dims, int deg, const int_fast8_t *basis_id, c
    BasisFunc phi_func = &BasisSimplexSimplex;
    int flag = finite_difference_test(dim, dims, deg, basis_id, x, phiPrime, phi_func);
    if(flag == 1)
+   {
       PRINT_ERR("failed finite_difference_test", __LINE__, __FILE__);
+      for(int d = 0; d < dim; ++d)
+         printf("x[%i] = %lf  ", d, x[d]);
+      printf("\n");
+   }
 #endif
 
    free(phiPrimeSimplex);
@@ -707,7 +722,12 @@ void BasisPrimeCubeSimplexSimplex(int *dims, int deg, const int_fast8_t *basis_i
    void (*phi_func)(int *dims, int deg, const int_fast8_t *basis_id, const double *x, double *phi) = &BasisCubeSimplexSimplex;
    int flag = finite_difference_test(dim, dims, deg, basis_id, x, phiPrime, phi_func);
    if(flag == 1)
+   {
       PRINT_ERR("failed finite_difference_test", __LINE__, __FILE__);
+      for(int d = 0; d < dim; ++d)
+         printf("x[%i] = %lf  ", d, x[d]);
+      printf("\n");
+   }
 #endif
 }// end BasisPrimeCubeSimplexSimplex
 

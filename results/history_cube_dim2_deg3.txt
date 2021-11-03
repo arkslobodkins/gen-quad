@@ -1,7 +1,0 @@
-degree of precision = 3
-number of basis functions = 10
-dimension = 2
-initial number of nodes = 4
-final number of nodes = 4
-final residual = 0.0000000000000002
-

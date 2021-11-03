@@ -290,14 +290,10 @@ static void quadrature_free_basic(quadrature *q)
       PRINT_ERR("full destructor should be called", __LINE__, __FILE__);
       return;
    }
-
    if(q == NULL) return;
 
    Vector_free(q->z);
-
-   if(q->dims != NULL) {
-      free(q->dims); q->dims = NULL; }
-
+   if(q->dims != NULL) { free(q->dims); q->dims = NULL; }
    free(q); q = NULL;
 }
 
@@ -312,15 +308,9 @@ static void quadrature_free_full(quadrature *q)
    if(q == NULL) return;
 
    Vector_free(q->z);
-
-   if(q->dims != NULL) {
-      free(q->dims); q->dims = NULL; }
-
+   if(q->dims != NULL) { free(q->dims); q->dims = NULL; }
    if(q->setFuncsConstrFlag) q->constr_free(q->constr);
-   if(q->dims != NULL) {
-      free(q->dims); q->dims = NULL;
-   }
-
+   if(q->dims != NULL) { free(q->dims); q->dims = NULL; }
    free(q); q = NULL;
 }
 

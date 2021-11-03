@@ -42,7 +42,6 @@ void AddLineFirst(const_quadrature *q_gauss, const_quadrature *quad_prev, quadra
 }
 
 
-
 // AddLineLastSimplex
 // Computes tensor product of unit (dim-1)-dimensional simplex
 // and 1-dimensional interval [0, 1], and maps the product to the unit
@@ -92,8 +91,8 @@ void AddLineSimplex(const_quadrature *q_gauss, const_quadrature *quad_prev, quad
 // simplex of dimension dim using generalized Duffy transformation.
 void GeneralDuffy(quadrature *quad)
 {
-   int dim   = quad->dim;
-   int N     = quad->k;
+   int dim = quad->dim;
+   int N = quad->k;
    double *x = quad->x;
    double *w = quad->w;
 

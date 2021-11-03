@@ -65,8 +65,8 @@ void get_constraints_interval(constraints *constr)
 
 void constraints_interval_free(constraints *constr)
 {
-	RMatrix_free(constr->M);
-	Vector_free(constr->b);
+   RMatrix_free(constr->M);
+   Vector_free(constr->b);
    RMatrix_free(constr->M_FULL);
    Vector_free(constr->b_FULL);
    free(constr); constr = NULL;
@@ -140,8 +140,8 @@ void get_constraints_cube(constraints *constr)
 
 void constraints_cube_free(constraints *constr)
 {
-	RMatrix_free(constr->M);
-	Vector_free(constr->b);
+   RMatrix_free(constr->M);
+   Vector_free(constr->b);
    RMatrix_free(constr->M_FULL);
    Vector_free(constr->b_FULL);
    free(constr); constr = NULL;
@@ -415,14 +415,14 @@ constraints *constraints_cubesimplexsimplex_init(int dims[3])
 {
    assert( (dims[0] > 1) && (dims[1] > 1)  && (dims[2] > 0) );
 
-	int dim = dims[0] + dims[1] + dims[2];
+   int dim = dims[0] + dims[1] + dims[2];
    constraints *constr = (constraints *)malloc(sizeof(constraints));
    constr->dim = dim;
    constr->dims = dims;
 
    int n_rows =  (dims[0] + ONE) + (dims[1]+ ONE) + (TWO * dims[2]); // double check the order
    int n_cols = dim;
-	constr->M = RMatrix_init(n_rows, n_cols);
+   constr->M = RMatrix_init(n_rows, n_cols);
    constr->b = Vector_init(n_rows);
    constr->M_FULL = RMatrix_init(n_rows+1, n_cols+1);
    constr->b_FULL = Vector_init(n_rows+1);
@@ -434,7 +434,7 @@ constraints *constraints_cubesimplexsimplex_init(int dims[3])
 void constraints_cubesimplexsimplex_realloc(constraints *constr, int dims[3])
 {
    assert( (dims[0] > 1) && (dims[1] > 1)  && (dims[2] > 0) );
-	int dim = dims[0] + dims[1] + dims[2];
+   int dim = dims[0] + dims[1] + dims[2];
    int n_rows =  (dims[0] + ONE) + (dims[1]+ ONE) + (TWO * dims[2]); // double check the order
    int n_cols = dim;
 

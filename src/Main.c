@@ -8,10 +8,8 @@
 
 int main(int argc, char *argv[])
 {
-
    QuadDriver(argc, argv);
-
    return EXIT_SUCCESS;
-} // end main
+}
 
 
