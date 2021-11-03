@@ -1,9 +1,7 @@
-gen-quad is a package primarily targeted for computing efficient quadrature rules  
-of moderate and high accuracies for polyhedral domains of moderate dimension.  
-Dimensions of interest lie in the range 2-6, but one can go to higher dimensions.  
-Theoretically, the algorithm can compute quadrature rules of arbitrarily high  
-degree and dimension. In practice, it is limited to available memory resources  
-and adequate runtime.  
+gen-quad is a package primarily targeted for computing efficient quadrature rules of moderate and high  
+accuracies for polyhedral domains of moderate dimension. Dimensions of interest lie in the range 2-6,  
+but one can go to higher dimensions. Theoretically, the algorithm can compute quadrature rules of arbitrarily  
+high degree and dimension. In practice, it is limited to available memory resources and adequate runtime.  
   
 Currently supported domains are:  
 N-dimensional CUBE  
@@ -12,13 +10,10 @@ N-dimensional CUBESIMPLEX(tensor product of a cube and a simplex)
 N-dimensional SIMPLEXSIMPLEX(tensor product of two simplexes)  
 INTERVAL(simply returns Gauss-Legendre rules)  
   
-All domains (except INTERVAL) are computed using a node elimination algorithm  
-in combination with recursive procedures. The node elimination is an iterative  
-technique, which accepts initial quadrature rule as a guess and eliminates  
-as many nodes as possible, thereby obtaining more efficient quadrature rule.  
-Due to high computational cost of the algorithm, runtime increases rapidly with  
-the increase in degree of accuracy and dimension. Parallel implementation  
-is a work in progress.  
+All domains (except INTERVAL) are computed using a node elimination algorithm in combination with recursive procedures.  
+The node elimination is an iterative technique, which accepts initial quadrature rule as a guess and eliminates as many  
+nodes as possible, thereby obtaining more efficient quadrature rule. Due to high computational cost of the algorithm,  
+runtime increases rapidly with the increase in degree of accuracy and dimension. Parallel implementation is a work in progress.  
   
   
 Use instructions:  
