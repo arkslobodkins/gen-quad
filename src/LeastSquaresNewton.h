@@ -17,10 +17,8 @@ extern "C" {
 
 bool LeastSquaresNewton(const bool_enum FLAG_CONSTR, const int_fast8_t *basis, quadrature *q_orig, int *its);
 
-#ifdef CONSTR_OPT
 ConstrVectData ConstrVectDataInit();
 int ConstrainedOptimization(const quadrature *q_prev, quadrature *q_next, ConstrVectData *cVecData);
-#endif
 
 #ifdef __cplusplus
 }

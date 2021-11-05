@@ -29,12 +29,11 @@ double LSQ_TIME = 0.0;
 #define MAX_ELIM_WEIGHTS 10
 
 
-static bool CheckForFail(int info, double errorNorm, double errorNormPrev, Vector least_sq_sol);
+static int CheckForFail(int info, double errorNorm, double errorNormPrev, Vector least_sq_sol);
 
-#ifdef CONSTR_OPT
 static void ConstrVectDataReset(ConstrVectData *cVectData);
 static ConstrNodeData ConstrNodeDataInit();
-static void ConstrNodeDataReset(ConstrNodeData *cNodeData);
+ATTR_UNUSED static void ConstrNodeDataReset(ConstrNodeData *cNodeData);
 
 static int ConstrainedProjection(const quadrature *q_prev, quadrature *q_next);
 
@@ -45,7 +44,6 @@ static ConstrNodeData ShortenNode(int node_num, const RMatrix A, const Vector b,
                                   const Vector z_old, const Vector z_new);
 
 static int ProjectNode(const CMatrix eqn_matrix, const Vector dx, Vector x_projected);
-#endif
 
 
 // LeastSquaresNewton
@@ -57,13 +55,8 @@ bool LeastSquaresNewton(const bool_enum FLAG_CONSTR, const int_fast8_t *basis, q
 {
    assert(q_orig->k >= 0);
 
-#ifdef CONSTR_OPT
    int elim_weights = 0;
    ConstrVectData cVectData = ConstrVectDataInit();
-#else
-   if(FLAG_CONSTR == ON)
-      PRINT_ERR("constrained optimization is turned off and won't be performed", __LINE__, __FILE__);
-#endif
 
    int k               = q_orig->k;
    int deg             = q_orig->deg;
@@ -102,24 +95,25 @@ bool LeastSquaresNewton(const bool_enum FLAG_CONSTR, const int_fast8_t *basis, q
    do
    {
 
-#ifdef CONSTR_OPT
-      if(cVectData.ACTIVE == ON)
+      if(FLAG_CONSTR == ON)
       {
-         if(cVectData.N_OR_W == WEIGHT)
+         if(cVectData.ACTIVE == ON)
          {
-            if(k == 1  || ++elim_weights > MAX_ELIM_WEIGHTS)
+            if(cVectData.N_OR_W == WEIGHT)
             {
-               SOL_FLAG = SOL_NOT_FOUND;
-               goto FREERETURN;
+               if(k == 1  || ++elim_weights > MAX_ELIM_WEIGHTS)
+               {
+                  SOL_FLAG = SOL_NOT_FOUND;
+                  goto FREERETURN;
+               }
+               ncols = (dim+1)*--k;
+               SMALL_DIM = MIN(nrows, ncols);
+               LEAD_DIM  = MAX(nrows, ncols);
+               quadrature_remove_element(cVectData.boundaryNodeId, q_next);
+               quadrature_remove_element(cVectData.boundaryNodeId, q_prev);
             }
-            ncols = (dim+1)*--k;
-            SMALL_DIM = MIN(nrows, ncols);
-            LEAD_DIM  = MAX(nrows, ncols);
-            quadrature_remove_element(cVectData.boundaryNodeId, q_next);
-            quadrature_remove_element(cVectData.boundaryNodeId, q_prev);
          }
       }
-#endif
 
       GetJacobian(basis, q_prev, JACOBIAN);
       GetFunction(basis, q_prev, RHS);
@@ -138,14 +132,13 @@ bool LeastSquaresNewton(const bool_enum FLAG_CONSTR, const int_fast8_t *basis, q
       errorNormPrev = errorNorm;
       GetFunction(basis, q_next, RHS);
       errorNorm = V_ScaledTwoNorm(RHS);
-      bool check_values = CheckForFail(INFO, errorNorm, errorNormPrev, LEAST_SQ_SOL);
-      if(check_values == true)
+      int check_values = CheckForFail(INFO, errorNorm, errorNormPrev, LEAST_SQ_SOL);
+      if(check_values != Q_SUCCESS)
       {
          SOL_FLAG = SOL_NOT_FOUND;
          goto FREERETURN;
       }
 
-#ifdef CONSTR_OPT
       if(FLAG_CONSTR == ON)
       {
          int P_FLAG = ConstrainedProjection(q_prev, q_next);
@@ -169,7 +162,6 @@ bool LeastSquaresNewton(const bool_enum FLAG_CONSTR, const int_fast8_t *basis, q
             goto FREERETURN;
          }
       }
-#endif
 
       GetFunction(basis, q_next, RHS);
       errorNormUpdate = V_ScaledTwoNorm(RHS);
@@ -216,26 +208,28 @@ FREERETURN:
 
 
 
-static bool CheckForFail(int INFO, double errorNorm, double errorNormPrev, Vector least_sq_sol)
+static int CheckForFail(int INFO, double errorNorm, double errorNormPrev, Vector least_sq_sol)
 {
 
    if(errorNorm > errorNormPrev+2)     // fail if method is not converging
-      return true;
+      return NOT_CONVERGE;
 
    if(V_InfNorm(least_sq_sol) > 100)   // fail if solution is exploding
-      return true;
+      return DIVERGE_ERR;
 
    else if(INFO != 0)                  // fail if LAPACK routine has failed
-      return true;
+      return LAPACK_ERR;
 
-   else if(V_CheckInfAndNan(least_sq_sol))
-      return true;
+   else if(V_CheckInf(least_sq_sol))
+      return INF_VAL;
 
-   else return false;
+   else if(V_CheckNan(least_sq_sol))
+      return NAN_VAL;
+
+   else return Q_SUCCESS;
 }
 
 
-#ifdef CONSTR_OPT
 
 ConstrVectData ConstrVectDataInit()
 {
@@ -270,7 +264,7 @@ static ConstrNodeData ConstrNodeDataInit()
    return cNodeData;
 }
 
-static void ConstrNodeDataReset(ConstrNodeData *cNodeData)
+ATTR_UNUSED static void ConstrNodeDataReset(ConstrNodeData *cNodeData)
 {
    cNodeData->nodeId = -1;
    cNodeData->eqnId  = -1;
@@ -626,4 +620,3 @@ static int ProjectNode(const CMatrix eqn_matrix, const Vector dx, Vector x_proje
    return CONSTR_SUCCESS;
 }
 
-#endif

@@ -33,7 +33,7 @@ void Output(const quadrature *q, int arr_size, history **hist_arr)
       fprintf(FID, "initial number of nodes = %i\n", hist_arr[i]->nodes_initial);
       fprintf(FID, "final number of nodes = %i\n", hist_arr[i]->nodes_final);
       fprintf(FID, "total eliminations = %i\n", hist_arr[i]->list->size);
-      fprintf(FID, "final residual = %0.16f\n\n", hist_arr[i]->res);
+      fprintf(FID, "final residual = %.16e\n\n", hist_arr[i]->res);
       node *curr = hist_arr[i]->list->first;
       for(j = 0; j < hist_arr[i]->list->size; ++j)
       {

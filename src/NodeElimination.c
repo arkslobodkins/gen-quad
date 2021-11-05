@@ -93,15 +93,11 @@ void NodeElimination(const quadrature *q_initial, quadrature *q_final, glist *hi
    {
       if(n_cur <= 1) goto FREERETURN;
 
-#ifdef CONSTR_OPT
-      int temp_prev;
-      bool removed_node;
       if(dim == MAX_DIM)
          if(n_cur == n_prev) CONSTR_FLAG = ON;
          else                CONSTR_FLAG = OFF;
-      else
-         CONSTR_FLAG = OFF;
-#endif
+      else CONSTR_FLAG = OFF;
+
       n_prev = n_cur;
 
       // Initialize parameters and arrays
@@ -133,7 +129,7 @@ void NodeElimination(const quadrature *q_initial, quadrature *q_final, glist *hi
 
       int *arrayIndex    = (int *)malloc( SIZE_INT(n_cur) );
       double *signif_ind = (double *)malloc( SIZE_DOUBLE(n_cur) );
-      Vector Q2_ROW     = Vector_init(J_TR.rows);
+      Vector Q2_ROW      = Vector_init(J_TR.rows);
       RMatrix Z          = RMatrix_init(n_cur, ncols);
       RMatrix dZ         = RMatrix_init(n_cur, ncols);
       // compute initial guesses for Newton's method and store them in Z
@@ -178,6 +174,8 @@ void NodeElimination(const quadrature *q_initial, quadrature *q_final, glist *hi
       for(i = 0; i < n_cur; ++i)
       {
          int count;
+         int temp_prev;
+         bool removed_node;
          for(count = 0, j = 0; j < n_cur; ++j)
          {
             if(j == arrayIndex[i]) continue;
@@ -190,7 +188,6 @@ void NodeElimination(const quadrature *q_initial, quadrature *q_final, glist *hi
 
          if(V_InfNorm(q_temp->z) >= QUAD_HUGE) continue;
 
-#ifdef CONSTR_OPT
          removed_node = false;
          ConstrVectData cVectData = ConstrVectDataInit();
          if(QuadInConstraint(q_temp) == false)
@@ -216,7 +213,6 @@ void NodeElimination(const quadrature *q_initial, quadrature *q_final, glist *hi
 
             quadrature_free(q_prev);
          }
-#endif
 
          int its = 0;
          SOL_FLAG = LeastSquaresNewton(CONSTR_FLAG, basis, q_temp, &its);
@@ -226,18 +222,17 @@ void NodeElimination(const quadrature *q_initial, quadrature *q_final, glist *hi
             n_cur = q_temp->k;
             quadrature_realloc(q_temp->k, dim, dims, deg, q_new);
             quadrature_assign(q_temp, q_new);
-            hist_data *hist_d = malloc(sizeof(hist_data));
+
+            hist_data *hist_d = (hist_data *)malloc(sizeof(hist_data));
             hist_d->nodes_tot = n_cur;
             hist_d->success_node = i;
             hist_d->success_its = its;
             glist_push(history, (void *)hist_d);
             break; // break i loop
          }
-#ifdef CONSTR_OPT
          else if(SOL_FLAG == SOL_NOT_FOUND)
             if(removed_node == true)
                quadrature_realloc(temp_prev, dim, dims, deg, q_temp);
-#endif
       }// end i loop
       RMatrix_free(Z);
       free(arrayIndex);
@@ -248,10 +243,8 @@ void NodeElimination(const quadrature *q_initial, quadrature *q_final, glist *hi
       // end NodeElimination if repeat flag is off and all iterations were unsuccessful
       if (SOL_FLAG == SOL_FOUND)
          PrintElimInfo(dim, n_cur, n_opt, n_opt/n_cur);
-#ifdef CONSTR_OPT
       else if( (SOL_FLAG == SOL_NOT_FOUND) && (CONSTR_FLAG != ON)  && (dim == MAX_DIM) )
          Print("rerunning with constrained optimization");
-#endif
       else if( SOL_FLAG == SOL_NOT_FOUND ) {
          Print("Last iteration did not converge");
          break;

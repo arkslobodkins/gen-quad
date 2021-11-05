@@ -1,6 +1,10 @@
 #ifndef GLIST_H
 #define GLIST_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct node
 {
    void *data;
@@ -21,5 +25,8 @@ void glist_free(glist *list);
 void glist_push(glist *list, void *data);
 void glist_print(glist *list, void (*print)(void *data));
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

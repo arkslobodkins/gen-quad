@@ -7,10 +7,10 @@
 extern "C" {
 #endif
 
-void AddLineFirst(const quadrature *q_gauss, const quadrature *quad_prev, quadrature *quad_new);
-void AddLineSimplex(const quadrature *q_gauss, const quadrature *quad_prev, quadrature *quad_new);
-void GeneralDuffy(quadrature *quad);
-void MixedTensor(const quadrature *q1, const quadrature *q2, quadrature *q_pr);
+void AddLineFirst(const quadrature *q1D, const quadrature *quad_prev, quadrature *quad_new);
+void AddLineSimplex(const quadrature *q1D, const quadrature *quad_prev, quadrature *quad_new);
+void GeneralDuffy(quadrature *q);
+void MixedTensor(const quadrature *q1, const quadrature *q2, quadrature *q_tp);
 
 #ifdef __cplusplus
 }

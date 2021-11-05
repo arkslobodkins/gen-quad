@@ -23,6 +23,7 @@ void PrintFloat(float x, const char *name);
 void PrintDouble(double x, const char *name);
 void Print(const char *x);
 void PRINT_ERR(const char *x, int line_num, const char *file_name);
+const char *ERR_STRING(int return_val);
 
 void PrintHistElem(void *data);
 #ifdef __cplusplus

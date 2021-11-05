@@ -103,8 +103,8 @@ typedef struct
 typedef struct quadrature quadrature;
 typedef struct const_quadrature const_quadrature;
 
-typedef void   (*EvalBasis)       (int *dims, int deg, const int_fast8_t *basis, const double *x, double *phi);
-typedef void   (*EvalBasisDer)    (int *dims, int deg, const int_fast8_t *basis, const double *x, double *phiPrime);
+typedef void(*EvalBasis)(int *dims, int deg, const int_fast8_t *basis, const double *x, double *phi);
+typedef void(*EvalBasisDer)(int *dims, int deg, const int_fast8_t *basis, const double *x, double *phiPrime);
 typedef void(*BasisIntegrals)(int *dims, int deg, double *integrals);
 typedef bool(*InDomain)(const_quadrature *quad);
 typedef bool(*InDomainElem)(const_quadrature *quad, int elem);
@@ -177,6 +177,22 @@ struct quadrature
 #define QUAD_HUGE_ERR  -6
 #define LAPACK_ERR     -7
 #define DIV_BY_ZERO    -8
+#define NOT_CONVERGE   -9
+#define DIVERGE_ERR    -10
+#define LARGE_RES      -11
+
+#define STR_Q_SUCCESS "Q_SUCCESS"
+#define STR_NULL_VAL "NULL_VAL"
+#define STR_ALLOC_FAIL "ALLOC_FAIL"
+#define STR_ILL_INPUT "ILL_INPUT"
+#define STR_INF_VAL "INF_VAL"
+#define STR_NAN_VAL "NAN_VAL"
+#define STR_QUAD_HUGE_ERR "QUAD_HUGE_ERR"
+#define STR_LAPACK_ERR "LAPACK_ERR"
+#define STR_DIV_BY_ZERO "DIV_BY_ZERO"
+#define STR_NOT_CONVERGE "NOT_CONVERGE"
+#define STR_DIVERGE_ERR "DIVERGE_ERR"
+#define STR_LARGE_RES "LARGE_RES"
 
 
 #ifdef __cplusplus

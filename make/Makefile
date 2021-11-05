@@ -1,10 +1,8 @@
-CC = gcc -std=c99 -Wall
+CC = g++ -std=c++98 -Wall
 
-#comment   "-DCONSTR_OPT"       to disable constrained optimization\
 #uncomment "-DQUAD_DEBUG_OFF"   to disable debug mode
 #uncomment "-NDEBUG"            to disable assert statements
 CFLAGS=-g                 \
-		-DCONSTR_OPT        \
 		#-DQUAD_DEBUG_OFF   \
 		#-DNDEBUG
 

@@ -12,7 +12,6 @@ void MAT_MUL(int M, int K, int N, double *MAT1, double *MAT2, double *MAT3)
    double alpha = 1.0;
    double beta  = 0.0;
    dgemm_(&TRANS1, &TRANS2, &M, &N, &K, &alpha, MAT1, &M, MAT2, &K, &beta, MAT3, &M);
-
 }
 
 

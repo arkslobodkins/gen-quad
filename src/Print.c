@@ -100,3 +100,50 @@ void PrintHistElem(void *data)
    printf("success_node = %d\n", h_data->success_node);
    printf("success_its id = %d\n", h_data->success_its);
 }
+
+const char *ERR_STRING(int return_val)
+{
+   switch(return_val)
+   {
+   case  0:
+      return STR_Q_SUCCESS;
+      break;
+   case -1:
+      return STR_NULL_VAL;
+      break;
+   case -2:
+      return STR_ALLOC_FAIL;
+      break;
+   case -3:
+      return STR_ILL_INPUT;
+      break;
+   case -4:
+      return STR_INF_VAL;
+      break;
+   case -5:
+      return STR_NAN_VAL;
+      break;
+   case -6:
+      return STR_QUAD_HUGE_ERR;
+      break;
+   case -7:
+      return STR_LAPACK_ERR;
+      break;
+   case -8:
+      return STR_DIV_BY_ZERO;
+      break;
+   case -9:
+      return STR_NOT_CONVERGE;
+      break;
+   case -10:
+      return STR_DIVERGE_ERR;
+      break;
+   case -11:
+      return STR_LARGE_RES;
+      break;
+   default:
+      return "OTHER";
+   }
+
+}
+

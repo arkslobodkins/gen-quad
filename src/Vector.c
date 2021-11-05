@@ -13,55 +13,6 @@
 #include <math.h>
 
 
-Vector_bool Vector_bool_init(int n)
-{
-   Vector_bool V = {0};
-
-   V.len = n;
-   V.id = (bool *)calloc(n, sizeof(bool));
-
-   return V;
-}
-
-void Vector_bool_realloc(int n, Vector_bool *V)
-{
-   V->len = n;
-   V->id = (bool *)realloc(V->id, n*sizeof(bool));
-}
-
-void Vector_bool_free(Vector_bool V)
-{
-   if(V.id != NULL) {
-      free(V.id);
-      V.id = NULL;
-   }
-}
-
-
-Vector_int Vector_int_init(int n)
-{
-   Vector_int V = {0};
-   V.len = n;
-   V.id = (int *)calloc(n, sizeof(int));
-
-   return V;
-}
-
-void Vector_int_realloc(int n, Vector_int *V)
-{
-   V->len = n;
-   V->id = (int *)realloc(V->id, n*sizeof(int));
-}
-
-void Vector_int_free(Vector_int V)
-{
-   if(V.id != NULL) {
-      free(V.id);
-      V.id = NULL;
-   }
-}
-
-
 Vector Vector_init(int n)
 {
    Vector V = {0};
@@ -73,8 +24,8 @@ Vector Vector_init(int n)
 
 void Vector_realloc(int n, Vector *V)
 {
-   V->len = n;
    V->id = (double *)realloc(V->id, n*sizeof(double));
+   V->len = n;
 }
 
 void Vector_Assign(const Vector v1, Vector v2)
@@ -86,13 +37,10 @@ void Vector_Assign(const Vector v1, Vector v2)
 
 void Vector_free(Vector V)
 {
-   if(V.id != NULL) {
-      free(V.id);
-      V.id = NULL;
-   }
+   if(V.id != NULL) { free(V.id); V.id = NULL; }
 }
 
-void Vector_Print(const Vector V)
+void VPrint(const Vector V)
 {
    for(int i = 0; i < V.len; ++i)
       printf("V[%i] = %.6e\n", i, V.id[i]);
@@ -134,7 +82,7 @@ VMin VectorMin(const Vector v)
 }
 
 
-void VRemoveElement(int index, Vector *z)
+void VectorRemoveElement(int index, Vector *z)
 {
    assert(index <= z->len-1);
 
@@ -142,16 +90,6 @@ void VRemoveElement(int index, Vector *z)
       z->id[index] = z->id[i+1];
 
    Vector_realloc(z->len-1, z);
-}
-
-void VIntRemoveElement(int index, Vector_int *z)
-{
-   assert(index <= z->len-1);
-
-   for(int i = index; i < z->len-1; ++i)
-      z->id[index] = z->id[i+1];
-
-   Vector_int_realloc(z->len-1, z);
 }
 
 
@@ -190,12 +128,23 @@ double V_InfNorm(const Vector z)
    return norm;
 }
 
-bool V_CheckInfAndNan(const Vector z)
+bool V_CheckNan(const Vector z)
 {
    assert(z.len > 0);
 
    for(int i = 0; i < z.len; ++i)
-      if( (isnan(z.id[i]) == 1) || (isinf(z.id[i]) == 1) )
+      if(isnan(z.id[i]) == 1)
+         return true;
+
+   return false;
+}
+
+bool V_CheckInf(const Vector z)
+{
+   assert(z.len > 0);
+
+   for(int i = 0; i < z.len; ++i)
+      if(isinf(z.id[i]) == 1)
          return true;
 
    return false;

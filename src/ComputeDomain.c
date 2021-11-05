@@ -324,7 +324,7 @@ void ComputeCubeSimplex(int deg, int dim1, int dim2)
 // When quadrature for dim1-dimensional simplex and dim2-dimensional simplices
 // are computed by Node Elimination, the tensor product of dim1 and dim2 simplices
 // is used as the final initial guess for SIMPLEXSIMPLEX. When Node Elimination for the dimensions assigned by a user
-// is finalized, the final quadrature and analysis is printed to quadRule.txt and results.txt.
+// is finalized, the final quadrature and history are printed to results directory.
 void ComputeSimplexSimplex(int deg, int dim1, int dim2)
 {
    assert(deg > 0);
@@ -389,6 +389,12 @@ void ComputeSimplexSimplex(int deg, int dim1, int dim2)
 }// end ComputeSimplexSimplex
 
 
+void ComputeCubeSimplexSimplex(int degree, int dim1, int dim2, int dim3)
+{
+
+}
+
+
 static quadrature *ComputeSimplexNext(int deg, int dim_cur, int dim_next, const quadrature *q_cur, int hist_start, history **hist)
 {
    assert(deg > 0);
@@ -440,12 +446,6 @@ static quadrature *ComputeSimplexNext(int deg, int dim_cur, int dim_next, const 
    quadrature_free(q_init_next);
 
    return q_new_next;
-}
-
-
-void ComputeCubeSimplexSimplex(int degree, int dim1, int dim2, int dim3)
-{
-
 }
 
 
