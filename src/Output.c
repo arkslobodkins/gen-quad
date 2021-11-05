@@ -12,30 +12,38 @@ static char *get_domain_string(DOMAIN_TYPE D);
 
 
 // Prints history and quadrature parameters to a file.
-void Output(int num_nodes_initial, double res, const_quadrature *q, const elim_history hist)
+void Output(const quadrature *q, int arr_size, history **hist_arr)
 {
    char str[50];
-   int i;
-   int eliminations = hist.tot_elims;
+   int i,j;
    int deg = q->deg;
    int dim = q->dim;
-   int m = q->num_funcs;
    char *shape = get_domain_string(q->D);
    sprintf(str, "../results/history_%s_dim%i_deg%i.txt", shape, dim, deg);
    FILE* FID;
    FID = fopen(str, "w");
-   fprintf(FID, "degree of precision = %i\n", deg);
-   fprintf(FID, "number of basis functions = %i\n", m);
-   fprintf(FID, "dimension = %i\n", dim);
-   fprintf(FID, "initial number of nodes = %i\n", num_nodes_initial);
-   fprintf(FID, "final number of nodes = %i\n", q->k);
-   fprintf(FID, "final residual = %0.16f\n\n", res);
 
-   for(i = 0; i < eliminations; ++i)
+   for(i = 0; i < arr_size; ++i)
    {
-      fprintf(FID, "total number of nodes[%i] = %i\n", i, hist.nodes_tot[i]);
-      fprintf(FID, "success_node[%i] = %i\n", i, hist.success_node[i]);
-      fprintf(FID, "Converged in %i iterations\n\n", hist.success_its[i]);
+      fprintf(FID, "*********************************************************\n\n");
+      fprintf(FID, "dimension = %i\n", hist_arr[i]->dim);
+      fprintf(FID, "degree of precision = %i\n", hist_arr[i]->degree);
+      fprintf(FID, "DOMAIN_TYPE = %s\n", get_domain_string(hist_arr[i]->D));
+      fprintf(FID, "number of basis functions = %i\n", hist_arr[i]->num_funcs);
+      fprintf(FID, "initial number of nodes = %i\n", hist_arr[i]->nodes_initial);
+      fprintf(FID, "final number of nodes = %i\n", hist_arr[i]->nodes_final);
+      fprintf(FID, "total eliminations = %i\n", hist_arr[i]->list->size);
+      fprintf(FID, "final residual = %0.16f\n\n", hist_arr[i]->res);
+      node *curr = hist_arr[i]->list->first;
+      for(j = 0; j < hist_arr[i]->list->size; ++j)
+      {
+         hist_data *cur_d = (hist_data *)(curr->data);
+         fprintf(FID, "total number of nodes[%i] = %i\n", j, cur_d->nodes_tot);
+         fprintf(FID, "success_node[%i] = %i\n", j, cur_d->success_node);
+         fprintf(FID, "Converged in %i iterations\n\n", cur_d->success_its);
+         curr = curr->next;
+      }
+      fprintf(FID, "\n");
    }
 
    fclose(FID);
@@ -43,7 +51,7 @@ void Output(int num_nodes_initial, double res, const_quadrature *q, const elim_h
 
 
 // Prints final quadrature to a file
-void DumpCubatureRule(const_quadrature *quad)
+void DumpCubatureRule(const quadrature *quad)
 {
    int i = -1, j = -1;
    char str[50] = "0";
@@ -72,17 +80,17 @@ static char *get_domain_string(DOMAIN_TYPE D)
    switch(D)
    {
       case INTERVAL:
-         return (char *)"line";
+         return (char *)"LINE";
       case CUBE:
-         return (char *)"cube";
+         return (char *)"CUBE";
       case SIMPLEX:
-         return (char *)"simplex";
+         return (char *)"SIMPLEX";
       case CUBESIMPLEX:
-         return (char *)"cubesimplex";
+         return (char *)"CUBESIMPLEX";
       case SIMPLEXSIMPLEX:
-         return  (char *)"simplexsimplex";
+         return  (char *)"SIMPLEXSIMPLEX";
       case CUBESIMPLEXSIMPLEX:
-         return (char *)"cubesimplexsimplex";
+         return (char *)"CUBESIMPLEXSIMPLEX";
       default:
          return (char *)"0";
    }

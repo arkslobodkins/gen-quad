@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-void PrintNodes(const_quadrature *q, const char *name)
+void PrintNodes(const quadrature *q, const char *name)
 {
    int dim = q->dim;
 
@@ -21,7 +21,7 @@ void PrintNodes(const_quadrature *q, const char *name)
    printf("\n");
 }
 
-void PrintNodeAndWeight(int id, const_quadrature *q, const char *name)
+void PrintNodeAndWeight(int id, const quadrature *q, const char *name)
 {
    int dim = q->dim;
    printf("%i. node and weight for %s\n", id, name);
@@ -33,7 +33,7 @@ void PrintNodeAndWeight(int id, const_quadrature *q, const char *name)
    printf("\n\n");
 }
 
-void PrintNodesAndWeights(const_quadrature *q, const char *name)
+void PrintNodesAndWeights(const quadrature *q, const char *name)
 {
    int dim = q->dim;
 
@@ -50,7 +50,7 @@ void PrintNodesAndWeights(const_quadrature *q, const char *name)
    printf("\n");
 }
 
-void PrintNodeInfo(int iters, double error_norm, const_quadrature *q, const char *name)
+void PrintNodeInfo(int iters, double error_norm, const quadrature *q, const char *name)
 {
    printf("quadrature info for %s during iteration of LSQ\n", name);
    printf("iterations = %i error_norm = %.16le InDomain = %i\n\n", iters, error_norm, QuadInDomain(q));
@@ -93,3 +93,10 @@ void PRINT_ERR(const char *x, int line_num, const char *file_name)
 }
 
 
+void PrintHistElem(void *data)
+{
+   hist_data *h_data = (hist_data *)data;
+   printf("nodes_tot = %d\n", h_data->nodes_tot);
+   printf("success_node = %d\n", h_data->success_node);
+   printf("success_its id = %d\n", h_data->success_its);
+}

@@ -29,8 +29,8 @@ RMatrix RMatrix_init(int nRows, int nCols)
 
 void RMatrix_realloc(int nRows, int nCols, RMatrix *M)
 {
-   M->id  = (double *)realloc(M->id, nRows*nCols*sizeof(double) );
    M->rid = (double **)realloc(M->rid, nRows*sizeof(double*) );
+   M->id  = (double *)realloc(M->id, nRows*nCols*sizeof(double) );
    for(int i = 0; i < nRows; ++i)
       M->rid[i] = &M->id[nCols*i];
 

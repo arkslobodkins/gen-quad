@@ -13,6 +13,8 @@ void dormqr_(char *, char *, int *, int *, int *, double *, int *, double *, dou
 void dgels_(char *, int *, int *, int *, double *, int *, double*, int *, double *, int *, int *);
 
 void MAT_MUL(int M, int K, int N, double *MAT1, double *MAT2, double *MAT3);
+int DORMQR_M(char SIDE, char TRANS, double *REFL_Q, CMatrix Q, CMatrix A);
+int DORMQR_V(char SIDE, char TRANS, double *REFL_Q, CMatrix Q, Vector A);
 void Transpose(int M, int N, const double *A, double *B);
 
 #ifdef __cplusplus

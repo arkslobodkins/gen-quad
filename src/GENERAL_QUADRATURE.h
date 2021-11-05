@@ -3,6 +3,7 @@
 
 #include "Matrix.h"
 #include "Vector.h"
+#include "glist.h"
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -29,6 +30,7 @@ extern "C" {
 #define TWO 2
 #define THREE 3
 #define QUAD_HUGE 10.0
+#define CLOSE_TO_ZERO POW_DOUBLE(10, -18)
 #define QUAD_TOL  POW_DOUBLE(10.0, -15)
 #define BOUND_TOL POW_DOUBLE(10.0, -12)
 #define POW_DOUBLE(x,y) pow(x,y)
@@ -59,6 +61,24 @@ typedef struct
    int *success_its;
 } elim_history;
 
+typedef struct
+{
+   int nodes_tot;
+   int success_node;
+   int success_its;
+} hist_data;
+
+typedef struct
+{
+   glist *list;
+   int dim;
+   int degree;
+   int nodes_initial;
+   int nodes_final;
+   int num_funcs;
+   double res;
+   DOMAIN_TYPE D;
+} history;
 
 typedef struct
 {
@@ -147,34 +167,6 @@ struct quadrature
    FreePtr free_ptr;
 };
 
-struct const_quadrature
-{
-   const DOMAIN_TYPE D;
-   const int dim;
-   const int num_dims;
-   const int *dims;
-   const int deg;
-   const int num_funcs;
-
-   const int k;
-   const double *w;
-   const double *x;
-   const Vector z;
-   const constraints *constr;
-
-   int            setFuncsConstrFlag;
-   const SetFuncs setFuncs; // Function that sets up all domain functions to point to appropriate domain
-
-   const EvalBasis           evalBasis;
-   const EvalBasisDer        evalBasisDer;
-   const BasisIntegrals      basisIntegrals;
-   const constraints_init    constr_init;
-   const constraints_realloc constr_realloc;
-   const get_constraints     get_constr;
-   const constraints_free    constr_free;
-
-   const FreePtr free_ptr;
-};
 
 #define Q_SUCCESS       0
 #define NULL_VAL       -1
@@ -184,13 +176,8 @@ struct const_quadrature
 #define NAN_VAL        -5
 #define QUAD_HUGE_ERR  -6
 #define LAPACK_ERR     -7
+#define DIV_BY_ZERO    -8
 
-#define STR_NULL_VAL     "Pointer is NULL"
-#define STR_ALLOC_FAIL   "Memory allocation failed"
-#define STR_ILL_INPUT    "Encountered illegal input to the function"
-#define STR_INF_VAL      "Encountered infinity"
-#define STR_NAN_VAL      "Encountered not a number"
-#define STR_LAPACK_ERROR "LAPACK routine did not return success"
 
 #ifdef __cplusplus
 }

@@ -258,8 +258,6 @@ void constraints_cubesimplex_realloc(constraints *constr, int dims[2])
 
    RMatrix_realloc(n_rows, n_cols, &constr->M);
    Vector_realloc(n_rows, &constr->b);
-   constr->M_FULL = RMatrix_init(n_rows+1, n_cols+1);
-   constr->b_FULL = Vector_init(n_rows+1);
    RMatrix_realloc(n_rows+1, n_cols+1, &constr->M_FULL);
    Vector_realloc(n_rows+1, &constr->b_FULL);
 }

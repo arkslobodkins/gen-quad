@@ -18,7 +18,7 @@
 
 
 static inline int GetNumDims(DOMAIN_TYPE D);
-static inline bool QuadPosWeightsElem(const_quadrature *q, int elem);
+static inline bool QuadPosWeightsElem(const quadrature *q, int elem);
 
 static void SetIntervalFuncs(quadrature *q);
 static void SetCubeFuncs(quadrature *q);
@@ -191,7 +191,7 @@ void quadrature_reinit(int n, quadrature *q)
 }
 
 
-quadrature *quadrature_make_full_copy(const_quadrature *q)
+quadrature *quadrature_make_full_copy(const quadrature *q)
 {
    if(q->setFuncsConstrFlag == 0) {
       PRINT_ERR("supplied quadrature object was not fully initialized", __LINE__, __FILE__);
@@ -213,7 +213,7 @@ quadrature *quadrature_make_full_copy(const_quadrature *q)
 }
 
 // Assignment operator
-void quadrature_assign(const_quadrature *q1, quadrature *q2)
+void quadrature_assign(const quadrature *q1, quadrature *q2)
 {
    assert(q2->k == q1->k);
    int k   = q1->k;
@@ -257,7 +257,7 @@ void quadrature_to_vector(const quadrature q, Vector v)
 }
 
 
-void quadrature_get_elem(const_quadrature *q, int i, Vector v)
+void quadrature_get_elem(const quadrature *q, int i, Vector v)
 {
    assert(v.len = q->dim);
    int dim = q->dim;
@@ -315,7 +315,7 @@ static void quadrature_free_full(quadrature *q)
 }
 
 
-bool QuadOnTheBoundary(const_quadrature *q, int elem)
+bool QuadOnTheBoundary(const quadrature *q, int elem)
 {
    if(q->setFuncsConstrFlag == 0) {
       PRINT_ERR("constraints have not been initialized", __LINE__, __FILE__);
@@ -343,7 +343,7 @@ bool QuadOnTheBoundary(const_quadrature *q, int elem)
 }
 
 
-bool QuadInDomain(const_quadrature *q)
+bool QuadInDomain(const quadrature *q)
 {
    if(q->setFuncsConstrFlag == 0) {
       PRINT_ERR("constraints have not been initialized", __LINE__, __FILE__);
@@ -372,7 +372,7 @@ bool QuadInDomain(const_quadrature *q)
 }
 
 
-bool QuadInDomainElem(const_quadrature *q, int elem)
+bool QuadInDomainElem(const quadrature *q, int elem)
 {
    if(q->constr == NULL) {
       PRINT_ERR("constraints have not been initialized", __LINE__, __FILE__);
@@ -399,9 +399,9 @@ bool QuadInDomainElem(const_quadrature *q, int elem)
 }
 
 
-bool QuadPosWeights(const_quadrature *q)
+bool QuadPosWeights(const quadrature *q)
 {
-   const_quadrature _q = *q;
+   const quadrature _q = *q;
    for(int i = 0; i < _q.k; ++i)
       if(_q.w[i] < 0)
          return false;
@@ -410,13 +410,13 @@ bool QuadPosWeights(const_quadrature *q)
 }
 
 
-static inline bool QuadPosWeightsElem(const_quadrature *q, int elem)
+static inline bool QuadPosWeightsElem(const quadrature *q, int elem)
 {
    return is_greater_than_zero(q->w[elem]);
 }
 
 
-bool QuadInConstraint(const_quadrature *q)
+bool QuadInConstraint(const quadrature *q)
 {
    if(q->constr == NULL) {
       PRINT_ERR("constraints have not been initialized", __LINE__, __FILE__);
@@ -427,7 +427,7 @@ bool QuadInConstraint(const_quadrature *q)
 }
 
 
-bool QuadInConstraintElem(const_quadrature *q, int elem)
+bool QuadInConstraintElem(const quadrature *q, int elem)
 {
    if(q->constr == NULL) {
       PRINT_ERR("constraints have not been initialized", __LINE__, __FILE__);
@@ -438,7 +438,7 @@ bool QuadInConstraintElem(const_quadrature *q, int elem)
 }
 
 
-double QuadTestIntegral(const_quadrature *q)
+double QuadTestIntegral(const quadrature *q)
 {
    if(q->constr == NULL) {
       PRINT_ERR("constraints have not been initialized", __LINE__, __FILE__);
@@ -478,7 +478,7 @@ double QuadTestIntegral(const_quadrature *q)
 }
 
 
-bool QuadEqnOnTheBoundary(const_quadrature *q, int elem, int eqn)
+bool QuadEqnOnTheBoundary(const quadrature *q, int elem, int eqn)
 {
    if(q->constr == NULL || q->setFuncsConstrFlag == 0)
    {

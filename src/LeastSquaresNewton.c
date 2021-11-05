@@ -36,10 +36,10 @@ static void ConstrVectDataReset(ConstrVectData *cVectData);
 static ConstrNodeData ConstrNodeDataInit();
 static void ConstrNodeDataReset(ConstrNodeData *cNodeData);
 
-static int ConstrainedProjection(const_quadrature *q_prev, quadrature *q_next);
+static int ConstrainedProjection(const quadrature *q_prev, quadrature *q_next);
 
-static int ShortenVector(const RMatrix A, const Vector b, const_quadrature *q_prev,
-                         const_quadrature *q_next, ConstrVectData *cVectData);
+static int ShortenVector(const RMatrix A, const Vector b, const quadrature *q_prev,
+                         const quadrature *q_next, ConstrVectData *cVectData);
 
 static ConstrNodeData ShortenNode(int node_num, const RMatrix A, const Vector b,
                                   const Vector z_old, const Vector z_new);
@@ -85,13 +85,13 @@ bool LeastSquaresNewton(const bool_enum FLAG_CONSTR, const int_fast8_t *basis, q
    double *WORK        = (double *)malloc(LWORK*size_double);
    Vector LEAST_SQ_SOL = Vector_init(LEAD_DIM);
 
-   quadrature *q_prev = quadrature_make_full_copy((const_quadrature *)q_orig);
-   quadrature *q_next = quadrature_make_full_copy((const_quadrature *)q_orig);
+   quadrature *q_prev = quadrature_make_full_copy(q_orig);
+   quadrature *q_next = quadrature_make_full_copy(q_orig);
 
    // return if input is a satisfactory quadrature
    GetFunction(basis, q_prev, RHS);
    errorNorm = V_ScaledTwoNorm(RHS);
-   if( (errorNorm < q_tol) && (QuadInConstraint((const_quadrature *)q_prev) == true) )
+   if( (errorNorm < q_tol) && (QuadInConstraint(q_prev) == true) )
    {
       SOL_FLAG = SOL_FOUND;
       *its = 0;
@@ -148,13 +148,13 @@ bool LeastSquaresNewton(const bool_enum FLAG_CONSTR, const int_fast8_t *basis, q
 #ifdef CONSTR_OPT
       if(FLAG_CONSTR == ON)
       {
-         int P_FLAG = ConstrainedProjection((const_quadrature *)q_prev, q_next);
+         int P_FLAG = ConstrainedProjection(q_prev, q_next);
          if(P_FLAG != CONSTR_SUCCESS)
          {
             SOL_FLAG = SOL_NOT_FOUND;
             goto FREERETURN;
          }
-         int C_FLAG = ConstrainedOptimization((const_quadrature *)q_prev, q_next, &cVectData);
+         int C_FLAG = ConstrainedOptimization(q_prev, q_next, &cVectData);
          if(C_FLAG != CONSTR_SUCCESS)
          {
             SOL_FLAG = SOL_NOT_FOUND;
@@ -163,7 +163,7 @@ bool LeastSquaresNewton(const bool_enum FLAG_CONSTR, const int_fast8_t *basis, q
       }
       else
       {
-         if( !QuadInConstraint((const_quadrature *)q_next) && itsLoc > 5)
+         if( !QuadInConstraint(q_next) && itsLoc > 5)
          {
             SOL_FLAG = SOL_NOT_FOUND;
             goto FREERETURN;
@@ -174,14 +174,14 @@ bool LeastSquaresNewton(const bool_enum FLAG_CONSTR, const int_fast8_t *basis, q
       GetFunction(basis, q_next, RHS);
       errorNormUpdate = V_ScaledTwoNorm(RHS);
 
-      quadrature_assign((const_quadrature *)q_next, q_prev);
+      quadrature_assign(q_next, q_prev);
       ++itsLoc;
 
    } while( (itsLoc < maxiter) && (errorNormUpdate > q_tol) );
 
 
    // check if quadrature satisfies constraints
-   if( ( !QuadInConstraint( (const_quadrature *)q_next ))
+   if( ( !QuadInConstraint( q_next ))
     || (  errorNormUpdate > q_tol) )
    {
       SOL_FLAG = SOL_NOT_FOUND;
@@ -195,7 +195,7 @@ bool LeastSquaresNewton(const bool_enum FLAG_CONSTR, const int_fast8_t *basis, q
     && (errorNormUpdate <= q_tol) )
    {
       quadrature_realloc(q_next->k, dim, dims, deg, q_orig);
-      quadrature_assign((const_quadrature *)q_next, q_orig);
+      quadrature_assign(q_next, q_orig);
       SOL_FLAG = SOL_FOUND;
    }
    else
@@ -280,7 +280,7 @@ static void ConstrNodeDataReset(ConstrNodeData *cNodeData)
 }
 
 
-static int ConstrainedProjection(const_quadrature *q_prev, quadrature *q_next)
+static int ConstrainedProjection(const quadrature *q_prev, quadrature *q_next)
 {
    int i,j,d;
    int k = q_prev->k;
@@ -309,7 +309,7 @@ static int ConstrainedProjection(const_quadrature *q_prev, quadrature *q_next)
             ++active_eqn_count;
             eqn_flags[j] = true;
             if( !do_project)
-               if( !QuadInDomainElem((const_quadrature *)q_next, i) ) do_project = true;
+               if( !QuadInDomainElem(q_next, i) ) do_project = true;
          }
       }
 
@@ -352,7 +352,7 @@ static int ConstrainedProjection(const_quadrature *q_prev, quadrature *q_next)
 }
 
 
-int ConstrainedOptimization(const_quadrature *q_prev, quadrature *q_next, ConstrVectData *cVectData)
+int ConstrainedOptimization(const quadrature *q_prev, quadrature *q_next, ConstrVectData *cVectData)
 {
    assert(q_prev->k == q_next->k);
 
@@ -360,15 +360,15 @@ int ConstrainedOptimization(const_quadrature *q_prev, quadrature *q_next, Constr
    int RET_FLAG = CONSTR_SUCCESS;
 
    Vector q_diff = Vector_init(q_len);
-   quadrature *q_next_copy = quadrature_make_full_copy((const_quadrature *)q_next);
+   quadrature *q_next_copy = quadrature_make_full_copy(q_next);
    for(int i = 0; i < q_len; ++i)
       q_diff.id[i] = q_prev->z.id[i] - q_next_copy->z.id[i];
 
-   if( ( QuadInConstraint( (const_quadrature *)q_next_copy) == false )
+   if( ( QuadInConstraint( q_next_copy) == false )
          && ( QuadInConstraint(q_prev ) == true ) )
    {
       RET_FLAG = ShortenVector(q_prev->constr->M_FULL, q_prev->constr->b_FULL,
-                               q_prev, (const_quadrature *)q_next_copy, cVectData);
+                               q_prev, q_next_copy, cVectData);
       COND_TEST_2;
 
       // return if quadrature vector was not shortened successfully
@@ -384,9 +384,9 @@ int ConstrainedOptimization(const_quadrature *q_prev, quadrature *q_next, Constr
 
       COND_TEST_3;
 
-      if(QuadInConstraint( (const_quadrature *)q_next_copy ) == 1)
+      if(QuadInConstraint( q_next_copy ) == 1)
       {
-         quadrature_assign((const_quadrature *)q_next_copy, q_next);
+         quadrature_assign(q_next_copy, q_next);
          RET_FLAG = CONSTR_SUCCESS;
       }
       else
@@ -406,7 +406,7 @@ int ConstrainedOptimization(const_quadrature *q_prev, quadrature *q_next, Constr
 
 // Shortens q_next vector such that every node satisfies inequality  A*q_next_i = b,
 // provided that q_prev satisfies the constraints.
-static int ShortenVector(const RMatrix A, const Vector b, const_quadrature *q_prev, const_quadrature *q_next, ConstrVectData *cVectData)
+static int ShortenVector(const RMatrix A, const Vector b, const quadrature *q_prev, const quadrature *q_next, ConstrVectData *cVectData)
 {
    assert(A.cols == q_prev->dim+1);
    assert(q_prev->k == q_next->k);

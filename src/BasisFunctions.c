@@ -1430,8 +1430,8 @@ double  orthogonal_simplex_basis_test(int *dims, int deg, const int_fast8_t *bas
 
    int N = POW_INT(n, dim);
    quadrature *quad_S = quadrature_init_basic(N, dim, dims, deg, SIMPLEX);
-   GeneralizedNodesTensor( (const_quadrature *)quad_1D, quad_S );
-   GeneralizedWeightsTensor( (const_quadrature *)quad_1D, quad_S );
+   GeneralizedNodesTensor(quad_1D, quad_S);
+   GeneralizedWeightsTensor(quad_1D, quad_S);
    GeneralDuffy(quad_S);
 
    double *phi = (double *)malloc(num_funcs*size_double);

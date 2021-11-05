@@ -19,7 +19,8 @@ OBJS =  GaussCore.o Jacobi.o
 all : quad
 quad: Main.o InsertionSort.o BasisIntegrals.o LeastSquaresNewton.o GeneralGaussTensor.o                \
 	   GetJacobian.o GetFunction.o NodeElimination.o BasisFunctions.o BasisIndices.o Output.o           \
-		AddDimension.o ComputeDomain.o QuadDriver.o Constraints.o Vector.o Matrix.o Print.o Quadrature.o \
+		AddDimension.o ComputeDomain.o QuadDriver.o Constraints.o Vector.o Matrix.o glist.o Print.o      \
+	   Quadrature.o                                                                                     \
 	   LINALG.o libgaussq.a
 
 	$(CC)  $(CFLAGS) -o $@ $^ $(LIBSBLAS) $(LIBSLA)  $(MATH)

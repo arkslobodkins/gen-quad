@@ -19,7 +19,7 @@ bool LeastSquaresNewton(const bool_enum FLAG_CONSTR, const int_fast8_t *basis, q
 
 #ifdef CONSTR_OPT
 ConstrVectData ConstrVectDataInit();
-int ConstrainedOptimization(const_quadrature *q_prev, quadrature *q_next, ConstrVectData *cVecData);
+int ConstrainedOptimization(const quadrature *q_prev, quadrature *q_next, ConstrVectData *cVecData);
 #endif
 
 #ifdef __cplusplus

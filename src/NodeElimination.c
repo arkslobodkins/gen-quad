@@ -36,7 +36,7 @@ static bool TestQR(int numRows, int qiCols, const double *Q);
  * to obtain quadrature rule with fewer nodes. The procedure is repeated
  * until no more nodes can be eliminated.
  ***************************************************************************************************/
-void NodeElimination(const_quadrature *q_initial, quadrature *q_final, elim_history *hist)
+void NodeElimination(const quadrature *q_initial, quadrature *q_final, glist *history)
 {
    if(q_initial->setFuncsConstrFlag!= 1)
       PRINT_ERR("Functions and constraints for q_initial are not set", __LINE__, __FILE__);
@@ -63,14 +63,14 @@ void NodeElimination(const_quadrature *q_initial, quadrature *q_final, elim_hist
    // test accuracy of the initial quadrature
    // if residual is too large, attempt to find quadrature using Newton's method.
    // if Newton's method finds a solution, proceed to Node elimination, otherwise return.
-   double res = QuadTestIntegral( (const_quadrature *)q_initial );
+   double res = QuadTestIntegral( q_initial );
    PrintDouble(res, "initial residual in NodeElimination");
    if(fabs(res) > tol) {
       bool SOL_FLAG = LeastSquaresNewton(ON, basis, q_temp, 0);
       if(SOL_FLAG == SOL_FOUND) {
          n_initial = q_temp->k;
          quadrature_realloc(q_temp->k, dim, dims, deg, q_new);
-         quadrature_assign((const_quadrature *)q_temp, q_new);
+         quadrature_assign(q_temp, q_new);
       }
       else if(SOL_FLAG == SOL_NOT_FOUND) {
          Print("Initial quadrature did not converge. The initial guess should be more accurate.\n");
@@ -128,33 +128,26 @@ void NodeElimination(const_quadrature *q_initial, quadrature *q_final, elim_hist
          QW.cid[i][i*(dim+1)] = 1.0;
 
       // obtain i*(dim+1)th rows of Q(from J_TR) explicitly and store them in QW columns
-      char SIDE      = 'L';
-      char TRANS     = 'T';
-      int lworkQR    = 2*J_TR.cols;
-      double *workQR = (double *) malloc( SIZE_DOUBLE(lworkQR));
-      dormqr_(&SIDE, &TRANS, &QW.rows, &QW.cols, &N_REFL, J_TR.id, &LDJ, REFL, QW.id, &LDJ, workQR, &lworkQR, &INFO);
+      DORMQR_M('L',  'T', REFL, J_TR, QW);
       COND_TEST_4;
 
       int *arrayIndex    = (int *)malloc( SIZE_INT(n_cur) );
       double *signif_ind = (double *)malloc( SIZE_DOUBLE(n_cur) );
-      Vector Q2W_ROW     = Vector_init(ncols);
+      Vector Q2_ROW     = Vector_init(J_TR.rows);
       RMatrix Z          = RMatrix_init(n_cur, ncols);
       RMatrix dZ         = RMatrix_init(n_cur, ncols);
       // compute initial guesses for Newton's method and store them in Z
       for(i = 0; i < QW.cols; ++i)
       {
          // extract i*(dim+1)th row of Q2 and compute its norm, where Q = [Q1, Q2]
-         for(j = 0; j < num_funcs; ++j) Q2W_ROW.id[j] = 0.0;
-         for(j = num_funcs; j < QW.rows; ++j) Q2W_ROW.id[j] = QW.cid[i][j];
-         double norm_Q2_W_ROW = TwoNorm(ncols-num_funcs, &Q2W_ROW.id[num_funcs]);
+         for(j = 0; j < num_funcs; ++j) Q2_ROW.id[j] = 0.0;
+         for(j = num_funcs; j < QW.rows; ++j) Q2_ROW.id[j] = QW.cid[i][j];
+         double norm_Q2_ROW = TwoNorm(ncols-num_funcs, &Q2_ROW.id[num_funcs]);
 
-         // multiply Q by i*(dim+1)th row of Q2
-         TRANS = 'N'; char SIDE = 'L';
-         int ONE_COLUMN = 1;
-         dormqr_(&SIDE, &TRANS, &J_TR.rows, &ONE_COLUMN, &N_REFL, J_TR.id, &LDJ, REFL, Q2W_ROW.id, &LDJ, workQR, &lworkQR, &INFO);
+         DORMQR_V('L', 'N', REFL, J_TR, Q2_ROW); // multiply Q by i*(dim+1)th row of Q2
 
          for(j = 0; j < ncols; ++j)
-            dZ.rid[i][j] = Q2W_ROW.id[j] * q_new->w[i]/SQUARE(norm_Q2_W_ROW);
+            dZ.rid[i][j] = Q2_ROW.id[j] * q_new->w[i]/SQUARE(norm_Q2_ROW);
 
          // compute new initial guesses and store them in predictor Z
          int count;
@@ -174,8 +167,7 @@ void NodeElimination(const_quadrature *q_initial, quadrature *q_final, elim_hist
       free(signif_ind);
       free(REFL);
       free(WORK);
-      free(workQR);
-      Vector_free(Q2W_ROW);
+      Vector_free(Q2_ROW);
       RMatrix_free(dZ);
       CMatrix_free(J);
       CMatrix_free(J_TR);
@@ -201,7 +193,7 @@ void NodeElimination(const_quadrature *q_initial, quadrature *q_final, elim_hist
 #ifdef CONSTR_OPT
          removed_node = false;
          ConstrVectData cVectData = ConstrVectDataInit();
-         if(QuadInConstraint((const_quadrature *)q_temp) == false)
+         if(QuadInConstraint(q_temp) == false)
          {
 
             quadrature *q_prev = quadrature_init_full(n_cur-1, dim, dims, deg, D);
@@ -213,7 +205,7 @@ void NodeElimination(const_quadrature *q_initial, quadrature *q_final, elim_hist
                   q_prev->x[count*dim+d] = q_new->x[j*dim+d];
                ++count;
             }
-            ConstrainedOptimization((const_quadrature *)q_prev, q_temp, &cVectData);
+            ConstrainedOptimization(q_prev, q_temp, &cVectData);
 
             if(cVectData.N_OR_W == WEIGHT)
             {
@@ -233,11 +225,12 @@ void NodeElimination(const_quadrature *q_initial, quadrature *q_final, elim_hist
          {
             n_cur = q_temp->k;
             quadrature_realloc(q_temp->k, dim, dims, deg, q_new);
-            quadrature_assign((const_quadrature *)q_temp, q_new);
-            hist->nodes_tot[hist->tot_elims]    = n_cur;
-            hist->success_node[hist->tot_elims] = i;
-            hist->success_its[hist->tot_elims]  = its;
-            ++hist->tot_elims;
+            quadrature_assign(q_temp, q_new);
+            hist_data *hist_d = malloc(sizeof(hist_data));
+            hist_d->nodes_tot = n_cur;
+            hist_d->success_node = i;
+            hist_d->success_its = its;
+            glist_push(history, (void *)hist_d);
             break; // break i loop
          }
 #ifdef CONSTR_OPT
@@ -269,8 +262,8 @@ void NodeElimination(const_quadrature *q_initial, quadrature *q_final, elim_hist
 FREERETURN:
    // save nodes and weights
    q_final->k = n_cur;
-   quadrature_assign((const_quadrature *)q_new, q_final);
-   res = QuadTestIntegral( (const_quadrature *)q_final );
+   quadrature_assign(q_new, q_final);
+   res = QuadTestIntegral(q_final);
    PrintDouble(res, "Final residual in NodeElimination"); printf("\n");
 
    FreeMemory(basis, q_temp, q_new);

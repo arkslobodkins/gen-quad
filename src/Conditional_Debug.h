@@ -29,7 +29,7 @@ for(int i = 0; i < k; ++i)                                                      
          PRINT_ERR("DID NOT PROJECT PROPERLY", __LINE__, __FILE__);                   \
          PrintInt(i, "ith node");                                                     \
          PrintNodesAndWeights(q_prev, "q_prev");                                      \
-         PrintNodesAndWeights((const_quadrature *)q_next, "q_next");                  \
+         PrintNodesAndWeights(q_next, "q_next");                                      \
          RET_FLAG = CONSTR_FAILURE;                                                   \
       }                                                                               \
    }                                                                                  \
@@ -39,17 +39,17 @@ for(int i = 0; i < k; ++i)                                                      
 if(cVectData->ACTIVE == OFF)                                              \
 {                                                                         \
    PRINT_ERR("CONSTRAINT FAILURE OCCURRED", __LINE__, __FILE__);          \
-   PrintNodesAndWeights((const_quadrature *)q_next, "q_next");            \
+   PrintNodesAndWeights(q_next, "q_next");                                \
    PrintNodesAndWeights(q_prev, "q_prev");                                \
 }
 
 #define COND_TEST_3                                                        \
-if(QuadInConstraint( (const_quadrature *)q_next_copy ) == 0)               \
+if(QuadInConstraint( q_next_copy ) == 0)                                   \
 {                                                                          \
    PrintInt(cVectData->boundaryNodeId, "node_id");                         \
    PRINT_ERR("DID NOT SHORTEN SUCCESSFULLY", __LINE__, __FILE__);          \
    PrintNodesAndWeights(q_prev, "q_prev");                                 \
-   PrintNodesAndWeights((const_quadrature *)q_next, "q_next");             \
+   PrintNodesAndWeights(q_next, "q_next");                                 \
 }
 
 #define COND_TEST_4                                                                   \
@@ -60,7 +60,6 @@ if(TEST_QR == FAILED)                                                           
    PRINT_ERR("FAILED QR TEST, returning from NodeElimination", __LINE__, __FILE__);   \
    free(REFL);                                                                        \
    free(WORK);                                                                        \
-   free(workQR);                                                                      \
    CMatrix_free(J);                                                                   \
    CMatrix_free(J_TR);                                                                \
    CMatrix_free(QW);                                                                  \
