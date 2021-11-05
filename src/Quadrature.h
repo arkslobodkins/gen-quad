@@ -10,7 +10,6 @@ extern "C" {
 
 quadrature * quadrature_init_basic(int n, int dim, int *dims, int deg, DOMAIN_TYPE D);
 quadrature * quadrature_init_full(int n, int dim, int *dims, int deg, DOMAIN_TYPE D);
-void quad_set_funcs_and_constr(quadrature *q);
 void quadrature_realloc(int n, int dim, int *dims, int deg, quadrature *q);
 void quadrature_reinit(int n, quadrature *q);
 quadrature *quadrature_make_full_copy(const quadrature *q);

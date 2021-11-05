@@ -101,7 +101,7 @@ bool LeastSquaresNewton(const bool_enum FLAG_CONSTR, const int_fast8_t *basis, q
          {
             if(cVectData.N_OR_W == WEIGHT)
             {
-               if(k == 1  || ++elim_weights > MAX_ELIM_WEIGHTS)
+               if(k == 1 || ++elim_weights > MAX_ELIM_WEIGHTS)
                {
                   SOL_FLAG = SOL_NOT_FOUND;
                   goto FREERETURN;

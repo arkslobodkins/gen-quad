@@ -48,10 +48,8 @@ void NodeElimination(const quadrature *q_initial, quadrature *q_final, glist *hi
    int num_funcs       = q_initial->num_funcs;
    int deg             = q_initial->deg;
    int dim             = q_initial->dim;
-   int dims[q_initial->num_dims];
-   const ATTR_UNUSED DOMAIN_TYPE D = q_initial->D;
-   for(int d = 0; d < q_initial->num_dims; ++d)
-      dims[d] = q_initial->dims[d];
+   int *dims           = q_initial->dims;
+   const DOMAIN_TYPE D = q_initial->D;
    double tol = QUAD_TOL; // 10^(-15);
 
    int_fast8_t *basis = (int_fast8_t *)malloc( (num_funcs*dim)*sizeof(int_fast8_t) );
@@ -65,14 +63,17 @@ void NodeElimination(const quadrature *q_initial, quadrature *q_final, glist *hi
    // if Newton's method finds a solution, proceed to Node elimination, otherwise return.
    double res = QuadTestIntegral( q_initial );
    PrintDouble(res, "initial residual in NodeElimination");
-   if(fabs(res) > tol) {
+   if(fabs(res) > tol)
+   {
       bool SOL_FLAG = LeastSquaresNewton(ON, basis, q_temp, 0);
-      if(SOL_FLAG == SOL_FOUND) {
+      if(SOL_FLAG == SOL_FOUND)
+      {
          n_initial = q_temp->k;
          quadrature_realloc(q_temp->k, dim, dims, deg, q_new);
          quadrature_assign(q_temp, q_new);
       }
-      else if(SOL_FLAG == SOL_NOT_FOUND) {
+      else if(SOL_FLAG == SOL_NOT_FOUND)
+      {
          Print("Initial quadrature did not converge. The initial guess should be more accurate.\n");
          FreeMemory(basis, q_temp, q_new);
          return;

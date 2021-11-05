@@ -18,7 +18,7 @@ typedef struct
    int size;
    node *first;
    node *last;
-}glist;
+} glist;
 
 glist *glist_create();
 void glist_free(glist *list);

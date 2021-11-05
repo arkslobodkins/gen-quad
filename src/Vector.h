@@ -7,17 +7,6 @@
 extern "C" {
 #endif
 
-typedef struct
-{
-   bool *id;
-   int len;
-} Vector_bool;
-
-typedef struct
-{
-   int *id;
-   int len;
-} Vector_int;
 
 typedef struct
 {

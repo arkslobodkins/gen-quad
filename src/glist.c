@@ -24,7 +24,6 @@ void glist_free(glist *list)
       free(curr);
       curr = next;
    }
-
    free(list);
 }
 
@@ -54,7 +53,6 @@ void glist_push(glist *list, void *data)
       list->last = new_node;
    }
    ++list->size;
-
 }
 
 
