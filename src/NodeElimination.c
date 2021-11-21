@@ -27,7 +27,7 @@
 extern int MAX_DIM;
 static void FreeMemory(int_fast8_t *basis, quadrature *q_temp, quadrature *q_new);
 static double TwoNorm(int n, double *z);
-static bool TestQR(int numRows, int qiCols, const double *Q);
+ATTR_UNUSED static bool TestQR(int numRows, int qiCols, const double *Q);
 
 
 /***************************************************************************************************
@@ -87,8 +87,8 @@ void NodeElimination(const quadrature *q_initial, quadrature *q_final, glist *hi
    int n_cur                    = n_initial;
    bool_enum CONSTR_FLAG        = OFF;
    bool SOL_FLAG                = SOL_NOT_FOUND;
-   double n_opt                 = ceil(1.0*num_funcs/(dim+1));
-   double efficiency            = n_opt/n_initial;
+   int n_opt                    = ceil(1.0*num_funcs/(dim+1));
+   double efficiency            = (double)n_opt/n_initial;
    PrintElimInfo( dim, n_cur , n_opt, efficiency);
    while( ((dim+1)*n_cur > num_funcs)  && (n_cur >= 1) )
    {
@@ -111,13 +111,16 @@ void NodeElimination(const quadrature *q_initial, quadrature *q_final, glist *hi
       GetJacobian(basis, q_new, J);
       CMatrix J_TR = CMatrix_init(J.cols, J.rows);
       CMatrix_Transpose(J, J_TR);
-      // construct QR factorization of transpose of the JACOBIAN
+      CMatrix_free(J);
+
+      // construct QR factorization of transpose of the jacobian
       int INFO     = -1;
       int LDJ      = J_TR.rows;
       int N_REFL   = MIN(J_TR.rows, J_TR.cols);
       double *REFL = (double *)malloc( SIZE_DOUBLE(N_REFL) );
       double *WORK = (double *)malloc( SIZE_DOUBLE(J_TR.cols) );
       dgeqr2_(&J_TR.rows, &J_TR.cols, J_TR.id, &LDJ, REFL, WORK, &INFO);
+      free(WORK);
 
       // initialize i*(dim+1)th rows of Q. Entries that correspond to weight indices are initialized to 1
       CMatrix QW  = CMatrix_init((dim+1)*n_cur, n_cur);
@@ -147,14 +150,11 @@ void NodeElimination(const quadrature *q_initial, quadrature *q_final, glist *hi
             dZ.rid[i][j] = Q2_ROW.id[j] * q_new->w[i]/SQUARE(norm_Q2_ROW);
 
          // compute new initial guesses and store them in predictor Z
-         int count;
-         for(count = 0, j = 0; j < n_cur; ++j)
+         for(j = 0; j < n_cur; ++j)
          {
-            Z.rid[i][(dim+1)*count] = q_new->w[j] - dZ.rid[i][(dim+1)*j];
+            Z.rid[i][j] = q_new->w[j] - dZ.rid[i][(dim+1)*j];
             for(d = 0; d < dim; ++d)
-               Z.rid[i][count*(dim+1)+1+d] = q_new->x[j*dim+d] - dZ.rid[i][j*(dim+1)+d+1];
-
-            ++count;
+               Z.rid[i][n_cur+j*dim+d] = q_new->x[j*dim+d] - dZ.rid[i][j*(dim+1)+d+1];
          }
 
          signif_ind[i] = TwoNorm(ncols, dZ.rid[i]);
@@ -163,10 +163,8 @@ void NodeElimination(const quadrature *q_initial, quadrature *q_final, glist *hi
 
       free(signif_ind);
       free(REFL);
-      free(WORK);
       Vector_free(Q2_ROW);
       RMatrix_free(dZ);
-      CMatrix_free(J);
       CMatrix_free(J_TR);
       CMatrix_free(QW);
 
@@ -180,20 +178,23 @@ void NodeElimination(const quadrature *q_initial, quadrature *q_final, glist *hi
          for(count = 0, j = 0; j < n_cur; ++j)
          {
             if(j == arrayIndex[i]) continue;
-            for(d = 0; d < dim; ++d)
-               q_temp->x[count*dim+d] = Z.rid[arrayIndex[i]][j*(dim+1) + d+1];
 
-            q_temp->w[count] = Z.rid[arrayIndex[i]][j*(dim+1)];
+            q_temp->w[count] = Z.rid[arrayIndex[i]][j];
+            for(d = 0; d < dim; ++d)
+               q_temp->x[count*dim+d] = Z.rid[arrayIndex[i]][n_cur+j*dim+d];
             ++count;
          }
 
-         if(V_InfNorm(q_temp->z) >= QUAD_HUGE) continue;
+         if(V_InfNorm(q_temp->z) >= QUAD_HUGE)
+         {
+            PRINT_ERR(STR_QUAD_HUGE_ERR, __LINE__, __FILE__);
+            continue;
+         }
 
          removed_node = false;
          ConstrVectData cVectData = ConstrVectDataInit();
          if(QuadInConstraint(q_temp) == false)
          {
-
             quadrature *q_prev = quadrature_init_full(n_cur-1, dim, dims, deg, D);
             for(count = 0, j = 0; j < n_cur; ++j)
             {
@@ -221,6 +222,7 @@ void NodeElimination(const quadrature *q_initial, quadrature *q_final, glist *hi
          if(SOL_FLAG == SOL_FOUND)
          {
             n_cur = q_temp->k;
+            efficiency = (double)n_opt/n_cur;
             quadrature_realloc(q_temp->k, dim, dims, deg, q_new);
             quadrature_assign(q_temp, q_new);
 
@@ -234,6 +236,7 @@ void NodeElimination(const quadrature *q_initial, quadrature *q_final, glist *hi
          else if(SOL_FLAG == SOL_NOT_FOUND)
             if(removed_node == true)
                quadrature_realloc(temp_prev, dim, dims, deg, q_temp);
+
       }// end i loop
       RMatrix_free(Z);
       free(arrayIndex);
@@ -243,12 +246,12 @@ void NodeElimination(const quadrature *q_initial, quadrature *q_final, glist *hi
 
       // end NodeElimination if repeat flag is off and all iterations were unsuccessful
       if (SOL_FLAG == SOL_FOUND)
-         PrintElimInfo(dim, n_cur, n_opt, n_opt/n_cur);
+         PrintElimInfo(dim, n_cur, n_opt, efficiency);
       else if( (SOL_FLAG == SOL_NOT_FOUND) && (CONSTR_FLAG != ON)  && (dim == MAX_DIM) )
          Print("rerunning with constrained optimization");
-      else if( SOL_FLAG == SOL_NOT_FOUND ) {
+      else if(SOL_FLAG == SOL_NOT_FOUND) {
          Print("Last iteration did not converge");
-         break;
+         break; // break while loop
       }
 
    }// end while loop

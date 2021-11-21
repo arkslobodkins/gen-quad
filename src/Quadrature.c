@@ -105,7 +105,9 @@ quadrature *quadrature_init_basic(int n, int dim, int *dims, int deg, DOMAIN_TYP
          q->setFuncs = SetCubeSimplexSimplexFuncs;
          break;
    }
+
    q->D = D;
+   q->evalBasisMonomial = &BasisMonomial;
 
    q->constr = NULL;
    q->evalBasis        = NULL;
@@ -445,34 +447,84 @@ double QuadTestIntegral(const quadrature *q)
       return false;
    }
 
-   int num_funcs   = q->num_funcs;
+   int k = q->k;
    int dim = q->dim;
+   int *dims = q->dims;
    int deg = q->deg;
+   double *x = q->x;
+   double *w = q->w;
+
+   int num_funcs = q->num_funcs;
    int_fast8_t *basis_id = (int_fast8_t *)malloc(num_funcs*dim *sizeof(int_fast8_t));
    BasisIndices(deg, dim, basis_id);
 
-   Vector res_loc = Vector_init(num_funcs);
-   Vector phi = Vector_init(num_funcs);
-   Vector In = Vector_init(num_funcs);
-   Vector Ie = Vector_init(num_funcs);
+   Vector orth_basis = Vector_init(num_funcs);
+   Vector IQuad      = Vector_init(num_funcs);
+   Vector IExact     = Vector_init(num_funcs);
+   Vector res_arr    = Vector_init(num_funcs);
 
-   q->basisIntegrals((int *)q->dims, q->deg, Ie.id);
+   q->basisIntegrals(dims, deg, IExact.id);
 
    // approximate integrals of basis functions
-   for(int i = 0; i < q->k; ++i)
+   for(int i = 0; i < k; ++i)
    {
-      q->evalBasis((int *)q->dims, q->deg, basis_id, &q->x[dim*i], phi.id);
+      q->evalBasis(dims, deg, basis_id, &x[dim*i], orth_basis.id);
       for(int j = 0; j < num_funcs; ++j)
-         In.id[j] += phi.id[j] * q->w[i];
+         IQuad.id[j] += orth_basis.id[j] * w[i];
    }
 
-   for(int j = 0; j < num_funcs; ++j) res_loc.id[j] = fabs(In.id[j]-Ie.id[j]);
-   double res = V_ScaledTwoNorm(res_loc);
+   for(int j = 0; j < num_funcs; ++j) res_arr.id[j] = fabs(IQuad.id[j]-IExact.id[j]);
+   double res = V_ScaledTwoNorm(res_arr);
 
-   Vector_free(Ie);
-   Vector_free(In);
-   Vector_free(phi);
-   Vector_free(res_loc);
+   Vector_free(IExact);
+   Vector_free(IQuad);
+   Vector_free(orth_basis);
+   Vector_free(res_arr);
+   free(basis_id);
+   return res;
+}
+
+
+double QuadTestIntegralMonomial(const quadrature *q)
+{
+   if(q->constr == NULL) {
+      PRINT_ERR("constraints have not been initialized", __LINE__, __FILE__);
+      return false;
+   }
+
+   int k = q->k;
+   int dim = q->dim;
+   int *dims = q->dims;
+   int deg = q->deg;
+   double *x = q->x;
+   double *w = q->w;
+
+   int num_funcs = q->num_funcs;
+   int_fast8_t *basis_id = (int_fast8_t *)malloc(num_funcs*dim *sizeof(int_fast8_t));
+   BasisIndices(deg, dim, basis_id);
+
+   Vector orth_basis = Vector_init(num_funcs);
+   Vector IQuad      = Vector_init(num_funcs);
+   Vector IExact     = Vector_init(num_funcs);
+   Vector res_arr    = Vector_init(num_funcs);
+
+   q->basisIntegralsMonomial(dims, deg, IExact.id);
+
+   // approximate integrals of basis functions
+   for(int i = 0; i < k; ++i)
+   {
+      q->evalBasisMonomial(dim, deg, basis_id, &x[dim*i], orth_basis.id);
+      for(int j = 0; j < num_funcs; ++j)
+         IQuad.id[j] += orth_basis.id[j] * w[i];
+   }
+
+   for(int j = 0; j < num_funcs; ++j) res_arr.id[j] = fabs(IQuad.id[j]-IExact.id[j]);
+   double res = V_ScaledTwoNorm(res_arr);
+
+   Vector_free(IExact);
+   Vector_free(IQuad);
+   Vector_free(orth_basis);
+   Vector_free(res_arr);
    free(basis_id);
    return res;
 }
@@ -525,6 +577,7 @@ static void SetCubeFuncs(quadrature *q)
    q->evalBasis        = &BasisCube;
    q->evalBasisDer     = &BasisPrimeCube;
    q->basisIntegrals   = &BasisIntegralsCube;
+   q->basisIntegralsMonomial = &IntegralsCubeMonomial; // Will add to other polygons as well
 
    q->constr_init      = &constraints_cube_init;
    q->constr_realloc   = &constraints_cube_realloc;

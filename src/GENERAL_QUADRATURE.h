@@ -49,6 +49,7 @@ extern "C" {
 
 
 typedef enum { ON, OFF } bool_enum;
+typedef enum { orthogonal, monomial } basis_type;
 typedef enum { INTERVAL, CUBE, SIMPLEX, CUBESIMPLEX, SIMPLEXSIMPLEX, CUBESIMPLEXSIMPLEX } DOMAIN_TYPE;
 typedef enum { NODE, WEIGHT, NONE } NODE_OR_WEIGHT;
 
@@ -104,9 +105,11 @@ typedef struct quadrature quadrature;
 typedef struct const_quadrature const_quadrature;
 
 typedef void(*EvalBasis)(int *dims, int deg, const int_fast8_t *basis, const double *x, double *phi);
+typedef void(*EvalBasisMonomial)(int dim, int deg, const int_fast8_t *basis, const double *x, double *phi);
 typedef void(*EvalBasisDer)(int *dims, int deg, const int_fast8_t *basis, const double *x, double *phiPrime);
 typedef void(*BasisIntegrals)(int *dims, int deg, double *integrals);
-typedef bool(*InDomain)(const_quadrature *quad);
+typedef void(*BasisIntegralsMonomial)(int *dims, int deg, double *integrals);
+
 typedef bool(*InDomainElem)(const_quadrature *quad, int elem);
 typedef bool(*InConstraint)(const_quadrature *q);
 typedef bool(*InConstraintElem)(const_quadrature *quad, int elem);
@@ -157,8 +160,10 @@ struct quadrature
    SetFuncs setFuncs; // Function that sets up all domain functions to point to appropriate domain
 
    EvalBasis           evalBasis;
+   EvalBasisMonomial   evalBasisMonomial;
    EvalBasisDer        evalBasisDer;
    BasisIntegrals      basisIntegrals;
+   BasisIntegralsMonomial basisIntegralsMonomial;
    constraints_init    constr_init;
    constraints_realloc constr_realloc;
    get_constraints     get_constr;

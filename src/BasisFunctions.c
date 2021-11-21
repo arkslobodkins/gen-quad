@@ -28,8 +28,8 @@ static void BasisPrimeSimplexPolyhedralTwo(int dim, int *dims, int deg, const in
 
 typedef void(*BasisFunc)(int *dims, int deg, const int_fast8_t *basis_id, const double *x,  double *phi);
 
-static int finite_difference_test(int dim, int *dims, int deg, const int_fast8_t *basis_id,
-                                  const double *x, const double *phi_prime, BasisFunc func);
+ATTR_UNUSED static int finite_difference_test(int dim, int *dims, int deg, const int_fast8_t *basis_id,
+                                              const double *x, const double *phi_prime, BasisFunc func);
 
 static void LegendrePoly(int order, double x, double *p, double *dp);
 
@@ -1337,23 +1337,28 @@ static void BasisPrimeSimplexPolyhedralTwo(int dim, int *dims, int deg, const in
 }// BasisPrimeSimplexPolyhedralTwo
 
 
-void BasisMonomial(int dim, int *dims, int deg, const int_fast8_t *basis_id, const double *x, double *phi)
+void BasisMonomial(int dim, int deg, const int_fast8_t *basis_id, const double *x, double *phi)
 {
    int num_funs = BasisSize(dim, deg);
-
-   for(int k = 0; k < num_funs; ++k) phi[k] = 1.0;
+   for(int k = 0; k < num_funs; ++k)
+      phi[k] = 1.0;
 
    for(int k = 0; k < num_funs; ++k)
+   {
       for(int d = 0; d < dim; ++d)
       {
-         double product = 1.0;
+         int basis_power = basis_id[k*dim+d];
          double factor = x[d];
-         for(int r = 0; r < basis_id[k*dim+d]; ++r) product *= factor;
+         double product = 1.0;
+
+         for(int r = 0; r < basis_power; ++r)
+            product *= factor;
 
          phi[k] *= product;
       }
+   }
 
-}// PhiMonomial
+}
 
 
 static int finite_difference_test(int dim, int *dims, int deg, const int_fast8_t *basis_id,

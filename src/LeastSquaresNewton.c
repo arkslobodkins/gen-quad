@@ -109,6 +109,7 @@ bool LeastSquaresNewton(const bool_enum FLAG_CONSTR, const int_fast8_t *basis, q
                ncols = (dim+1)*--k;
                SMALL_DIM = MIN(nrows, ncols);
                LEAD_DIM  = MAX(nrows, ncols);
+               CMatrix_realloc(nrows, ncols, &JACOBIAN);
                quadrature_remove_element(cVectData.boundaryNodeId, q_next);
                quadrature_remove_element(cVectData.boundaryNodeId, q_prev);
             }

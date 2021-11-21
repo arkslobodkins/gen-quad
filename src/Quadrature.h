@@ -30,6 +30,7 @@ bool QuadOnTheBoundary(const quadrature *q, int elem);
 bool QuadEqnOnTheBoundary(const quadrature *q, int elem, int eqn);
 
 double QuadTestIntegral(const quadrature *q);
+double QuadTestIntegralMonomial(const quadrature *q);
 
 #ifdef __cplusplus
 }

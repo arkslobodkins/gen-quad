@@ -1,5 +1,5 @@
-CC = g++
-VERSION = -std=c++98
+CC = gcc
+VERSION = -std=c99
 
 #uncomment "-DQUAD_DEBUG_OFF"   to disable debug mode
 #uncomment "-NDEBUG"            to disable assert statements
@@ -18,7 +18,7 @@ all : quad results
 quad: Main.o InsertionSort.o BasisIntegrals.o LeastSquaresNewton.o GeneralGaussTensor.o                \
       GetJacobian.o GetFunction.o NodeElimination.o BasisFunctions.o BasisIndices.o Output.o           \
       AddDimension.o ComputeDomain.o QuadDriver.o Constraints.o Vector.o Matrix.o glist.o Print.o      \
-      Quadrature.o LINALG.o libgaussq.a
+      Quadrature.o LINALG.o Polytope.o libgaussq.a
 	$(CC) $(VERSION) $(CFLAGS) -o $@ $^ $(LIBSBLAS) $(LIBSLA)  $(MATH)
 
 OBJS =  GaussCore.o Jacobi.o

@@ -38,7 +38,6 @@ double V_InfNorm(const Vector z);
 bool V_CheckNan(const Vector z);
 bool V_CheckInf(const Vector z);
 
-
 int IntPower(int x, int power);
 
 #ifdef __cplusplus

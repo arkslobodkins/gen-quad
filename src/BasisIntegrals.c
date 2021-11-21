@@ -13,7 +13,9 @@
 #include <string.h>
 
 // Routines that compute analytical integrals of all orthogonal
-// basis functions for respective domains and parameters.
+// basis functions for respective domains and parameters, which
+// are all zero due to orthogonality, except for the basis
+// function that integrates scalar polynomial "1".
 
 void BasisIntegralsCube(int *dims, int deg, double *integrals)
 {
@@ -84,3 +86,23 @@ void BasisIntegralsCubeSimplexSimplex(int *dims, int deg, double *integrals)
       integrals[0] /= i;
 }
 
+
+void IntegralsCubeMonomial(int *dims, int deg, double *integrals)
+{
+   int i, d;
+   int dim = dims[0];
+   int m = BasisSize(deg, dim);
+   int_fast8_t *basis = (int_fast8_t *)malloc(dim*m*sizeof(int));
+   BasisIndices(deg, dim, basis);
+
+   for(i = 0; i < m; ++i)
+   {
+      double val = 1.0;
+      for(d = 0; d < dim; ++d)
+         val = val/(basis[i*dim+d] + 1);
+
+      integrals[i] = val;
+   }
+
+   free(basis);
+}

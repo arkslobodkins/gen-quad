@@ -1,0 +1,36 @@
+*********************************************************
+
+dimension = 2
+degree of precision = 6
+DOMAIN_TYPE = CUBE
+number of basis functions = 28
+initial number of nodes = 16
+final number of nodes = 10
+total eliminations = 6
+final residual = 7.0028443177594094e-17
+
+total number of nodes[0] = 15
+success_node[0] = 0
+Converged in 6 iterations
+
+total number of nodes[1] = 14
+success_node[1] = 0
+Converged in 8 iterations
+
+total number of nodes[2] = 13
+success_node[2] = 1
+Converged in 4 iterations
+
+total number of nodes[3] = 12
+success_node[3] = 2
+Converged in 5 iterations
+
+total number of nodes[4] = 11
+success_node[4] = 9
+Converged in 5 iterations
+
+total number of nodes[5] = 10
+success_node[5] = 8
+Converged in 7 iterations
+
+

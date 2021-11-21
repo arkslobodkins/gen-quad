@@ -105,6 +105,9 @@ void ComputeCube(int deg, int dim)
       hist_save_end(q_new, hist_cube[d-2]);
    }
 
+   double res = QuadTestIntegralMonomial(q_new);
+   printf("Monomial residual = %.16e\n", res);
+
    Output(q_new, dim-1, hist_cube);
    DumpCubatureRule(q_new);
 

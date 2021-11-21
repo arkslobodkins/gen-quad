@@ -23,7 +23,7 @@ void BasisPrimeSimplexSimplex(int *dims, int deg, const int_fast8_t *basis_id, c
 void BasisCubeSimplexSimplex(int *dims, int deg, const int_fast8_t *basis_id, const double *x, double *phi);
 void BasisPrimeCubeSimplexSimplex(int *dims, int deg, const int_fast8_t *basis_id, const double *x, double *phiPrime);
 
-void BasisMonomial(int dim, int *dims, int deg, const int_fast8_t *basis_id, const double *x, double *phi);
+void BasisMonomial(int dim, int deg, const int_fast8_t *basis_id, const double *x, double *phi);
 
 double  orthogonal_simplex_basis_test(int *dims, int deg, const int_fast8_t *basis_id);
 
