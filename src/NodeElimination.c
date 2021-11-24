@@ -25,7 +25,7 @@
 #include <string.h>
 
 extern int MAX_DIM;
-static void FreeMemory(int_fast8_t *basis, quadrature *q_temp, quadrature *q_new);
+static void FreeMemory(INT_8 *basis, quadrature *q_temp, quadrature *q_new);
 static double TwoNorm(int n, double *z);
 ATTR_UNUSED static bool TestQR(int numRows, int qiCols, const double *Q);
 
@@ -44,7 +44,7 @@ void NodeElimination(const quadrature *q_initial, quadrature *q_final, glist *hi
       PRINT_ERR("Functions and constraints for q_final are not set",  __LINE__, __FILE__);
 
    int i,j,d;
-   int n_initial       = q_initial->k;
+   int n_initial       = q_initial->num_nodes;
    int num_funcs       = q_initial->num_funcs;
    int deg             = q_initial->deg;
    int dim             = q_initial->dim;
@@ -52,7 +52,7 @@ void NodeElimination(const quadrature *q_initial, quadrature *q_final, glist *hi
    const DOMAIN_TYPE D = q_initial->D;
    double tol = QUAD_TOL; // 10^(-15);
 
-   int_fast8_t *basis = (int_fast8_t *)malloc( (num_funcs*dim)*sizeof(int_fast8_t) );
+   INT_8 *basis = (INT_8 *)malloc( (num_funcs*dim)*sizeof(INT_8) );
    BasisIndices(deg, dim, basis);
 
    quadrature *q_temp = quadrature_make_full_copy(q_initial);
@@ -68,8 +68,8 @@ void NodeElimination(const quadrature *q_initial, quadrature *q_final, glist *hi
       bool SOL_FLAG = LeastSquaresNewton(ON, basis, q_temp, 0);
       if(SOL_FLAG == SOL_FOUND)
       {
-         n_initial = q_temp->k;
-         quadrature_realloc(q_temp->k, dim, dims, deg, q_new);
+         n_initial = q_temp->num_nodes;
+         quadrature_realloc(q_temp->num_nodes, dim, dims, deg, q_new);
          quadrature_assign(q_temp, q_new);
       }
       else if(SOL_FLAG == SOL_NOT_FOUND)
@@ -208,7 +208,7 @@ void NodeElimination(const quadrature *q_initial, quadrature *q_final, glist *hi
 
             if(cVectData.N_OR_W == WEIGHT)
             {
-               temp_prev = q_temp->k;
+               temp_prev = q_temp->num_nodes;
                quadrature_remove_element(cVectData.boundaryNodeId, q_temp);
                removed_node = true;
             }
@@ -221,9 +221,9 @@ void NodeElimination(const quadrature *q_initial, quadrature *q_final, glist *hi
          // store nodes and weights if Newton's method succeeded, update history
          if(SOL_FLAG == SOL_FOUND)
          {
-            n_cur = q_temp->k;
+            n_cur = q_temp->num_nodes;
             efficiency = (double)n_opt/n_cur;
-            quadrature_realloc(q_temp->k, dim, dims, deg, q_new);
+            quadrature_realloc(q_temp->num_nodes, dim, dims, deg, q_new);
             quadrature_assign(q_temp, q_new);
 
             hist_data *hist_d = (hist_data *)malloc(sizeof(hist_data));
@@ -258,7 +258,7 @@ void NodeElimination(const quadrature *q_initial, quadrature *q_final, glist *hi
 
 FREERETURN:
    // save nodes and weights
-   q_final->k = n_cur;
+   q_final->num_nodes = n_cur;
    quadrature_assign(q_new, q_final);
    res = QuadTestIntegral(q_final);
    PrintDouble(res, "Final residual in NodeElimination"); printf("\n");
@@ -267,7 +267,7 @@ FREERETURN:
 }// end NodeElimination
 
 
-static void FreeMemory(int_fast8_t *basis, quadrature *q_temp, quadrature *q_new)
+static void FreeMemory(INT_8 *basis, quadrature *q_temp, quadrature *q_new)
 {
    free(basis);
    quadrature_free(q_temp);

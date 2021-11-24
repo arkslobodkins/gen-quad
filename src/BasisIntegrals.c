@@ -4,10 +4,8 @@
  */
 
 #include "BasisIntegrals.h"
-
 #include "BasisIndices.h"
 #include "Quadrature.h"
-#include "GENERAL_QUADRATURE.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -92,7 +90,7 @@ void IntegralsCubeMonomial(int *dims, int deg, double *integrals)
    int i, d;
    int dim = dims[0];
    int m = BasisSize(deg, dim);
-   int_fast8_t *basis = (int_fast8_t *)malloc(dim*m*sizeof(int));
+   INT_8 *basis = (INT_8 *)malloc(dim*m*sizeof(int));
    BasisIndices(deg, dim, basis);
 
    for(i = 0; i < m; ++i)

@@ -9,12 +9,6 @@
 extern "C" {
 #endif
 
-typedef struct
-{
-   int_fast8_t *basis_indices;
-   double *basis_functions;
-   double *basis_integrals;
-} Basis;
 
 typedef struct Polytope Polytope;
 
@@ -25,6 +19,8 @@ typedef int (*_deg)(void *);
 typedef DOMAIN_TYPE(*_type)(void *);
 typedef const char*(*_string)();
 typedef double(*_get_area)(Polytope *);
+typedef void (*_ComputeBasisIntegrals)(Polytope* polytope);
+typedef void (*_ComputeBasisFunctions)(Polytope* polytope, double *point);
 
 
 typedef struct
@@ -36,16 +32,20 @@ typedef struct
   _type type;
   _string string;
   _get_area get_area;
+  _ComputeBasisIntegrals ComputeBasisIntegrals;
+  _ComputeBasisFunctions ComputeBasisFunctions;
 
 } PolytopeInterface;
 
 struct Polytope
 {
-   Basis *basis;
+   int basisSize;
+   bool_enum basis_indices_flag;
+   INT_8 *basis_indices;
+   double *basis_functions;
+   double *basis_integrals;
    void *constr;
    void *domain_params;
-
-   int basisSize;
 
    const PolytopeInterface *interface;
 };
@@ -56,9 +56,11 @@ void PolytopeFree(Polytope* polytope);
 int PolytopeDim(Polytope *polytope);
 int PolytopeDeg(Polytope *polytope);
 DOMAIN_TYPE PolytopeType(Polytope *polytope);
-const char *PolytopeString(Polytope *Polytope);
+const char *PolytopeString(Polytope *polytope);
 double PolytopeGetArea(Polytope *polytope);
-void ComputeBasis(Polytope * polytope);
+void ComputeBasisIndices(Polytope * polytope);
+void ComputeBasisIntegrals(Polytope* polytope);
+void ComputeBasisFunctions(Polytope* polytope, double *point);
 
 typedef struct
 {
@@ -84,11 +86,14 @@ typedef struct
 
 typedef struct
 {
-   Basis *basis;
+   int basisSize;
+   bool_enum basis_indices_flag;
+   INT_8 *basis_indices;
+   double *basis_functions;
+   double *basis_integrals;
    constraints *constr;
    CubeParams *params;
 
-   int basisSize;
    const PolytopeInterface *interface;
 } Cube;
 
@@ -102,6 +107,9 @@ int CubeDeg(Cube *cube);
 DOMAIN_TYPE CubeType(Cube *cube);
 const char *GetCubeString();
 double CubeGetArea(Cube *cube);
+
+void ComputeBasisIntegralsCube(Cube* cube);
+void ComputeBasisFunctionsCube(Cube* cube, double *point);
 
 void TestPolytope();
 

@@ -13,12 +13,10 @@
 #include "NodeElimination.h"
 #include "Quadrature.h"
 #include "Output.h"
-#include "GENERAL_QUADRATURE.h"
 
 #include <assert.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <stdbool.h>
 #include <math.h>
 
 int MAX_DIM;
@@ -40,7 +38,7 @@ void ComputeInterval(int deg)
    int d_gauss[1] = {1};
    quadrature *q_gauss = quadrature_init_basic(n, 1, d_gauss, deg, INTERVAL);
    double p1 = 0.0, p2 = 0.0;
-   Jacobi(q_gauss->k, p1, p2, q_gauss->x, q_gauss->w);
+   Jacobi(q_gauss->num_nodes, p1, p2, q_gauss->x, q_gauss->w);
    DumpCubatureRule(q_gauss);
    quadrature_free(q_gauss);
 }
@@ -74,14 +72,14 @@ void ComputeCube(int deg, int dim)
    int d_gauss[1] = {1};
    quadrature *q_gauss = quadrature_init_basic(n, 1, d_gauss, deg, INTERVAL);
    double p1 = 0.0, p2 = 0.0;
-   Jacobi(q_gauss->k, p1, p2, q_gauss->x, q_gauss->w);
+   Jacobi(q_gauss->num_nodes, p1, p2, q_gauss->x, q_gauss->w);
 
    // implement recursive scheme for computing the initial guess and run Node Elimination algorithm
    for(int d = 2; d <= dim; ++d)
    {
       if(d == 2) // set up initial guess for 2-dim CUBE
       {
-         int n_nodes_next = q_gauss->k * q_gauss->k;
+         int n_nodes_next = q_gauss->num_nodes * q_gauss->num_nodes;
          int d_init[1] = {d};
          q_init = quadrature_init_full(n_nodes_next, d, d_init, deg, CUBE);
          AddLineFirst(q_gauss, q_gauss, q_init);
@@ -91,7 +89,7 @@ void ComputeCube(int deg, int dim)
       }
       else if(d > 2) // set up initial guess for d-dim CUBE
       {
-         int n_nodes_next = q_new->k * q_gauss->k;
+         int n_nodes_next = q_new->num_nodes * q_gauss->num_nodes;
          int d_init[1] = {d};
          quadrature_realloc(n_nodes_next, d, d_init, deg, q_init);
          AddLineFirst(q_gauss, q_new, q_init);
@@ -106,7 +104,7 @@ void ComputeCube(int deg, int dim)
    }
 
    double res = QuadTestIntegralMonomial(q_new);
-   printf("Monomial residual = %.16e\n", res);
+   printf("Monomial residual = %.16e\n\n", res);
 
    Output(q_new, dim-1, hist_cube);
    DumpCubatureRule(q_new);
@@ -169,7 +167,7 @@ void ComputeSimplex(int deg, int dim)
    int d_gauss[1] = {1};
    int n2 = ceil( (deg+1)/2.0 );
    quadrature *q_gauss = quadrature_init_basic(n2, 1,  d_gauss, 2*n2-1, INTERVAL);
-   Jacobi(q_gauss->k, p1, p2, q_gauss->x, q_gauss->w);
+   Jacobi(q_gauss->num_nodes, p1, p2, q_gauss->x, q_gauss->w);
    quadrature *q_new = ComputeSimplexNext(deg, 1, dim, q_gauss, 0, hist_simplex);
 
    Output(q_new, dim-1, hist_simplex);
@@ -231,11 +229,11 @@ void ComputeCubeSimplex(int deg, int dim1, int dim2)
 
             // generate Gaussian nodes and weights in 1-d on [0, 1]
             double p1 = 0.0, p2 = 0.0;
-            Jacobi(q_gauss_1->k, p1, p2, q_gauss_1->x, q_gauss_1->w);
-            Jacobi(q_gauss_2->k, p1, p2, q_gauss_2->x, q_gauss_2->w);
+            Jacobi(q_gauss_1->num_nodes, p1, p2, q_gauss_1->x, q_gauss_1->w);
+            Jacobi(q_gauss_2->num_nodes, p1, p2, q_gauss_2->x, q_gauss_2->w);
 
             int d_init[1] = {d};
-            int n_nodes_next = q_gauss_1->k * q_gauss_2->k;
+            int n_nodes_next = q_gauss_1->num_nodes * q_gauss_2->num_nodes;
             q_init_s = quadrature_init_full(n_nodes_next, d, d_init, deg, SIMPLEX);
             AddLineSimplex(q_gauss_1, q_gauss_2, q_init_s);
 
@@ -252,9 +250,9 @@ void ComputeCubeSimplex(int deg, int dim1, int dim2)
             quadrature *q_gauss = quadrature_init_basic(n, 1, d_gauss, 2*n-1, INTERVAL);
             // generate Gaussian nodes and weights in 1-d on [0, 1]
             double p1 = 0.0, p2 = 0.0;
-            Jacobi(q_gauss->k, p1, p2, q_gauss->x, q_gauss->w);
+            Jacobi(q_gauss->num_nodes, p1, p2, q_gauss->x, q_gauss->w);
 
-            int n_nodes_next = q_new_s->k * q_gauss->k;
+            int n_nodes_next = q_new_s->num_nodes * q_gauss->num_nodes;
             int d_init[1] = {d};
             quadrature_realloc(n_nodes_next, d, d_init, deg, q_init_s);
             AddLineSimplex(q_gauss, q_new_s, q_init_s);
@@ -275,13 +273,13 @@ void ComputeCubeSimplex(int deg, int dim1, int dim2)
          int d_gauss[1] = {1};
          quadrature *q_gauss = quadrature_init_basic(n, 1, d_gauss, deg, INTERVAL);
          double p1 = 0.0, p2 = 0.0;
-         Jacobi(q_gauss->k, p1, p2, q_gauss->x, q_gauss->w);
+         Jacobi(q_gauss->num_nodes, p1, p2, q_gauss->x, q_gauss->w);
 
          int d_init[2] = {dim_cube, dim_simplex};
          int d_new[2] = {dim_cube, dim_simplex};
          if(dim_cube == 1)
          {
-            int n_nodes_next = q_new_s->k * q_gauss->k;
+            int n_nodes_next = q_new_s->num_nodes * q_gauss->num_nodes;
             q_init_cs = quadrature_init_full(n_nodes_next, d, d_init, deg, CUBESIMPLEX);
             AddLineFirst(q_gauss, q_new_s, q_init_cs);
 
@@ -289,7 +287,7 @@ void ComputeCubeSimplex(int deg, int dim1, int dim2)
          }
          else if(dim_cube > 1)
          {
-            int n_nodes_next = q_new_cs->k * q_gauss->k;
+            int n_nodes_next = q_new_cs->num_nodes * q_gauss->num_nodes;
             quadrature_realloc(n_nodes_next, d, d_init, deg, q_init_cs);
             AddLineFirst(q_gauss, q_new_cs, q_init_cs);
 
@@ -349,7 +347,7 @@ void ComputeSimplexSimplex(int deg, int dim1, int dim2)
    int d_gauss[1] = {1};
    int n = ceil( (deg+1)/2.0 );
    quadrature *q_gauss = quadrature_init_basic(n, 1,  d_gauss, 2*n-1, INTERVAL);
-   Jacobi(q_gauss->k, p1, p2, q_gauss->x, q_gauss->w);
+   Jacobi(q_gauss->num_nodes, p1, p2, q_gauss->x, q_gauss->w);
 
    int hist_dims = dim_s1_max;
    history **hist_ss = (history **)malloc((hist_dims)*sizeof(history *));
@@ -364,7 +362,7 @@ void ComputeSimplexSimplex(int deg, int dim1, int dim2)
       q_new_s1 = quadrature_make_full_copy(q_new_s2);
 
    // set up parameters for SIMPLEXSIMPLEX
-   int n_nodes_next_ss = q_new_s1->k * q_new_s2->k;
+   int n_nodes_next_ss = q_new_s1->num_nodes * q_new_s2->num_nodes;
    int d_ss[2] = {dim_s1_max, dim_s2_max};
    quadrature *q_init_ss = quadrature_init_full(n_nodes_next_ss, dim, d_ss, deg, SIMPLEXSIMPLEX);
    quadrature *q_new_ss  = quadrature_init_full(n_nodes_next_ss, dim, d_ss, deg, SIMPLEXSIMPLEX);
@@ -415,11 +413,11 @@ static quadrature *ComputeSimplexNext(int deg, int dim_cur, int dim_next, const 
       int d_gauss[1] = {1};
       int n = ceil( (deg+d)/2.0 );
       quadrature *q_gauss = quadrature_init_basic(n, 1,  d_gauss, 2*n-1, INTERVAL);
-      Jacobi(q_gauss->k, p1, p2, q_gauss->x, q_gauss->w);
+      Jacobi(q_gauss->num_nodes, p1, p2, q_gauss->x, q_gauss->w);
 
       if(d == dim_cur+1)
       {
-         int n_nodes_next = q_gauss->k * q_cur->k;
+         int n_nodes_next = q_gauss->num_nodes * q_cur->num_nodes;
          int d_init[1] = {d};
          q_init_next = quadrature_init_full(n_nodes_next, d, d_init, deg, SIMPLEX);
          AddLineSimplex(q_gauss, q_cur, q_init_next);
@@ -429,7 +427,7 @@ static quadrature *ComputeSimplexNext(int deg, int dim_cur, int dim_next, const 
       }
       else if(d > dim_cur+1)
       {
-         int n_nodes_next = q_new_next->k * q_gauss->k;
+         int n_nodes_next = q_new_next->num_nodes * q_gauss->num_nodes;
          int d_init[1] = {d};
          quadrature_realloc(n_nodes_next, d, d_init, deg, q_init_next);
          AddLineSimplex(q_gauss, q_new_next, q_init_next );
@@ -469,14 +467,14 @@ static void hist_save_start(quadrature *q, history *hist)
 {
    hist->dim = q->dim;
    hist->degree = q->deg;
-   hist->nodes_initial = q->k;
+   hist->nodes_initial = q->num_nodes;
    hist->num_funcs = q->num_funcs;
    hist->D = q->D;
 }
 
 static void hist_save_end(quadrature *q, history *hist)
 {
-   hist->nodes_final = q->k;
+   hist->nodes_final = q->num_nodes;
    hist->res = QuadTestIntegral(q);
 }
 

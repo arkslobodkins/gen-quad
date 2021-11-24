@@ -69,7 +69,7 @@ quadrature *quadrature_init_basic(int n, int dim, int *dims, int deg, DOMAIN_TYP
    quadrature *q = (quadrature *)malloc(size_quadrature);
    memset(q, 0, sizeof(quadrature));
 
-   q->k = n;
+   q->num_nodes = n;
    q->z = Vector_init(n*(dim+1));
    memset( q->z.id, 0, SIZE_DOUBLE(n*(dim+1)) );
    q->w = &q->z.id[0];
@@ -145,7 +145,7 @@ quadrature *quadrature_init_full(int n, int dim, int *dims, int deg, DOMAIN_TYPE
 // (i.e. size of array dims remains unchanged) and DOMAIN_TYPE of q.
 void quadrature_realloc(int n, int dim, int *dims, int deg, quadrature *q)
 {
-   q->k = n;
+   q->num_nodes = n;
 
    Vector_realloc(n*(dim+1), &q->z);
    q->w = &q->z.id[0];
@@ -170,8 +170,8 @@ void quadrature_realloc(int n, int dim, int *dims, int deg, quadrature *q)
 // Before the routine is called, q should contain at least n nodes or more.
 void quadrature_reinit(int n, quadrature *q)
 {
-   assert(q->k >= n);
-   q->k = n;
+   assert(q->num_nodes >= n);
+   q->num_nodes = n;
 
    int dim = q->dim;
    double *x = (double *)malloc(SIZE_DOUBLE(n*dim));
@@ -200,7 +200,7 @@ quadrature *quadrature_make_full_copy(const quadrature *q)
       return NULL;
    }
 
-   int k         = q->k;
+   int k         = q->num_nodes;
    int dim       = q->dim;
    int deg       = q->deg;
    DOMAIN_TYPE D = q->D;
@@ -217,8 +217,8 @@ quadrature *quadrature_make_full_copy(const quadrature *q)
 // Assignment operator
 void quadrature_assign(const quadrature *q1, quadrature *q2)
 {
-   assert(q2->k == q1->k);
-   int k   = q1->k;
+   assert(q2->num_nodes == q1->num_nodes);
+   int k   = q1->num_nodes;
    int dim = q1->dim;
 
    // assign only nodes and weights, other fields remain unchanged
@@ -229,9 +229,9 @@ void quadrature_assign(const quadrature *q1, quadrature *q2)
 
 void quadrature_remove_element(int index, quadrature *q)
 {
-   assert(index <= q->k-1);
+   assert(index <= q->num_nodes-1);
 
-   int k     = q->k;
+   int k     = q->num_nodes;
    int dim   = q->dim;
    double *w = q->w;
    double *x = q->x;
@@ -249,9 +249,9 @@ void quadrature_remove_element(int index, quadrature *q)
 
 void quadrature_to_vector(const quadrature q, Vector v)
 {
-   assert( (q.k * (q.dim+1)) == v.len );
+   assert( (q.num_nodes * (q.dim+1)) == v.len );
 
-   int k = q.k;
+   int k = q.num_nodes;
    int dim = q.dim;
 
    memcpy( &v.id[0], q.w, SIZE_DOUBLE(k) );
@@ -270,9 +270,9 @@ void quadrature_get_elem(const quadrature *q, int i, Vector v)
 
 void vector_to_quadrature(const Vector v, quadrature q)
 {
-   assert( (q.k * (q.dim+1)) == v.len );
+   assert( (q.num_nodes * (q.dim+1)) == v.len );
 
-   int k = q.k;
+   int k = q.num_nodes;
    int dim = q.dim;
 
    memcpy( q.w, v.id, SIZE_DOUBLE(k) );
@@ -356,7 +356,7 @@ bool QuadInDomain(const quadrature *q)
    RMatrix M = q->constr->M;
    Vector b = q->constr->b;
 
-   for(int i = 0; i < q->k; ++i)
+   for(int i = 0; i < q->num_nodes; ++i)
    {
       double lhs[M.rows]; memset(lhs, 0, M.rows*size_double);
       const double *X_ixdim = &q->x[i*dim];
@@ -404,7 +404,7 @@ bool QuadInDomainElem(const quadrature *q, int elem)
 bool QuadPosWeights(const quadrature *q)
 {
    const quadrature _q = *q;
-   for(int i = 0; i < _q.k; ++i)
+   for(int i = 0; i < _q.num_nodes; ++i)
       if(_q.w[i] < 0)
          return false;
 
@@ -447,7 +447,7 @@ double QuadTestIntegral(const quadrature *q)
       return false;
    }
 
-   int k = q->k;
+   int k = q->num_nodes;
    int dim = q->dim;
    int *dims = q->dims;
    int deg = q->deg;
@@ -455,7 +455,7 @@ double QuadTestIntegral(const quadrature *q)
    double *w = q->w;
 
    int num_funcs = q->num_funcs;
-   int_fast8_t *basis_id = (int_fast8_t *)malloc(num_funcs*dim *sizeof(int_fast8_t));
+   INT_8 *basis_id = (INT_8 *)malloc(num_funcs*dim *sizeof(INT_8));
    BasisIndices(deg, dim, basis_id);
 
    Vector orth_basis = Vector_init(num_funcs);
@@ -492,7 +492,7 @@ double QuadTestIntegralMonomial(const quadrature *q)
       return false;
    }
 
-   int k = q->k;
+   int k = q->num_nodes;
    int dim = q->dim;
    int *dims = q->dims;
    int deg = q->deg;
@@ -500,7 +500,7 @@ double QuadTestIntegralMonomial(const quadrature *q)
    double *w = q->w;
 
    int num_funcs = q->num_funcs;
-   int_fast8_t *basis_id = (int_fast8_t *)malloc(num_funcs*dim *sizeof(int_fast8_t));
+   INT_8 *basis_id = (INT_8 *)malloc(num_funcs*dim *sizeof(INT_8));
    BasisIndices(deg, dim, basis_id);
 
    Vector orth_basis = Vector_init(num_funcs);

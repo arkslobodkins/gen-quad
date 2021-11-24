@@ -5,14 +5,12 @@
 
 #include "BasisIndices.h"
 
-#include <stdlib.h>
-#include <stdint.h>
-#include <math.h>
 #include <assert.h>
+#include <stdlib.h>
 
 // Recursively computes an array of power multi-indices for
 // generating polynomial basis of dimension dim and degree deg.
-void BasisIndices(int deg, int dim, int_fast8_t *f)
+void BasisIndices(int deg, int dim, INT_8 *f)
 {
    assert(dim >= 0 && deg >= 0);
 
@@ -30,7 +28,7 @@ void BasisIndices(int deg, int dim, int_fast8_t *f)
       {
          int size = BasisSize(deg-i, j-1);
          int dimxsize = dim*size;
-         int_fast8_t* recursiveF = (int_fast8_t *)malloc(size*(j-1) * sizeof(int_fast8_t));
+         INT_8* recursiveF = (INT_8 *)malloc(size*(j-1) * sizeof(INT_8));
          BasisIndices(deg-i, j-1, recursiveF);
          if(j == dim)
          {

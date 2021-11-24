@@ -9,7 +9,7 @@
 
 int main(int argc, char *argv[])
 {
-   TestPolytope();
+//   TestPolytope();
    QuadDriver(argc, argv);
    return EXIT_SUCCESS;
 }

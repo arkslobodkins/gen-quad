@@ -6,15 +6,18 @@
 #include "QuadDriver.h"
 #include "ComputeDomain.h"
 #include "GENERAL_QUADRATURE.h"
+#include "get_time.h"
 
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <strings.h>
-#include <time.h>
+#include <omp.h>
 
 static int is_int(const char *number);
 static int is_pos_int(int, char *);
+
+
 
 // Receives dimension sizes and degree of precision as command line arguments.
 // Performs tests to test appropriateness of the input arguments. If inputs are
@@ -35,12 +38,12 @@ void QuadDriver(int argc, char **argv)
       SHAPE = argv[1];
 
    DOMAIN_TYPE D;
-   if( strcasecmp("INTERVAL", SHAPE) == 0 )  D = INTERVAL;
-   else if( strcasecmp("CUBE", SHAPE) == 0 )  D = CUBE;
-   else if( strcasecmp("SIMPLEX", SHAPE) == 0 )  D = SIMPLEX;
-   else if( strcasecmp("CUBESIMPLEX", SHAPE) == 0 )  D = CUBESIMPLEX;
-   else if (strcasecmp("SIMPLEXSIMPLEX", SHAPE) == 0 )  D = SIMPLEXSIMPLEX;
-   else if (strcasecmp("CUBESIMPLEXSIMPLEX", SHAPE) == 0 )  D = CUBESIMPLEXSIMPLEX;
+   if( strcasecmp("INTERVAL", SHAPE) == 0 )                D = INTERVAL;
+   else if( strcasecmp("CUBE", SHAPE) == 0 )               D = CUBE;
+   else if( strcasecmp("SIMPLEX", SHAPE) == 0 )            D = SIMPLEX;
+   else if( strcasecmp("CUBESIMPLEX", SHAPE) == 0 )        D = CUBESIMPLEX;
+   else if (strcasecmp("SIMPLEXSIMPLEX", SHAPE) == 0 )     D = SIMPLEXSIMPLEX;
+   else if (strcasecmp("CUBESIMPLEXSIMPLEX", SHAPE) == 0 ) D = CUBESIMPLEXSIMPLEX;
    else
    {
       fprintf(stderr, "Domain is not specified properly. Acceptable parameters:\n"
@@ -295,8 +298,12 @@ void QuadDriver(int argc, char **argv)
 #else
    printf("DEBUG MODE OFF\n\n");
 #endif
+#ifdef _OPENMP
+   printf("OPENMP enanbled with %i threads\n\n", omp_get_max_threads());
+#endif
 
-   time_t start = clock();
+
+   double time_start_wall = get_cur_time();
    switch(D)
    {
       case INTERVAL:
@@ -318,11 +325,12 @@ void QuadDriver(int argc, char **argv)
          ComputeCubeSimplexSimplex(deg, dims[0], dims[1], dims[2]);
          break;
    }
-   time_t end = clock();
-   double total = (double)(end - start)/CLOCKS_PER_SEC;
    extern double LSQ_TIME;
-   printf("runtime = %le\n", total);
-   printf("total time for LAPACK routine in LeastSquaresNewton = %le\n", LSQ_TIME);
+   printf("wall clock time for LAPACK routine in LeastSquaresNewton = %le\n", LSQ_TIME);
+
+   double time_end_wall = get_cur_time();
+   printf("total wall clock time = %le\n", time_end_wall - time_start_wall);
+
 }
 
 

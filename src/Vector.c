@@ -10,7 +10,6 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <stdio.h>
-#include <math.h>
 
 
 Vector Vector_init(int n)

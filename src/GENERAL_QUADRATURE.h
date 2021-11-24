@@ -26,10 +26,14 @@ extern "C" {
 #endif
 
 
+#define GQ_TRUE 1
+#define GQ_FALSE 0
+
 #define ONE 1
 #define TWO 2
 #define THREE 3
 #define QUAD_HUGE 10.0
+#define INT_8 int_fast8_t
 #define CLOSE_TO_ZERO POW_DOUBLE(10, -18)
 #define QUAD_TOL  POW_DOUBLE(10.0, -15)
 #define BOUND_TOL POW_DOUBLE(10.0, -12)
@@ -104,9 +108,9 @@ typedef struct
 typedef struct quadrature quadrature;
 typedef struct const_quadrature const_quadrature;
 
-typedef void(*EvalBasis)(int *dims, int deg, const int_fast8_t *basis, const double *x, double *phi);
-typedef void(*EvalBasisMonomial)(int dim, int deg, const int_fast8_t *basis, const double *x, double *phi);
-typedef void(*EvalBasisDer)(int *dims, int deg, const int_fast8_t *basis, const double *x, double *phiPrime);
+typedef void(*EvalBasis)(int *dims, int deg, const INT_8 *basis, const double *x, double *phi);
+typedef void(*EvalBasisMonomial)(int dim, int deg, const INT_8 *basis, const double *x, double *phi);
+typedef void(*EvalBasisDer)(int *dims, int deg, const INT_8 *basis, const double *x, double *phiPrime);
 typedef void(*BasisIntegrals)(int *dims, int deg, double *integrals);
 typedef void(*BasisIntegralsMonomial)(int *dims, int deg, double *integrals);
 
@@ -150,7 +154,7 @@ struct quadrature
    int deg;
    int num_funcs;
 
-   int k;
+   int num_nodes;
    double *w;
    double *x;
    Vector z;

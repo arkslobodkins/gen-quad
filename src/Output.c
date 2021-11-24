@@ -61,9 +61,9 @@ void DumpCubatureRule(const quadrature *quad)
 
    sprintf(str, "../results/quadrature_%s_dim%i_deg%i.txt", shape, dim, deg);
    FILE *FID = fopen(str, "w");
-   fprintf(FID, "%i %i\n", dim, quad->k);
+   fprintf(FID, "%i %i\n", dim, quad->num_nodes);
 
-   for(i = 0; i < quad->k; ++i)
+   for(i = 0; i < quad->num_nodes; ++i)
    {
       for(j = 0; j < dim; ++j)
          fprintf(FID, "%.16e  ", quad->x[dim*i+j]);

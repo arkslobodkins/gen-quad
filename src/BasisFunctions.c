@@ -6,29 +6,28 @@
 #include "BasisFunctions.h"
 
 #include "BasisIndices.h"
+#include "AddDimension.h"
 #include "GeneralGaussTensor.h"
 #include "Gauss_Lib/Jacobi.h"
 #include "Quadrature.h"
-#include "AddDimension.h"
-#include "GENERAL_QUADRATURE.h"
 #include "Print.h"
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <math.h>
-#include <stdint.h>
 #include <assert.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <math.h>
 
 
-static void BasisSimplexPolyhedralOne(int dim, int *dims, int deg, const int_fast8_t *basis_id, const double *x, double *phi);
-static void BasisSimplexPolyhedralTwo(int dim, int *dims, int deg, const int_fast8_t *basis_id, const double *x, double *phi);
+static void BasisSimplexPolyhedralOne(int dim, int *dims, int deg, const INT_8 *basis_id, const double *x, double *phi);
+static void BasisSimplexPolyhedralTwo(int dim, int *dims, int deg, const INT_8 *basis_id, const double *x, double *phi);
 
-static void BasisPrimeSimplexPolyhedralOne(int dim, int *dims, int deg, const int_fast8_t *basis_id, const double *x, double *phiPrime);
-static void BasisPrimeSimplexPolyhedralTwo(int dim, int *dims, int deg, const int_fast8_t *basis_id, const double *x, double *phiPrime);
+static void BasisPrimeSimplexPolyhedralOne(int dim, int *dims, int deg, const INT_8 *basis_id, const double *x, double *phiPrime);
+static void BasisPrimeSimplexPolyhedralTwo(int dim, int *dims, int deg, const INT_8 *basis_id, const double *x, double *phiPrime);
 
-typedef void(*BasisFunc)(int *dims, int deg, const int_fast8_t *basis_id, const double *x,  double *phi);
+typedef void(*BasisFunc)(int *dims, int deg, const INT_8 *basis_id, const double *x,  double *phi);
 
-ATTR_UNUSED static int finite_difference_test(int dim, int *dims, int deg, const int_fast8_t *basis_id,
+ATTR_UNUSED static int finite_difference_test(int dim, int *dims, int deg, const INT_8 *basis_id,
                                               const double *x, const double *phi_prime, BasisFunc func);
 
 static void LegendrePoly(int order, double x, double *p, double *dp);
@@ -108,7 +107,7 @@ static void JacobiPolyPrime(int order, double x, double alpha, double beta, doub
 
 
 // Generates orthogonal polynomial basis for the unit cube
-void BasisCube(int *dims, int deg, const int_fast8_t *basis_id, const double *x, double *phi)
+void BasisCube(int *dims, int deg, const INT_8 *basis_id, const double *x, double *phi)
 {
    int dim = dims[0];
    assert(dim >= 1);
@@ -131,7 +130,7 @@ void BasisCube(int *dims, int deg, const int_fast8_t *basis_id, const double *x,
 
 
 // Generates derivatives of orthogonal polynomial basis for the unit cube
-void BasisPrimeCube(int *dims, int deg, const int_fast8_t *basis_id, const double* x, double *phiPrime)
+void BasisPrimeCube(int *dims, int deg, const INT_8 *basis_id, const double* x, double *phiPrime)
 {
    assert(dims[0] >= 1);
    int dim      = dims[0];
@@ -187,7 +186,7 @@ void BasisPrimeCube(int *dims, int deg, const int_fast8_t *basis_id, const doubl
 
 
 // Generates orthogonal polynomial basis for the unit simplex
-void BasisSimplex(int *dims, int deg, const int_fast8_t *basis_id, const double *x, double *phi)
+void BasisSimplex(int *dims, int deg, const INT_8 *basis_id, const double *x, double *phi)
 {
    assert(dims[0] >= 2);
    int dim      = dims[0];
@@ -255,7 +254,7 @@ void BasisSimplex(int *dims, int deg, const int_fast8_t *basis_id, const double 
 
    for(k = 0; k < num_funcs; ++k)
    {
-      const int_fast8_t *index = &basis_id[k*dim];
+      const INT_8 *index = &basis_id[k*dim];
       double phiTemp = 1.0;
       for(d = 1; d < dim; ++d)
       {
@@ -274,7 +273,7 @@ void BasisSimplex(int *dims, int deg, const int_fast8_t *basis_id, const double 
 
 
 // Generates derivatives of orthogonal polynomial basis for the unit simplex
-void BasisPrimeSimplex(int *dims, int deg, const int_fast8_t *basis_id, const double *x, double *phiPrime)
+void BasisPrimeSimplex(int *dims, int deg, const INT_8 *basis_id, const double *x, double *phiPrime)
 {
    assert(dims[0] >= 2);
    int dim      = dims[0];
@@ -355,7 +354,7 @@ void BasisPrimeSimplex(int *dims, int deg, const int_fast8_t *basis_id, const do
 
       }
 
-      const int_fast8_t *index;
+      const INT_8 *index;
       double polyTemp[4];
       double polyFactor[5];
       for(k = 0; k < num_funcs; ++k)
@@ -484,7 +483,7 @@ void BasisPrimeSimplex(int *dims, int deg, const int_fast8_t *basis_id, const do
 
 
 // Generates orthogonal polynomial basis for the unit CUBESIMPLEX
-void BasisCubeSimplex(int *dims, int deg, const int_fast8_t *basis_id, const double *x, double *phi)
+void BasisCubeSimplex(int *dims, int deg, const INT_8 *basis_id, const double *x, double *phi)
 {
    assert(dims[0] >= 1 && dims[1] >= 2);
    int dim1 = dims[0];
@@ -513,7 +512,7 @@ void BasisCubeSimplex(int *dims, int deg, const int_fast8_t *basis_id, const dou
 
 
 // Generates derivatives of orthogonal polynomial basis for the unit CUBESIMPLEX
-void BasisPrimeCubeSimplex(int *dims, int deg, const int_fast8_t *basis_id, const double *x, double *phiPrime)
+void BasisPrimeCubeSimplex(int *dims, int deg, const INT_8 *basis_id, const double *x, double *phiPrime)
 {
    assert(dims[0] >= 1 && dims[1] >= 2);
    int dim1     = dims[0];
@@ -567,7 +566,7 @@ void BasisPrimeCubeSimplex(int *dims, int deg, const int_fast8_t *basis_id, cons
 
 
 // Generates orthogonal polynomial basis for the unit SIMPLEXSIMPLEX
-void BasisSimplexSimplex(int *dims, int deg, const int_fast8_t *basis_id, const double *x, double *phi)
+void BasisSimplexSimplex(int *dims, int deg, const INT_8 *basis_id, const double *x, double *phi)
 {
    assert(dims[0] >= 2 && dims[1] >= 2);
    int dim = dims[0]+dims[1];
@@ -590,7 +589,7 @@ void BasisSimplexSimplex(int *dims, int deg, const int_fast8_t *basis_id, const 
 
 
 // Generates derivatives of orthogonal polynomial basis for the unit SIMPLEXSIMPLEX
-void BasisPrimeSimplexSimplex(int *dims, int deg, const int_fast8_t *basis_id, const double *x, double *phiPrime)
+void BasisPrimeSimplexSimplex(int *dims, int deg, const INT_8 *basis_id, const double *x, double *phiPrime)
 {
    assert(dims[0] >= 2 && dims[1] >= 2);
 
@@ -625,7 +624,7 @@ void BasisPrimeSimplexSimplex(int *dims, int deg, const int_fast8_t *basis_id, c
 
 
 // Generates orthogonal polynomial basis for the unit CUBESIMPLEXSIMPLEX
-void BasisCubeSimplexSimplex(int *dims, int deg, const int_fast8_t *basis_id, const double *x, double *phi)
+void BasisCubeSimplexSimplex(int *dims, int deg, const INT_8 *basis_id, const double *x, double *phi)
 {
 //   assert(params->num_funcs == BasisSize(params->dim, params->deg));
 //   int k, d;
@@ -672,7 +671,7 @@ void BasisCubeSimplexSimplex(int *dims, int deg, const int_fast8_t *basis_id, co
 
 
 // Generates derivatives of orthogonal polynomial basis for the unit CUBESIMPLEXSIMPLEX
-void BasisPrimeCubeSimplexSimplex(int *dims, int deg, const int_fast8_t *basis_id, const double *x, double *phiPrime)
+void BasisPrimeCubeSimplexSimplex(int *dims, int deg, const INT_8 *basis_id, const double *x, double *phiPrime)
 {
    int j, k, d;
    int dim = dims[0]+dims[1]+dims[2];
@@ -719,7 +718,7 @@ void BasisPrimeCubeSimplexSimplex(int *dims, int deg, const int_fast8_t *basis_i
    free(dxlegendre);
 
 #ifdef QUAD_DEBUG_ON
-   void (*phi_func)(int *dims, int deg, const int_fast8_t *basis_id, const double *x, double *phi) = &BasisCubeSimplexSimplex;
+   void (*phi_func)(int *dims, int deg, const INT_8 *basis_id, const double *x, double *phi) = &BasisCubeSimplexSimplex;
    int flag = finite_difference_test(dim, dims, deg, basis_id, x, phiPrime, phi_func);
    if(flag == 1)
    {
@@ -734,7 +733,7 @@ void BasisPrimeCubeSimplexSimplex(int *dims, int deg, const int_fast8_t *basis_i
 
 // Generates orthogonal polynomial basis for the first [0, dim1-1] coordinates
 // over simplex in dim-dimensional space.
-static void BasisSimplexPolyhedralOne(int dim, int *dims, int deg, const int_fast8_t *basis_id, const double *x, double *phi)
+static void BasisSimplexPolyhedralOne(int dim, int *dims, int deg, const INT_8 *basis_id, const double *x, double *phi)
 {
    assert(dims[0] >= 2);
 
@@ -804,7 +803,7 @@ static void BasisSimplexPolyhedralOne(int dim, int *dims, int deg, const int_fas
 
    for(k = 0; k < num_funcs; ++k)
    {
-      const int_fast8_t *index = &basis_id[k*dim];
+      const INT_8 *index = &basis_id[k*dim];
       double phiTemp = 1.0;
       for(d = 1; d < dim1; ++d)
       {
@@ -823,7 +822,7 @@ static void BasisSimplexPolyhedralOne(int dim, int *dims, int deg, const int_fas
 
 // Generates orthogonal polynomial basis for coordinates between [dim1, dim2-1]
 // over a simplex in dim-dimensional space.
-static void BasisSimplexPolyhedralTwo(int dim, int *dims, int deg, const int_fast8_t *basis_id, const double *x, double *phi)
+static void BasisSimplexPolyhedralTwo(int dim, int *dims, int deg, const INT_8 *basis_id, const double *x, double *phi)
 {
    assert(dims[1] >= 2);
    int dim1 = dims[0];
@@ -894,7 +893,7 @@ static void BasisSimplexPolyhedralTwo(int dim, int *dims, int deg, const int_fas
 
    for(k = 0; k < num_funcs; ++k)
    {
-      const int_fast8_t *index = &basis_id[k*dim+dim1];
+      const INT_8 *index = &basis_id[k*dim+dim1];
       double phiTemp = 1.0;
       for(d = 1; d < dim2; ++d)
       {
@@ -913,7 +912,7 @@ static void BasisSimplexPolyhedralTwo(int dim, int *dims, int deg, const int_fas
 
 // Generates derivatives of orthogonal polynomial basis for the first [0, dim1-1] coordinates
 // over simplex in dimal-dimensional space.
-static void BasisPrimeSimplexPolyhedralOne(int dim, int *dims, int deg, const int_fast8_t *basis_id, const double *x, double *phiPrime)
+static void BasisPrimeSimplexPolyhedralOne(int dim, int *dims, int deg, const INT_8 *basis_id, const double *x, double *phiPrime)
 {
    assert(dims[0] >= 2);
 
@@ -998,7 +997,7 @@ static void BasisPrimeSimplexPolyhedralOne(int dim, int *dims, int deg, const in
          }
       }
 
-      const int_fast8_t *index;
+      const INT_8 *index;
       double polyTemp[4];
       double polyFactor[5];
       for(int k = 0; k < num_funcs; ++k)
@@ -1120,7 +1119,7 @@ static void BasisPrimeSimplexPolyhedralOne(int dim, int *dims, int deg, const in
 
 // Generates derivatives of orthogonal polynomial basis for coordinates
 // between [dim1, dim2-1] over simplex in dimal-dimensional space.
-static void BasisPrimeSimplexPolyhedralTwo(int dim, int *dims, int deg, const int_fast8_t *basis_id, const double *x, double *phiPrime)
+static void BasisPrimeSimplexPolyhedralTwo(int dim, int *dims, int deg, const INT_8 *basis_id, const double *x, double *phiPrime)
 {
    assert(dims[1] >= 2);
 
@@ -1212,7 +1211,7 @@ static void BasisPrimeSimplexPolyhedralTwo(int dim, int *dims, int deg, const in
          }
       }
 
-      const int_fast8_t *index;
+      const INT_8 *index;
       double polyTemp[4];
       double polyFactor[5];
       for(int k = 0; k < num_funcs; ++k)
@@ -1337,7 +1336,7 @@ static void BasisPrimeSimplexPolyhedralTwo(int dim, int *dims, int deg, const in
 }// BasisPrimeSimplexPolyhedralTwo
 
 
-void BasisMonomial(int dim, int deg, const int_fast8_t *basis_id, const double *x, double *phi)
+void BasisMonomial(int dim, int deg, const INT_8 *basis_id, const double *x, double *phi)
 {
    int num_funs = BasisSize(dim, deg);
    for(int k = 0; k < num_funs; ++k)
@@ -1361,12 +1360,12 @@ void BasisMonomial(int dim, int deg, const int_fast8_t *basis_id, const double *
 }
 
 
-static int finite_difference_test(int dim, int *dims, int deg, const int_fast8_t *basis_id,
+static int finite_difference_test(int dim, int *dims, int deg, const INT_8 *basis_id,
                                   const double *x, const double *phi_prime, BasisFunc phi_func)
 {
    int num_funcs = BasisSize(deg, dim);
 
-   double h = POW_DOUBLE(10, -6);
+   double h = POW_DOUBLE(10, -5);
    double tol = POW_DOUBLE(10, -5);
 
    double *phi_approx = (double *)malloc( SIZE_DOUBLE(num_funcs*dim) );
@@ -1423,7 +1422,7 @@ FREERETURN:
 }
 
 
-double  orthogonal_simplex_basis_test(int *dims, int deg, const int_fast8_t *basis_id)
+double  orthogonal_simplex_basis_test(int *dims, int deg, const INT_8 *basis_id)
 {
    int dim = dims[0];
    int num_funcs = BasisSize(deg, dim);
@@ -1431,7 +1430,7 @@ double  orthogonal_simplex_basis_test(int *dims, int deg, const int_fast8_t *bas
    int n = floor(deg/2)+1 + floor(dim/2) + floor(deg/6) + 3; // make n large enough to get exact quadrature
    int dims_1D[1] = {1};
    quadrature *quad_1D = quadrature_init_basic(n, 1, dims_1D, deg, INTERVAL);
-   Jacobi(quad_1D->k, 0.0, 0.0, quad_1D->x, quad_1D->w);
+   Jacobi(quad_1D->num_nodes, 0.0, 0.0, quad_1D->x, quad_1D->w);
 
    int N = POW_INT(n, dim);
    quadrature *quad_S = quadrature_init_basic(N, dim, dims, deg, SIMPLEX);

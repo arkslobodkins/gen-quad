@@ -2,13 +2,12 @@
 #define GET_JACOBIAN_H
 
 #include "GENERAL_QUADRATURE.h"
-#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-void GetJacobian(const int_fast8_t *basis, quadrature *q, CMatrix);
+void GetJacobian(const INT_8 *basisIndices, quadrature *q, CMatrix);
 
 #ifdef __cplusplus
 }

@@ -16,9 +16,10 @@ double LSQ_TIME = 0.0;
 #include "Matrix.h"
 #include "Quadrature.h"
 #include "GENERAL_QUADRATURE.h"
-#include "LINALG.h"
+//#include "LINALG.h"
 #include "Print.h"
 #include "Conditional_Debug.h"
+#include "get_time.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -26,7 +27,16 @@ double LSQ_TIME = 0.0;
 #include <math.h>
 #include <assert.h>
 
+
 #define MAX_ELIM_WEIGHTS 10
+
+#include <../plasma-17.1/include/plasma.h>
+#include <lapacke.h>
+int plasma_dgels(plasma_enum_t trans,
+                 int m, int n, int nrhs,
+                 double *pA, int lda,
+                 plasma_desc_t *T,
+                 double *pB, int ldb);
 
 
 static int CheckForFail(int info, double errorNorm, double errorNormPrev, Vector least_sq_sol);
@@ -51,14 +61,14 @@ static int ProjectNode(const CMatrix eqn_matrix, const Vector dx, Vector x_proje
 // underdetermined systems of equations in the least
 // squares sense. Returns success if algorithm converged
 // and all nodes are inside of the domain and if all nodes are positive.
-bool LeastSquaresNewton(const bool_enum FLAG_CONSTR, const int_fast8_t *basis, quadrature *q_orig, int *its)
+bool LeastSquaresNewton(const bool_enum FLAG_CONSTR, const INT_8 *basis, quadrature *q_orig, int *its)
 {
-   assert(q_orig->k >= 0);
+   assert(q_orig->num_nodes >= 0);
 
    int elim_weights = 0;
    ConstrVectData cVectData = ConstrVectDataInit();
 
-   int k               = q_orig->k;
+   int k               = q_orig->num_nodes;
    int deg             = q_orig->deg;
    int numFuncs        = q_orig->num_funcs;
    int dim             = q_orig->dim;
@@ -123,10 +133,61 @@ bool LeastSquaresNewton(const bool_enum FLAG_CONSTR, const int_fast8_t *basis, q
       for(int i = SMALL_DIM; i < LEAD_DIM; ++i) LEAST_SQ_SOL.id[i] = 0.0;
 
       // solve least squares problem using LAPACK routine and time it
-      time_t start = clock();
-      dgels_(&TRANS, &nrows, &ncols, &NRHS, JACOBIAN.id, &LDA,
-             &LEAST_SQ_SOL.id[0], &LEAD_DIM, WORK, &LWORK, &INFO);
-      time_t end = clock(); LSQ_TIME += (double)(end - start)/CLOCKS_PER_SEC;
+      double start = get_cur_time();
+//      dgels_(&TRANS, &nrows, &ncols, &NRHS, JACOBIAN.id, &LDA,
+//             &LEAST_SQ_SOL.id[0], &LEAD_DIM, WORK, &LWORK, &INFO);
+
+
+      plasma_init(4);
+      int retval;
+      int IONE = 1;
+      int ISEED[4] = {0,0,0,1};
+
+//      double *A1 = (double *)malloc(3*2*sizeof(double));
+      CMatrix PJACOBIAN = CMatrix_init(nrows, ncols);
+      retval = LAPACKE_dlarnv(IONE, ISEED, nrows*ncols, PJACOBIAN.id);
+      assert(retval == 0);
+
+      for(int r = 0; r < nrows; ++r)
+         for(int c = 0; c < ncols; ++c)
+            PJACOBIAN.cid[c][r] = C_ELEM_ID(JACOBIAN, r, c);
+
+
+
+//      double *A2 = (double *)malloc(3*sizeof(double));
+      Vector PLEAST_SQ_SOL = Vector_init(LEAD_DIM);
+      retval = LAPACKE_dlarnv(IONE, ISEED, LEAD_DIM, PLEAST_SQ_SOL.id);
+      assert(retval == 0);
+
+      memcpy(PLEAST_SQ_SOL.id, LEAST_SQ_SOL.id, LEAD_DIM*size_double);
+
+//      A1[0] = 0.0; A1[1] = 1.0; A1[2] = 2.0;
+//      A1[3] = 1.0; A1[4] = 1.0; A1[5] = 1.0;
+//
+//      A2[0] = 6.0; A2[1] = 0.0; A2[2] = 0.0;
+
+      plasma_desc_t T;
+
+      plasma_dgels(PlasmaNoTrans,
+                 nrows, ncols, NRHS,
+                 PJACOBIAN.id, LDA,
+                 &T,
+                 PLEAST_SQ_SOL.id, LEAD_DIM);
+//      for(int o = 0; o < 2; ++o) printf("plasma solution = %lf\n", A2[o]);
+      memcpy(LEAST_SQ_SOL.id, PLEAST_SQ_SOL.id, LEAD_DIM*size_double);
+
+      plasma_desc_destroy(&T);
+      CMatrix_free(PJACOBIAN);
+      Vector_free(PLEAST_SQ_SOL);
+//      free(A1);
+//      free(A2);
+
+      plasma_finalize();
+
+
+      double end = get_cur_time(); LSQ_TIME += (end - start);
+      if(k == 978)
+         printf("lapack time = %lf\n", LSQ_TIME);
 
       for(int i = 0; i < ncols; ++i) q_next->z.id[i] = q_prev->z.id[i] - LEAST_SQ_SOL.id[i];
 
@@ -187,7 +248,7 @@ bool LeastSquaresNewton(const bool_enum FLAG_CONSTR, const int_fast8_t *basis, q
     && (isinf(errorNormUpdate) == 0)
     && (errorNormUpdate <= q_tol) )
    {
-      quadrature_realloc(q_next->k, dim, dims, deg, q_orig);
+      quadrature_realloc(q_next->num_nodes, dim, dims, deg, q_orig);
       quadrature_assign(q_next, q_orig);
       SOL_FLAG = SOL_FOUND;
    }
@@ -278,7 +339,7 @@ ATTR_UNUSED static void ConstrNodeDataReset(ConstrNodeData *cNodeData)
 static int ConstrainedProjection(const quadrature *q_prev, quadrature *q_next)
 {
    int i,j,d;
-   int k = q_prev->k;
+   int k = q_prev->num_nodes;
    int dim = q_prev->dim;
    int RET_FLAG = CONSTR_SUCCESS;
    assert(dim == q_next->constr->M.cols);
@@ -349,7 +410,7 @@ static int ConstrainedProjection(const quadrature *q_prev, quadrature *q_next)
 
 int ConstrainedOptimization(const quadrature *q_prev, quadrature *q_next, ConstrVectData *cVectData)
 {
-   assert(q_prev->k == q_next->k);
+   assert(q_prev->num_nodes == q_next->num_nodes);
 
    int q_len =  q_next->z.len;
    int RET_FLAG = CONSTR_SUCCESS;
@@ -404,10 +465,10 @@ int ConstrainedOptimization(const quadrature *q_prev, quadrature *q_next, Constr
 static int ShortenVector(const RMatrix A, const Vector b, const quadrature *q_prev, const quadrature *q_next, ConstrVectData *cVectData)
 {
    assert(A.cols == q_prev->dim+1);
-   assert(q_prev->k == q_next->k);
+   assert(q_prev->num_nodes == q_next->num_nodes);
 
    int i, count;
-   int k = q_prev->k;
+   int k = q_prev->num_nodes;
    int dim = q_prev->dim;
    int *eqn = (int *)calloc(k, sizeof(int));
 

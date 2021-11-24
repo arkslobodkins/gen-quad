@@ -10,7 +10,7 @@ void PrintNodes(const quadrature *q, const char *name)
    int dim = q->dim;
 
    printf("nodes for %s\n", name);
-   for(int i = 0; i < q->k; ++i)
+   for(int i = 0; i < q->num_nodes; ++i)
    {
       for(int j = 0; j < dim; ++j)
       {
@@ -38,7 +38,7 @@ void PrintNodesAndWeights(const quadrature *q, const char *name)
    int dim = q->dim;
 
    printf("nodes and weights for %s\n", name);
-   for(int i = 0; i < q->k; ++i)
+   for(int i = 0; i < q->num_nodes; ++i)
    {
       printf("w[%i] = %.6f ", i, q->w[i]);
       for(int j = 0; j < dim; ++j)

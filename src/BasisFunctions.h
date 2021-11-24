@@ -8,24 +8,24 @@
 extern "C" {
 #endif
 
-void BasisCube(int *dims, int deg, const int_fast8_t *basis_id, const double *x, double *phi);
-void BasisPrimeCube(int *dims, int deg, const int_fast8_t *basis_id, const double *x, double *phiPrime);
+void BasisCube(int *dims, int deg, const INT_8 *basis_id, const double *x, double *phi);
+void BasisPrimeCube(int *dims, int deg, const INT_8 *basis_id, const double *x, double *phiPrime);
 
-void BasisSimplex(int *dims, int deg, const int_fast8_t *basis_id, const double *x, double *phi);
-void BasisPrimeSimplex(int *dims, int deg, const int_fast8_t *basis_id, const double *x, double *phiPrime);
+void BasisSimplex(int *dims, int deg, const INT_8 *basis_id, const double *x, double *phi);
+void BasisPrimeSimplex(int *dims, int deg, const INT_8 *basis_id, const double *x, double *phiPrime);
 
-void BasisCubeSimplex(int *dims, int deg, const int_fast8_t *basis_id, const double *x, double *phi);
-void BasisPrimeCubeSimplex(int *dims, int deg, const int_fast8_t *basis_id, const double *x, double *phiPrime);
+void BasisCubeSimplex(int *dims, int deg, const INT_8 *basis_id, const double *x, double *phi);
+void BasisPrimeCubeSimplex(int *dims, int deg, const INT_8 *basis_id, const double *x, double *phiPrime);
 
-void BasisSimplexSimplex(int *dims, int deg, const int_fast8_t *basis_id, const double *x, double *phi);
-void BasisPrimeSimplexSimplex(int *dims, int deg, const int_fast8_t *basis_id, const double *x, double *phiPrime);
+void BasisSimplexSimplex(int *dims, int deg, const INT_8 *basis_id, const double *x, double *phi);
+void BasisPrimeSimplexSimplex(int *dims, int deg, const INT_8 *basis_id, const double *x, double *phiPrime);
 
-void BasisCubeSimplexSimplex(int *dims, int deg, const int_fast8_t *basis_id, const double *x, double *phi);
-void BasisPrimeCubeSimplexSimplex(int *dims, int deg, const int_fast8_t *basis_id, const double *x, double *phiPrime);
+void BasisCubeSimplexSimplex(int *dims, int deg, const INT_8 *basis_id, const double *x, double *phi);
+void BasisPrimeCubeSimplexSimplex(int *dims, int deg, const INT_8 *basis_id, const double *x, double *phiPrime);
 
-void BasisMonomial(int dim, int deg, const int_fast8_t *basis_id, const double *x, double *phi);
+void BasisMonomial(int dim, int deg, const INT_8 *basis_id, const double *x, double *phi);
 
-double  orthogonal_simplex_basis_test(int *dims, int deg, const int_fast8_t *basis_id);
+double  orthogonal_simplex_basis_test(int *dims, int deg, const INT_8 *basis_id);
 
 #ifdef __cplusplus
 }

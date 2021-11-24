@@ -15,7 +15,7 @@ extern "C" {
 #define CONSTR_SUCCESS  0
 #define CONSTR_FAILURE -1
 
-bool LeastSquaresNewton(const bool_enum FLAG_CONSTR, const int_fast8_t *basis, quadrature *q_orig, int *its);
+bool LeastSquaresNewton(const bool_enum FLAG_CONSTR, const INT_8 *basis, quadrature *q_orig, int *its);
 
 ConstrVectData ConstrVectDataInit();
 int ConstrainedOptimization(const quadrature *q_prev, quadrature *q_next, ConstrVectData *cVecData);

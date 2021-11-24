@@ -3,14 +3,11 @@
  * August 2021
  */
 
-#include <omp.h>
-#include <stdio.h>
 #include "AddDimension.h"
-
 #include "GeneralGaussTensor.h"
-#include "GENERAL_QUADRATURE.h"
 
 #include <assert.h>
+#include <stdio.h>
 
 // Computes tensor product of arbitrary quadrature over (dim-1)-dimensional
 // domain Ω and 1-dimensional interval [0, 1]. Quadrature of dimension dim
@@ -20,17 +17,16 @@ void AddLineFirst(const quadrature *q1D, const quadrature *quad_prev, quadrature
 {
    assert(q1D->dim == 1);
    assert(q1D->dim + quad_prev->dim == quad_new->dim);
-   assert(q1D->k * quad_prev->k == quad_new->k);
+   assert(q1D->num_nodes * quad_prev->num_nodes == quad_new->num_nodes);
 
    int dim = quad_new->dim;
-   int n1D = q1D->k;
-   int n_prev = quad_prev->k;
+   int n1D = q1D->num_nodes;
+   int n_prev = quad_prev->num_nodes;
    const double *x1D = q1D->x;
    const double *x_prev = quad_prev->x;
    double *x_new = quad_new->x;
 
    // compute tensor product for nodes
-   #pragma omp parallel for default(shared) schedule(static)
    for(int j = 0; j < n_prev; ++j)
    {
       int jxdim_minus_1 = j*(dim-1);
@@ -55,12 +51,12 @@ void AddLineSimplex(const quadrature *q1D, const quadrature *quad_prev, quadratu
 {
    assert(q1D->dim == 1);
    assert(q1D->dim + quad_prev->dim == quad_new->dim);
-   assert(q1D->k * quad_prev->k == quad_new->k);
+   assert(q1D->num_nodes * quad_prev->num_nodes == quad_new->num_nodes);
    assert(quad_prev->D == SIMPLEX || quad_prev->D == INTERVAL);
    assert(quad_new->D == SIMPLEX);
 
    int dim = quad_new->dim;
-   int n_new = quad_new->k;
+   int n_new = quad_new->num_nodes;
    double *x_new = quad_new->x;
    double *w_new = quad_new->w;
 
@@ -86,7 +82,7 @@ void AddLineSimplex(const quadrature *q1D, const quadrature *quad_prev, quadratu
 void GeneralDuffy(quadrature *q)
 {
    int dim = q->dim;
-   int N = q->k;
+   int N = q->num_nodes;
    double *x = q->x;
    double *w = q->w;
 
@@ -106,10 +102,10 @@ void GeneralDuffy(quadrature *q)
 void MixedTensor(const quadrature *q1, const quadrature *q2, quadrature *q_tp)
 {
    assert(q1->dim + q2->dim == q_tp->dim);
-   assert(q1->k * q2->k == q_tp->k);
+   assert(q1->num_nodes * q2->num_nodes == q_tp->num_nodes);
 
-   int n1 = q1->k;
-   int n2 = q2->k;
+   int n1 = q1->num_nodes;
+   int n2 = q2->num_nodes;
    int dim1 = q1->dim;
    int dim2 = q2->dim;
    int dim_tp = q_tp->dim;

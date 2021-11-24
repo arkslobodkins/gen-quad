@@ -15,10 +15,10 @@
 
 void NodesTensor2D(const quadrature *quad1, const quadrature *quad2, quadrature *quad_new)
 {
-   assert(quad1->k * quad2->k == quad_new->k);
+   assert(quad1->num_nodes * quad2->num_nodes == quad_new->num_nodes);
 
-   int n1 = quad1->k;
-   int n2 = quad2->k;
+   int n1 = quad1->num_nodes;
+   int n2 = quad2->num_nodes;
    double *x1 = quad1->x;
    double *x2 = quad2->x;
    double *x_new = quad_new->x;
@@ -36,10 +36,10 @@ void NodesTensor2D(const quadrature *quad1, const quadrature *quad2, quadrature 
 
 void WeightsTensor2D(const quadrature *quad1, const quadrature *quad2, quadrature *quad_new)
 {
-   assert(quad1->k * quad2->k == quad_new->k);
+   assert(quad1->num_nodes * quad2->num_nodes == quad_new->num_nodes);
 
-   int n1 = quad1->k;
-   int n2 = quad2->k;
+   int n1 = quad1->num_nodes;
+   int n2 = quad2->num_nodes;
    double *w1 = quad1->w;
    double *w2 = quad2->w;
    double *w_new = quad_new->w;
@@ -54,11 +54,11 @@ void GeneralizedNodesTensor(const quadrature *quad_1D, quadrature *quad_gen)
 {
    assert(quad_1D->dim == 1);
    assert(quad_gen->dim > 1);
-   assert(quad_gen->k = POW_INT(quad_1D->k, quad_gen->dim));
+   assert(quad_gen->num_nodes = POW_INT(quad_1D->num_nodes, quad_gen->dim));
 
    int dim = quad_gen->dim;
    int p = quad_1D->deg;
-   int n = quad_1D->k;
+   int n = quad_1D->num_nodes;
    int n_sq = SQUARE(n);
    int id1 = -1, id2 = -1;
    double *x_gen = quad_gen->x;
@@ -115,10 +115,10 @@ void GeneralizedWeightsTensor(const quadrature *quad_1D, quadrature *quad_gen)
 {
    assert(quad_1D->dim == 1);
    assert(quad_gen->dim > 1);
-   assert(quad_gen->k = POW_INT(quad_1D->k, quad_gen->dim));
+   assert(quad_gen->num_nodes = POW_INT(quad_1D->num_nodes, quad_gen->dim));
 
    int dim = quad_gen->dim;
-   int n = quad_1D->k;
+   int n = quad_1D->num_nodes;
    int n_sq = SQUARE(n);
    int deg = quad_gen->deg;
    double *w_gen = quad_gen->w;

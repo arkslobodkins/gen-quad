@@ -1,4 +1,6 @@
 #include "BasisIndices.h"
+#include "BasisIntegrals.h"
+#include "BasisFunctions.h"
 #include "Polytope.h"
 #include "Constraints.h"
 
@@ -13,19 +15,18 @@ Polytope * PolytopeInit(void *init_params, PolytopeInterface *interface)
     int dim = polytope->interface->dim(polytope);
     int deg = polytope->interface->deg(polytope);
     polytope->basisSize = BasisSize(deg, dim);
-    polytope->basis = (Basis *)malloc(sizeof(Basis));
-    polytope->basis->basis_indices   = NULL;
-    polytope->basis->basis_functions = NULL;
-    polytope->basis->basis_integrals = NULL;
+    polytope->basis_indices_flag = OFF;
+    polytope->basis_indices   = NULL;
 
     return polytope;
 }
 
 void PolytopeFree(Polytope* polytope)
 {
-   if(polytope->basis->basis_indices != NULL) { free(polytope->basis->basis_indices);
-      polytope->basis->basis_indices = NULL; }
-   if(polytope->basis != NULL) { free(polytope->basis); polytope->basis = NULL; }
+   if(polytope->basis_indices != NULL) {
+      free(polytope->basis_indices);
+      polytope->basis_indices = NULL;
+   }
 
    polytope->interface->polytope_free(polytope);
 }
@@ -55,6 +56,32 @@ double PolytopeGetArea(Polytope *polytope)
     return (polytope->interface->get_area)(polytope);
 }
 
+void ComputeBasisIndices(Polytope * polytope)
+{
+   if(polytope->basis_indices_flag == ON) {
+      fprintf(stderr, "basis indices have been computed already\n");
+      return;
+   }
+    int dim = polytope->interface->dim(polytope);
+    int deg = polytope->interface->deg(polytope);
+    polytope->basis_indices = (INT_8 *)
+       malloc(polytope->basisSize*dim*sizeof(INT_8));
+    BasisIndices(deg, dim, polytope->basis_indices);
+    polytope->basis_indices_flag = ON;
+}
+
+void ComputeBasisIntegrals(Polytope* polytope)
+{
+   polytope->interface->ComputeBasisIntegrals(polytope);
+}
+
+void ComputeBasisFunctions(Polytope* polytope, double *point)
+{
+   polytope->interface->ComputeBasisFunctions(polytope, point);
+}
+
+
+
 Cube * CubeInit(InitialCubeParams *params, PolytopeInterface *interface)
 {
     Cube *cube    = (Cube *)malloc(sizeof(Cube));
@@ -65,17 +92,9 @@ Cube * CubeInit(InitialCubeParams *params, PolytopeInterface *interface)
     cube->params->deg = params->deg;
     cube->params->D   = CUBE;
 
-
+    cube->basis_functions = NULL;
+    cube->basis_integrals = NULL;
     return cube;
-}
-
-void ComputeBasis(Polytope * polytope)
-{
-    int dim = polytope->interface->dim(polytope);
-    int deg = polytope->interface->deg(polytope);
-    polytope->basis->basis_indices = (int_fast8_t *)
-       malloc(polytope->basisSize*dim*sizeof(int_fast8_t));
-    BasisIndices(deg, dim, polytope->basis->basis_indices);
 }
 
 double CubeGetArea(Cube *cube)
@@ -103,6 +122,26 @@ const char *GetCubeString()
    return "CUBE";
 }
 
+void ComputeBasisIntegralsCube(Cube* cube)
+{
+   int dim = cube->params->dim;
+   int deg = cube->params->deg;
+   cube->basis_integrals = (double *)malloc(cube->basisSize*size_double);
+   BasisIntegralsCube(&dim, deg, cube->basis_integrals);
+   // BasisIntegrals will be fixed from dims to dim
+}
+
+void ComputeBasisFunctionsCube(Cube* cube, double *point)
+{
+   if(cube->basis_indices_flag != ON)
+      fprintf(stderr, "basis_indices have not been computed\n");
+
+   int dim = cube->params->dim;
+   int deg = cube->params->deg;
+   cube->basis_functions = (double *)malloc(cube->basisSize*size_double);
+   BasisCube(&dim, deg, cube->basis_indices, point, cube->basis_functions);
+}
+
 constraints * CubeConstrInit(Cube *cube)
 {
    constraints *c = (constraints *) malloc(sizeof(constraints));
@@ -117,6 +156,14 @@ void CubeConstrFree(Cube *cube)
 void CubeFree(Cube *cube)
 {
    CubeConstrFree(cube);
+   if(cube->basis_functions != NULL) {
+      free(cube->basis_functions);
+      cube->basis_functions = NULL;
+   }
+   if(cube->basis_integrals != NULL) {
+      free(cube->basis_integrals);
+      cube->basis_integrals = NULL;
+   }
    if(cube->params != NULL) { free(cube->params); cube->params = NULL; }
    if(cube != NULL) { free(cube); cube = NULL; }
 }
@@ -131,6 +178,10 @@ PolytopeInterface SetCubeInterface()
    CubeInterface.type          = (_type)&CubeType;
    CubeInterface.string        = (_string)&GetCubeString;
    CubeInterface.get_area      = (_get_area)&CubeGetArea;
+   CubeInterface.ComputeBasisIntegrals =
+      (_ComputeBasisIntegrals)&ComputeBasisIntegralsCube;
+   CubeInterface.ComputeBasisFunctions =
+      (_ComputeBasisFunctions)&ComputeBasisFunctionsCube;
 
    return CubeInterface;
 }
@@ -138,7 +189,7 @@ PolytopeInterface SetCubeInterface()
 void TestPolytope()
 {
    PolytopeInterface CubeInterface = SetCubeInterface();
-   int dim = 2; int deg = 5;
+   int dim = 2; int deg = 2;
    InitialCubeParams params = {dim, deg};
    Polytope *polytope = PolytopeInit((void *)&params, &CubeInterface);
 
@@ -148,7 +199,11 @@ void TestPolytope()
    printf("polytope name = %s\n", PolytopeString(polytope));
    printf("polytope area = %lf\n", PolytopeGetArea(polytope));
    printf("polytope basis size = %i\n", polytope->basisSize);
-   ComputeBasis(polytope);
+   ComputeBasisIndices(polytope);
+   ComputeBasisIntegrals(polytope);
+   double x[2]; x[0] = 0.5; x[1] = 0.5;
+   ComputeBasisFunctions(polytope, x);
+
 
    PolytopeFree(polytope);
 }
