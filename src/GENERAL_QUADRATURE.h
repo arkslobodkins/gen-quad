@@ -37,6 +37,7 @@ extern "C" {
 #define CLOSE_TO_ZERO POW_DOUBLE(10, -18)
 #define QUAD_TOL  POW_DOUBLE(10.0, -15)
 #define BOUND_TOL POW_DOUBLE(10.0, -12)
+#define BOUND_CORRECTION POW_DOUBLE(10.0, -14)
 #define POW_DOUBLE(x,y) pow(x,y)
 #define POW_INT(x,y)    IntPower(x,y)
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
@@ -177,10 +178,10 @@ struct quadrature
 };
 
 
-#define Q_SUCCESS       0
+#define GQ_SUCCESS       0
 #define NULL_VAL       -1
 #define ALLOC_FAIL     -2
-#define ILL_INPUT      -3
+#define INV_INPUT      -3
 #define INF_VAL        -4
 #define NAN_VAL        -5
 #define QUAD_HUGE_ERR  -6
@@ -189,11 +190,12 @@ struct quadrature
 #define NOT_CONVERGE   -9
 #define DIVERGE_ERR    -10
 #define LARGE_RES      -11
+#define CONSTR_ERROR   -12
 
-#define STR_Q_SUCCESS "Q_SUCCESS"
+#define STR_Q_SUCCESS "GQ_SUCCESS"
 #define STR_NULL_VAL "NULL_VAL"
 #define STR_ALLOC_FAIL "ALLOC_FAIL"
-#define STR_ILL_INPUT "ILL_INPUT"
+#define STR_INV_INPUT "INV_INPUT"
 #define STR_INF_VAL "INF_VAL"
 #define STR_NAN_VAL "NAN_VAL"
 #define STR_QUAD_HUGE_ERR "QUAD_HUGE_ERR"
@@ -202,6 +204,7 @@ struct quadrature
 #define STR_NOT_CONVERGE "NOT_CONVERGE"
 #define STR_DIVERGE_ERR "DIVERGE_ERR"
 #define STR_LARGE_RES "LARGE_RES"
+#define STR_CONSTR_ERROR "CONSTR_ERROR"
 
 
 #ifdef __cplusplus

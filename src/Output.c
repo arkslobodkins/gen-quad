@@ -10,9 +10,8 @@
 
 static char *get_domain_string(DOMAIN_TYPE D);
 
-
 // Prints history and quadrature parameters to a file.
-void Output(const quadrature *q, int arr_size, history **hist_arr)
+void HistoryToFile(const quadrature *q, int arr_size, history **hist_arr)
 {
    char str[50];
    int i,j;
@@ -49,9 +48,8 @@ void Output(const quadrature *q, int arr_size, history **hist_arr)
    fclose(FID);
 }
 
-
 // Prints final quadrature to a file
-void DumpCubatureRule(const quadrature *quad)
+void QuadratureToFile(const quadrature *quad)
 {
    int i = -1, j = -1;
    char str[50] = "0";
@@ -73,7 +71,6 @@ void DumpCubatureRule(const quadrature *quad)
 
    fclose(FID);
 }
-
 
 static char *get_domain_string(DOMAIN_TYPE D)
 {

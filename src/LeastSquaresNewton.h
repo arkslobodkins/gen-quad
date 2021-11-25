@@ -3,7 +3,6 @@
 
 #include "GENERAL_QUADRATURE.h"
 #include <stdbool.h>
-#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -12,13 +11,7 @@ extern "C" {
 #define SOL_FOUND true
 #define SOL_NOT_FOUND false
 
-#define CONSTR_SUCCESS  0
-#define CONSTR_FAILURE -1
-
 bool LeastSquaresNewton(const bool_enum FLAG_CONSTR, const INT_8 *basis, quadrature *q_orig, int *its);
-
-ConstrVectData ConstrVectDataInit();
-int ConstrainedOptimization(const quadrature *q_prev, quadrature *q_next, ConstrVectData *cVecData);
 
 #ifdef __cplusplus
 }

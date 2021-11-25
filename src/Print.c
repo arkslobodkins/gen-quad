@@ -36,7 +36,6 @@ void PrintNodeAndWeight(int id, const quadrature *q, const char *name)
 void PrintNodesAndWeights(const quadrature *q, const char *name)
 {
    int dim = q->dim;
-
    printf("nodes and weights for %s\n", name);
    for(int i = 0; i < q->num_nodes; ++i)
    {
@@ -50,16 +49,17 @@ void PrintNodesAndWeights(const quadrature *q, const char *name)
    printf("\n");
 }
 
-void PrintNodeInfo(int iters, double error_norm, const quadrature *q, const char *name)
+void PrintQuadLSQInfo(int iters, double error_norm, const quadrature *q, const char *name)
 {
    printf("quadrature info for %s during iteration of LSQ\n", name);
-   printf("iterations = %i error_norm = %.16le InDomain = %i\n\n", iters, error_norm, QuadInDomain(q));
+   printf("iterations = %i error_norm = %.16le InDomain = %i\n\n",
+         iters, error_norm, QuadInDomain(q));
 }
 
 void PrintElimInfo(int dim, int num_nodes, int opt, double opt_factor)
 {
-   printf("dimension = %i, current number of nodes = %i, optimal = %i, efficiency = %f\n", dim, num_nodes, opt, opt_factor);
-
+   printf("dimension = %i, current number of nodes = %i, optimal = %i, efficiency = %f\n",
+         dim, num_nodes, opt, opt_factor);
 }
 
 void PrintInt(int x, const char *name)
@@ -105,7 +105,7 @@ const char *ERR_STRING(int return_val)
 {
    switch(return_val)
    {
-   case  0:
+   case 0:
       return STR_Q_SUCCESS;
       break;
    case -1:
@@ -115,7 +115,7 @@ const char *ERR_STRING(int return_val)
       return STR_ALLOC_FAIL;
       break;
    case -3:
-      return STR_ILL_INPUT;
+      return STR_INV_INPUT;
       break;
    case -4:
       return STR_INF_VAL;
@@ -141,6 +141,8 @@ const char *ERR_STRING(int return_val)
    case -11:
       return STR_LARGE_RES;
       break;
+   case -12:
+      return STR_CONSTR_ERROR;
    default:
       return "OTHER";
    }

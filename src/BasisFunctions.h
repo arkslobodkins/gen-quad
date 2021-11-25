@@ -25,7 +25,7 @@ void BasisPrimeCubeSimplexSimplex(int *dims, int deg, const INT_8 *basis_id, con
 
 void BasisMonomial(int dim, int deg, const INT_8 *basis_id, const double *x, double *phi);
 
-double  orthogonal_simplex_basis_test(int *dims, int deg, const INT_8 *basis_id);
+void orthogonal_simplex_basis_test(int deg, int dim);
 
 #ifdef __cplusplus
 }

@@ -4,13 +4,12 @@
  */
 
 
-#include "LeastSquaresNewton.h"
+#include "LeastSquaresNewtonPlasma.h"
 #include "ConstrainedOptimization.h"
 
 #include "GetFunction.h"
 #include "GetJacobian.h"
 #include "Quadrature.h"
-#include "LINALG.h"
 #include "GENERAL_QUADRATURE.h"
 #include "Print.h"
 #include "Conditional_Debug.h"
@@ -23,6 +22,9 @@
 #include <math.h>
 #include <assert.h>
 
+#include <omp.h>
+#include <lapacke.h>
+
 static int CheckForFail(int INFO, double errorNorm, double errorNormPrev, Vector least_sq_sol);
 
 // LeastSquaresNewton
@@ -30,9 +32,9 @@ static int CheckForFail(int INFO, double errorNorm, double errorNormPrev, Vector
 // underdetermined systems of equations in the least
 // squares sense. Returns success if algorithm converged
 // and all nodes are inside of the domain and if all nodes are positive.
+double LSQPLASMA_TIME = 0.0;
 #define MAX_ELIM_WEIGHTS 10
-double LSQ_TIME = 0.0;
-bool LeastSquaresNewton(const bool_enum FLAG_CONSTR, const INT_8 *basis, quadrature *q_orig, int *its)
+bool LeastSquaresNewtonPlasma(const bool_enum FLAG_CONSTR, const INT_8 *basis, quadrature *q_orig, int *its)
 {
    assert(q_orig->num_nodes >= 1);
 
@@ -50,17 +52,16 @@ bool LeastSquaresNewton(const bool_enum FLAG_CONSTR, const INT_8 *basis, quadrat
    // initialize LAPACK
    int nrows  = numFuncs;
    int ncols = (dim+1)*k;
-   char TRANS = 'N';
    int NRHS = 1;
    int LDA = nrows;
    int LEAD_DIM = MAX(nrows, ncols);
    int SMALL_DIM = MIN(nrows, ncols);
    int LWORK = 5*ncols;
    int INFO = 0;
-   CMatrix JACOBIAN = CMatrix_init(nrows, ncols);
-   Vector LEAST_SQ_SOL = Vector_init(LEAD_DIM);
    Vector RHS          = Vector_init(nrows);
    double *WORK        = (double *)malloc(LWORK*size_double);
+   CMatrix JACOBIAN = CMatrix_init(nrows, ncols);
+   Vector LEAST_SQ_SOL = Vector_init(LEAD_DIM);
 
    quadrature *q_prev = quadrature_make_full_copy(q_orig);
    quadrature *q_next = quadrature_make_full_copy(q_orig);
@@ -103,10 +104,41 @@ bool LeastSquaresNewton(const bool_enum FLAG_CONSTR, const INT_8 *basis, quadrat
       for(int i = 0; i < SMALL_DIM; ++i)        LEAST_SQ_SOL.id[i] = RHS.id[i];
       for(int i = SMALL_DIM; i < LEAD_DIM; ++i) LEAST_SQ_SOL.id[i] = 0.0;
 
+
+
       double start_time = get_cur_time();
-      dgels_(&TRANS, &nrows, &ncols, &NRHS, JACOBIAN.id, &LDA,
-             &LEAST_SQ_SOL.id[0], &LEAD_DIM, WORK, &LWORK, &INFO);
-      LSQ_TIME += get_cur_time() - start_time;
+      plasma_init(omp_get_max_threads());
+
+      int retval;
+      int IONE = 1;
+      int ISEED[4] = {0,0,0,1};
+      plasma_desc_t T;
+
+      CMatrix JACOBIAN_COPY = CMatrix_init(nrows, ncols);
+      retval = LAPACKE_dlarnv(IONE, ISEED, nrows*ncols, JACOBIAN_COPY.id);
+      assert(retval == 0);
+
+      Vector LEAST_SQ_SOL_COPY = Vector_init(LEAD_DIM);
+      retval = LAPACKE_dlarnv(IONE, ISEED, LEAD_DIM, LEAST_SQ_SOL_COPY.id);
+      assert(retval == 0);
+
+      CMatrix_Assign(JACOBIAN, JACOBIAN_COPY);
+      Vector_Assign(LEAST_SQ_SOL, LEAST_SQ_SOL_COPY);
+
+      plasma_dgels(PlasmaNoTrans,
+            nrows, ncols, NRHS,
+            JACOBIAN_COPY.id, LDA, &T,
+            LEAST_SQ_SOL_COPY.id, LEAD_DIM);
+
+      CMatrix_Assign(JACOBIAN_COPY, JACOBIAN);
+      Vector_Assign(LEAST_SQ_SOL_COPY, LEAST_SQ_SOL);
+      CMatrix_free(JACOBIAN_COPY);
+      Vector_free(LEAST_SQ_SOL_COPY);
+
+      plasma_desc_destroy(&T);
+      plasma_finalize();
+      LSQPLASMA_TIME += get_cur_time() - start_time;
+
 
       for(int i = 0; i < ncols; ++i)
          q_next->z.id[i] = q_prev->z.id[i] - LEAST_SQ_SOL.id[i];
@@ -196,6 +228,4 @@ static int CheckForFail(int INFO, double errorNorm, double errorNormPrev, Vector
 
    else return GQ_SUCCESS;
 }
-
-
 

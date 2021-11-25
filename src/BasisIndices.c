@@ -14,8 +14,7 @@ void BasisIndices(int deg, int dim, INT_8 *f)
 {
    assert(dim >= 0 && deg >= 0);
 
-   if(dim == 1)
-   {
+   if(dim == 1) {
       for(int i = 0; i <= deg; ++i) f[i] = i;
       return;
    }

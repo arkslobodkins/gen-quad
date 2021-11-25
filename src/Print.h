@@ -14,7 +14,7 @@ extern "C" {
 void PrintNodes(const quadrature *q, const char *name);
 void PrintNodesAndWeights(const quadrature *q, const char *name);
 void PrintNodeAndWeight(int id, const quadrature *q, const char *name);
-void PrintNodeInfo(int iters, double error_norm, const quadrature *q, const char *name);
+void PrintQuadLSQInfo(int iters, double error_norm, const quadrature *q, const char *name);
 void PrintElimInfo(int dim, int num_nodes, int opt, double opt_factor);
 
 void PrintInt(int x, const char *name);

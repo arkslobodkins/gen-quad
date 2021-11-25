@@ -10,6 +10,8 @@
 #include <string.h>
 #include <omp.h>
 
+#include "get_time.h"
+double JACOBIAN_TIME = 0.0;
 
 // Computes an returns Jacobian of size num_funcs x (dim+1)*num_nodes
 // of a vector X * w, where each row of X corresponds to
@@ -18,6 +20,8 @@
 // of the quadrature.
 void GetJacobian(const INT_8 *basisIndices, quadrature *q, CMatrix JACOBIAN)
 {
+   double time_start = get_cur_time();
+
    int dim  = q->dim;
    int deg  = q->deg;
    int rows = q->num_funcs;
@@ -29,7 +33,7 @@ void GetJacobian(const INT_8 *basisIndices, quadrature *q, CMatrix JACOBIAN)
    int dims[num_dims];
    memcpy(dims, q->dims, num_dims*size_int);
 
-   bool_enum OMP_CONDITION;
+   int OMP_CONDITION;
    if(dim == 3  && deg >= 12)      OMP_CONDITION = GQ_TRUE;
    else if(dim == 4  && deg  >= 6) OMP_CONDITION = GQ_TRUE;
    else if(dim == 5  && deg  >= 5) OMP_CONDITION = GQ_TRUE;
@@ -39,6 +43,7 @@ void GetJacobian(const INT_8 *basisIndices, quadrature *q, CMatrix JACOBIAN)
    // achieves speedup when dim >= 3 and quadrature degree is sufficiently high
    // if dim == 3, degree should be  > 10 for speedup
    // The higher the dimension, the lower becomes the degree requirement.
+   // In the future number of threads will be selected as a function of problem size.
    #pragma omp parallel default(shared) if(OMP_CONDITION) num_threads(omp_get_max_threads())
    {
       double *basisLoc      = (double *)malloc(SIZE_DOUBLE(rows));
@@ -69,5 +74,7 @@ void GetJacobian(const INT_8 *basisIndices, quadrature *q, CMatrix JACOBIAN)
       free(basisPrimeLoc);
       free(basisIndCopy);
    } // end omp parallel
+
+   JACOBIAN_TIME += get_cur_time() - time_start;
 }
 

@@ -71,6 +71,61 @@ TEST(GEN_QUAD_TEST, VECTOR)
    Vector_Assign(v, w);
    for(int i = 0; i < v.len; ++i)
       EXPECT_EQ(v.id[i], w.id[i]);
+
+   Vector_free(v);
 }
 
 
+TEST(GEN_QUAD_TEST, MATRIX)
+{
+   int nrows = 5, ncols = 3;
+   RMatrix RM = RMatrix_init(nrows, ncols);
+   CMatrix CM = CMatrix_init(nrows, ncols);
+   Vector br = Vector_init(nrows);
+   Vector bc = Vector_init(nrows);
+   Vector x = Vector_init(ncols);
+
+   for(int i = 0; i < RM.rows; ++i)
+      for(int j = 0; j < RM.cols; ++j)
+         RM.rid[i][j] = i+j;
+   for(int j = 0; j < CM.cols; ++j)
+      for(int i = 0; i < CM.rows; ++i)
+         CM.cid[j][i] = i+j;
+   for(int j = 0; j < RM.cols; ++j)
+      x.id[j] = j;
+
+   RMatVec(RM, x, br);
+   CMatVec(CM, x, bc);
+
+   for(int i = 0; i < RM.rows; ++i) {
+      double rhs = 0.0;
+      for(int j = 0; j < RM.cols; ++j)
+         rhs += (i+j)*j;
+      EXPECT_EQ(br.id[i], rhs);
+      EXPECT_EQ(bc.id[i], rhs);
+   }
+
+   RMatrix_realloc(nrows+3, ncols-2, &RM);
+   CMatrix_realloc(nrows-1, ncols+2, &CM);
+   ASSERT_EQ(RM.rows, nrows+3);
+   ASSERT_EQ(RM.cols, ncols-2);
+   ASSERT_EQ(CM.rows, nrows-1);
+   ASSERT_EQ(CM.cols, ncols+2);
+
+   for(int j = 0; j < CM.cols; ++j)
+      for(int i = 0; i < CM.rows; ++i)
+         CM.cid[j][i] = i+j;
+
+   CMatrix CM_T = CMatrix_init(CM.cols, CM.rows);
+   CMatrix_Transpose(CM, CM_T);
+   for(int j = 0; j < CM.cols; ++j)
+      for(int i = 0; i < CM.rows; ++i)
+         EXPECT_EQ(CM.cid[j][i], CM_T.cid[i][j]);
+
+   Vector_free(x);
+   Vector_free(br);
+   Vector_free(bc);
+   RMatrix_free(RM);
+   CMatrix_free(CM);
+   CMatrix_free(CM_T);
+}

@@ -7,8 +7,8 @@
 extern "C" {
 #endif
 
-void Output(const quadrature *q, int arr_size, history **hist_arr);
-void DumpCubatureRule(const quadrature *quad);
+void HistoryToFile(const quadrature *q, int arr_size, history **hist_arr);
+void QuadratureToFile(const quadrature *quad);
 
 #ifdef __cplusplus
 }

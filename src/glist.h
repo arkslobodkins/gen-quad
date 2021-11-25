@@ -11,7 +11,6 @@ typedef struct node
    struct node *prev;
    struct node *next;
 } node;
-typedef struct node node;
 
 typedef struct
 {

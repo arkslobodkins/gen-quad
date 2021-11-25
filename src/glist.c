@@ -30,8 +30,7 @@ void glist_free(glist *list)
 
 void glist_push(glist *list, void *data)
 {
-   if (list == NULL)
-   {
+   if (list == NULL) {
       fprintf(stderr, "glist_push: list is null\n");
       return;
    }
@@ -58,22 +57,19 @@ void glist_push(glist *list, void *data)
 
 void glist_print(glist *list, void (*print)(void *))
 {
-   if(list == NULL || list->first == NULL)
-   {
+   if(list == NULL || list->first == NULL) {
 
       fprintf(stderr, "glist_print: list is null\n");
       return;
    }
 
-   if(list->size == 0)
-   {
+   if(list->size == 0) {
       fprintf(stderr, "glist_print: list is empty\n");
       return;
    }
 
    struct node *curr = list->first;
-   for(int i = 0; i < list->size; ++i)
-   {
+   for(int i = 0; i < list->size; ++i) {
       print(curr->data);
       curr = curr->next;
    }

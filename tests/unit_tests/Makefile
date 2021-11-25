@@ -9,9 +9,7 @@ tests.x: driver.o Vector.o Matrix.o
 	$(GVERSION)  $(COMPFLAGS) -o $@ $^ $(MATH) $(GTEST_FLAGS)
 
 clean :
-	\rm -f *.o
+	\rm -f *.o tests.x
 
-realclean : clean
-	\rm -f tests.x *~ *.a
 
 

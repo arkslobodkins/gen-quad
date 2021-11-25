@@ -38,7 +38,6 @@ void AddLineFirst(const quadrature *q1D, const quadrature *quad_prev, quadrature
             x_new[ind+d] = x_prev[jxdim_minus_1+d-1];
       }
    }
-
    WeightsTensor2D(q1D, quad_prev, quad_new);
 }
 
@@ -64,11 +63,9 @@ void AddLineSimplex(const quadrature *q1D, const quadrature *quad_prev, quadratu
    WeightsTensor2D(q1D, quad_prev, quad_new);
 
    // apply one level of Duffy Transformation
-   for(int i = 0; i < n_new; ++i)
-   {
+   for(int i = 0; i < n_new; ++i) {
       int ind = i*dim;
-      for(int d = 1; d < dim; ++d)
-      {
+      for(int d = 1; d < dim; ++d) {
          x_new[ind+d] *= x_new[ind];
          w_new[i] *= x_new[ind];
       }
@@ -86,11 +83,9 @@ void GeneralDuffy(quadrature *q)
    double *x = q->x;
    double *w = q->w;
 
-   for(int i = 0; i < N; ++i)
-   {
+   for(int i = 0; i < N; ++i) {
       int ind = i*dim;
-      for(int d = 1; d < dim; ++d)
-      {
+      for(int d = 1; d < dim; ++d) {
          x[ind+d] *= x[ind+d-1];
          w[i] *= x[ind+d-1];
       }
@@ -119,8 +114,7 @@ void MixedTensor(const quadrature *q1, const quadrature *q2, quadrature *q_tp)
             q_tp->x[id+d1] = q1->x[i*dim1+d1];
 
          int count = 0;
-         for(int d2 = dim1; d2 < dim_tp; ++d2)
-         {
+         for(int d2 = dim1; d2 < dim_tp; ++d2) {
             q_tp->x[id+d2] = q2->x[j*dim2+count];
             ++count;
          }

@@ -11,6 +11,7 @@ void NodesTensor2D(const quadrature *quad1, const quadrature *quad2, quadrature 
 void WeightsTensor2D(const quadrature *quad1, const quadrature *quad2, quadrature *quad_new);
 void GeneralizedNodesTensor(const quadrature *quad1, quadrature *quad_gen);
 void GeneralizedWeightsTensor(const quadrature *quad_1, quadrature *quad_gen);
+void TestGeneralizedTensor();
 
 #ifdef __cplusplus
 }

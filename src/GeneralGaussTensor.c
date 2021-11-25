@@ -4,14 +4,12 @@
  */
 
 #include "GeneralGaussTensor.h"
-
 #include "Quadrature.h"
 #include "GENERAL_QUADRATURE.h"
+#include "Print.h"
 
 #include <assert.h>
-#include <stdlib.h>
-#include <math.h>
-
+#include <stdio.h>
 
 void NodesTensor2D(const quadrature *quad1, const quadrature *quad2, quadrature *quad_new)
 {
@@ -23,16 +21,13 @@ void NodesTensor2D(const quadrature *quad1, const quadrature *quad2, quadrature 
    double *x2 = quad2->x;
    double *x_new = quad_new->x;
 
-   for(int i = 0; i < n1; ++i)
-   {
-      for(int j = 0; j < n2; ++j)
-      {
+   for(int i = 0; i < n1; ++i) {
+      for(int j = 0; j < n2; ++j) {
          x_new[2*(n2*i+j)]   = x1[i];
          x_new[2*(n2*i+j)+1] = x2[j];
       }
    }
 }
-
 
 void WeightsTensor2D(const quadrature *quad1, const quadrature *quad2, quadrature *quad_new)
 {
@@ -48,7 +43,6 @@ void WeightsTensor2D(const quadrature *quad1, const quadrature *quad2, quadratur
       for(int j = 0; j < n2; ++j)
          w_new[i*n2+j] = w1[i] * w2[j];
 }
-
 
 void GeneralizedNodesTensor(const quadrature *quad_1D, quadrature *quad_gen)
 {
@@ -69,12 +63,10 @@ void GeneralizedNodesTensor(const quadrature *quad_1D, quadrature *quad_gen)
 
    NodesTensor2D(quad_1D, quad_1D, quad_temp1);
    int count = POW_INT(n, dim-2);
-   for(int i = 0; i < count; ++i)
-   {
+   for(int i = 0; i < count; ++i) {
       id1 = dim-2 + i*dim*n_sq;
       id2 = dim-1 + i*dim*n_sq;
-      for(int k = 0; k < n_sq; ++k)
-      {
+      for(int k = 0; k < n_sq; ++k) {
          x_gen[id1+k*dim] = x_t1[2*k];
          x_gen[id2+k*dim] = x_t1[2*k+1];
       }
@@ -110,7 +102,6 @@ void GeneralizedNodesTensor(const quadrature *quad_1D, quadrature *quad_gen)
 
 }
 
-
 void GeneralizedWeightsTensor(const quadrature *quad_1D, quadrature *quad_gen)
 {
    assert(quad_1D->dim == 1);
@@ -128,14 +119,14 @@ void GeneralizedWeightsTensor(const quadrature *quad_1D, quadrature *quad_gen)
    double *w1 = quad_temp1->w;
 
    int counter = POW_INT(n, dim-2);
-   for(int i = 0; i < counter; ++i)
-   {
+   for(int i = 0; i < counter; ++i) {
       WeightsTensor2D(quad_1D, quad_1D, quad_temp1);
       for(int k = 0; k < n_sq; ++k)
          w_gen[i*n_sq+k] = w1[k];
    }
    quadrature_free(quad_temp1);
 
+   if(dim == 2) return;
 
    int dims_temp2[3] = {3};
    quadrature *quad_temp2 = quadrature_init_basic(POW_INT(n, 3), 3, dims_temp2, deg, CUBE);
@@ -159,8 +150,7 @@ void GeneralizedWeightsTensor(const quadrature *quad_1D, quadrature *quad_gen)
          w2[i] = w_gen[i];
 
       counter = POW_INT(n, j);
-      for(int i = 0; i < counter; ++i)
-      {
+      for(int i = 0; i < counter; ++i) {
          WeightsTensor2D(quad_1D, quad_temp2, quad_temp3);
          for(int k = 0; k < POW_INT(n, dim-j-1) * n; ++k)
             w_gen[POW_INT(n, dim-j)*i+k] = w3[k];
@@ -169,4 +159,29 @@ void GeneralizedWeightsTensor(const quadrature *quad_1D, quadrature *quad_gen)
 
    quadrature_free(quad_temp2);
    quadrature_free(quad_temp3);
+}
+
+void TestGeneralizedTensor()
+{
+   int deg = 1;
+   int d1 = 1;
+   int *dims1 = &d1;
+   int nodes1D = 3;
+   quadrature *quad1D = quadrature_init_basic(nodes1D, 1, dims1, deg, CUBE);
+   quad1D->x[0] = 1.0; quad1D->x[1] = 2.0; quad1D->x[2] = 3.0;
+   quad1D->w[0] = -1.0; quad1D->w[1] = -2.0; quad1D->w[2] = -3.0;
+
+   int dimTensor = 3;
+   int *dimsT = &dimTensor;
+   int nodesGen = POW_INT(nodes1D, dimTensor);
+   quadrature *quadTensor = quadrature_init_basic(nodesGen, dimTensor, dimsT, deg, CUBE);
+
+   GeneralizedNodesTensor(quad1D, quadTensor);
+   GeneralizedWeightsTensor(quad1D, quadTensor);
+   printf("Testing Generalized Tensor product:");
+   PrintNodesAndWeights(quad1D, "quad1D");
+   PrintNodesAndWeights(quadTensor, "quadTensor");
+
+   quadrature_free(quad1D);
+   quadrature_free(quadTensor);
 }

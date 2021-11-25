@@ -11,10 +11,14 @@
 #include <string.h>
 #include <omp.h>
 
+#include "get_time.h"
+double FUNCTION_TIME = 0.0;
+
 // Computes an evaluates function f = F(X)*W - b for Newton's method.
 void GetFunction(const INT_8 *basisIndices, quadrature *q, Vector f)
 {
    assert(f.len = q->num_funcs);
+   double time_start = get_cur_time();
 
    int dim   = q->dim;
    int deg   = q->deg;
@@ -33,7 +37,7 @@ void GetFunction(const INT_8 *basisIndices, quadrature *q, Vector f)
       f.id[i] = -1.0 * b[i];
    free(b);
 
-   bool_enum OMP_CONDITION;
+   int OMP_CONDITION;
    if(dim == 3  && deg >= 12)      OMP_CONDITION = GQ_TRUE;
    else if(dim == 4  && deg  >= 6) OMP_CONDITION = GQ_TRUE;
    else if(dim == 5  && deg  >= 5) OMP_CONDITION = GQ_TRUE;
@@ -71,4 +75,5 @@ void GetFunction(const INT_8 *basisIndices, quadrature *q, Vector f)
       free(basisLoc);
    } // end omp parallel
 
+   FUNCTION_TIME += get_cur_time() - time_start;
 }

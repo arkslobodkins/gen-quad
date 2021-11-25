@@ -10,6 +10,10 @@ all : plasma.x
 plasma.x: Driver.o get_time.o libplasma.a libcoreblas.a
 	$(CC) $(VERSION) $(CFLAGS) -o $@ $^ $(LIBSBLAS) $(LIBSLA) $(MATH)
 
+clean :
+	\rm -f *.o plasma.x
+
+
 
 
 

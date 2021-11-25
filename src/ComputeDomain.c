@@ -26,8 +26,8 @@ static void hist_free(history *h_list);
 static void hist_save_start(quadrature *q, history *hist);
 static void hist_save_end(quadrature *q, history *hist);
 
-static quadrature* ComputeSimplexNext(int deg, int dim_cur, int dim_next, const quadrature *q_cur, int hist_start, history **hist);
-
+static quadrature* ComputeSimplexNext(int deg, int dim_cur, int dim_next,
+                                      const quadrature *q_cur, int hist_start, history **hist);
 
 void ComputeInterval(int deg)
 {
@@ -39,7 +39,7 @@ void ComputeInterval(int deg)
    quadrature *q_gauss = quadrature_init_basic(n, 1, d_gauss, deg, INTERVAL);
    double p1 = 0.0, p2 = 0.0;
    Jacobi(q_gauss->num_nodes, p1, p2, q_gauss->x, q_gauss->w);
-   DumpCubatureRule(q_gauss);
+   QuadratureToFile(q_gauss);
    quadrature_free(q_gauss);
 }
 
@@ -77,8 +77,7 @@ void ComputeCube(int deg, int dim)
    // implement recursive scheme for computing the initial guess and run Node Elimination algorithm
    for(int d = 2; d <= dim; ++d)
    {
-      if(d == 2) // set up initial guess for 2-dim CUBE
-      {
+      if(d == 2) { // set up initial guess for 2-dim CUBE
          int n_nodes_next = q_gauss->num_nodes * q_gauss->num_nodes;
          int d_init[1] = {d};
          q_init = quadrature_init_full(n_nodes_next, d, d_init, deg, CUBE);
@@ -87,8 +86,7 @@ void ComputeCube(int deg, int dim)
          int d_new[1] = {d};
          q_new = quadrature_init_full(n_nodes_next, d, d_new, deg, CUBE);
       }
-      else if(d > 2) // set up initial guess for d-dim CUBE
-      {
+      else if(d > 2) { // set up initial guess for d-dim CUBE
          int n_nodes_next = q_new->num_nodes * q_gauss->num_nodes;
          int d_init[1] = {d};
          quadrature_realloc(n_nodes_next, d, d_init, deg, q_init);
@@ -106,8 +104,8 @@ void ComputeCube(int deg, int dim)
    double res = QuadTestIntegralMonomial(q_new);
    printf("Monomial residual = %.16e\n\n", res);
 
-   Output(q_new, dim-1, hist_cube);
-   DumpCubatureRule(q_new);
+   HistoryToFile(q_new, dim-1, hist_cube);
+   QuadratureToFile(q_new);
 
    quadrature_free(q_gauss);
    quadrature_free(q_init);
@@ -135,25 +133,7 @@ void ComputeSimplex(int deg, int dim)
    assert(deg > 0);
    assert(dim > 1);
 
-   {
-      // test orthogonality of basis functions
-      double x[dim];
-      for(int d = 0; d < dim; ++d)
-         x[d] = (double)rand() / (double) RAND_MAX;
-
-      int num_funs = BasisSize(deg, dim);
-      int8_t *basis_id = (int8_t *)malloc((num_funs*dim)*sizeof(int8_t));
-      double *phi = (double *)malloc(num_funs*sizeof(double));
-      BasisIndices(deg, dim, basis_id);
-
-      int s_dims = dim;
-      BasisSimplex(&s_dims, deg, basis_id, x, phi);
-      double inf_norm = orthogonal_simplex_basis_test(&s_dims, deg, basis_id);
-      printf("\nTesting orthogonality of basis functions. Maximum error of basis functions = %.16e\n\n", inf_norm);
-
-      free(basis_id);
-      free(phi);
-   }
+   orthogonal_simplex_basis_test(deg, dim);
 
    MAX_DIM = dim;
    history **hist_simplex = (history **)malloc((dim-1)*sizeof(history *));
@@ -170,8 +150,8 @@ void ComputeSimplex(int deg, int dim)
    Jacobi(q_gauss->num_nodes, p1, p2, q_gauss->x, q_gauss->w);
    quadrature *q_new = ComputeSimplexNext(deg, 1, dim, q_gauss, 0, hist_simplex);
 
-   Output(q_new, dim-1, hist_simplex);
-   DumpCubatureRule(q_new);
+   HistoryToFile(q_new, dim-1, hist_simplex);
+   QuadratureToFile(q_new);
 
    quadrature_free(q_gauss);
    quadrature_free(q_new);
@@ -277,16 +257,14 @@ void ComputeCubeSimplex(int deg, int dim1, int dim2)
 
          int d_init[2] = {dim_cube, dim_simplex};
          int d_new[2] = {dim_cube, dim_simplex};
-         if(dim_cube == 1)
-         {
+         if(dim_cube == 1) {
             int n_nodes_next = q_new_s->num_nodes * q_gauss->num_nodes;
             q_init_cs = quadrature_init_full(n_nodes_next, d, d_init, deg, CUBESIMPLEX);
             AddLineFirst(q_gauss, q_new_s, q_init_cs);
 
             q_new_cs = quadrature_init_full(n_nodes_next, d, d_new, deg, CUBESIMPLEX);
          }
-         else if(dim_cube > 1)
-         {
+         else if(dim_cube > 1) {
             int n_nodes_next = q_new_cs->num_nodes * q_gauss->num_nodes;
             quadrature_realloc(n_nodes_next, d, d_init, deg, q_init_cs);
             AddLineFirst(q_gauss, q_new_cs, q_init_cs);
@@ -302,8 +280,8 @@ void ComputeCubeSimplex(int deg, int dim1, int dim2)
 
    }
 
-   Output(q_new_cs, dim-1, hist_cs);
-   DumpCubatureRule(q_new_cs);
+   HistoryToFile(q_new_cs, dim-1, hist_cs);
+   QuadratureToFile(q_new_cs);
 
    quadrature_free(q_init_s);
    quadrature_free(q_new_s);
@@ -336,8 +314,7 @@ void ComputeSimplexSimplex(int deg, int dim1, int dim2)
    // flip dimensions in a favourable order
    int dim_s1_max = dim1;
    int dim_s2_max = dim2;
-   if(dim_s1_max < dim_s2_max)
-   {
+   if(dim_s1_max < dim_s2_max) {
       int temp   = dim_s2_max;
       dim_s2_max = dim_s1_max;
       dim_s1_max = temp;
@@ -376,8 +353,8 @@ void ComputeSimplexSimplex(int deg, int dim1, int dim2)
    NodeElimination(q_init_ss, q_new_ss, hist_ss[hist_dims-1]->list);
    hist_save_end(q_new_ss, hist_ss[hist_dims-1]);
 
-   Output(q_new_ss, hist_dims, hist_ss);
-   DumpCubatureRule(q_new_ss);
+   HistoryToFile(q_new_ss, hist_dims, hist_ss);
+   QuadratureToFile(q_new_ss);
 
    quadrature_free(q_gauss);
    quadrature_free(q_init_ss);
@@ -415,8 +392,7 @@ static quadrature *ComputeSimplexNext(int deg, int dim_cur, int dim_next, const 
       quadrature *q_gauss = quadrature_init_basic(n, 1,  d_gauss, 2*n-1, INTERVAL);
       Jacobi(q_gauss->num_nodes, p1, p2, q_gauss->x, q_gauss->w);
 
-      if(d == dim_cur+1)
-      {
+      if(d == dim_cur+1) {
          int n_nodes_next = q_gauss->num_nodes * q_cur->num_nodes;
          int d_init[1] = {d};
          q_init_next = quadrature_init_full(n_nodes_next, d, d_init, deg, SIMPLEX);
@@ -425,8 +401,7 @@ static quadrature *ComputeSimplexNext(int deg, int dim_cur, int dim_next, const 
          int d_new[1] = {d};
          q_new_next = quadrature_init_full(n_nodes_next, d, d_new, deg, SIMPLEX);
       }
-      else if(d > dim_cur+1)
-      {
+      else if(d > dim_cur+1) {
          int n_nodes_next = q_new_next->num_nodes * q_gauss->num_nodes;
          int d_init[1] = {d};
          quadrature_realloc(n_nodes_next, d, d_init, deg, q_init_next);
@@ -465,11 +440,11 @@ static void hist_free(history *h_list)
 
 static void hist_save_start(quadrature *q, history *hist)
 {
-   hist->dim = q->dim;
-   hist->degree = q->deg;
+   hist->dim           = q->dim;
+   hist->degree        = q->deg;
    hist->nodes_initial = q->num_nodes;
-   hist->num_funcs = q->num_funcs;
-   hist->D = q->D;
+   hist->num_funcs     = q->num_funcs;
+   hist->D             = q->D;
 }
 
 static void hist_save_end(quadrature *q, history *hist)

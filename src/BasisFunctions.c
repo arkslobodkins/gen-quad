@@ -4,7 +4,7 @@
  */
 
 #include "BasisFunctions.h"
-
+#include "BasisIntegrals.h"
 #include "BasisIndices.h"
 #include "AddDimension.h"
 #include "GeneralGaussTensor.h"
@@ -31,7 +31,8 @@ ATTR_UNUSED static int finite_difference_test(int dim, int *dims, int deg, const
                                               const double *x, const double *phi_prime, BasisFunc func);
 
 static void LegendrePoly(int order, double x, double *p, double *dp);
-
+static void JacobiPoly(int order, double x, double alpha, double beta, double *p);
+static void JacobiPolyPrime(int order, double x, double alpha, double beta, double *dp);
 
 static void LegendrePoly(int order, double x, double *p, double *dp)
 {
@@ -56,10 +57,6 @@ static void LegendrePoly(int order, double x, double *p, double *dp)
 #define SQUARE(x) ((x)*(x))
 #define ADD(x, y) (x)+(y)
 #define SUB(x, y) (x)-(y)
-
-static void JacobiPoly(int order, double x, double alpha, double beta, double *p);
-static void JacobiPolyPrime(int order, double x, double alpha, double beta, double *dp);
-
 static void JacobiPoly(int order, double x, double alpha, double beta, double *p)
 {
    // compute constants to be used inside a for loop to avoid redundant computations
@@ -1422,9 +1419,8 @@ FREERETURN:
 }
 
 
-double  orthogonal_simplex_basis_test(int *dims, int deg, const INT_8 *basis_id)
+void orthogonal_simplex_basis_test(int deg, int dim)
 {
-   int dim = dims[0];
    int num_funcs = BasisSize(deg, dim);
 
    int n = floor(deg/2)+1 + floor(dim/2) + floor(deg/6) + 3; // make n large enough to get exact quadrature
@@ -1433,35 +1429,40 @@ double  orthogonal_simplex_basis_test(int *dims, int deg, const INT_8 *basis_id)
    Jacobi(quad_1D->num_nodes, 0.0, 0.0, quad_1D->x, quad_1D->w);
 
    int N = POW_INT(n, dim);
-   quadrature *quad_S = quadrature_init_basic(N, dim, dims, deg, SIMPLEX);
+   quadrature *quad_S = quadrature_init_basic(N, dim, &dim, deg, SIMPLEX);
    GeneralizedNodesTensor(quad_1D, quad_S);
    GeneralizedWeightsTensor(quad_1D, quad_S);
    GeneralDuffy(quad_S);
 
-   double *phi = (double *)malloc(num_funcs*size_double);
-   double *integrals = (double *)calloc(num_funcs, size_double);
+   double *basis = (double *)calloc(num_funcs, size_double);
+   double *quad_integrals = (double *)calloc(num_funcs, size_double);
+
+   double *exact_integrals = (double *)calloc(num_funcs, size_double);
+   BasisIntegralsSimplex(&dim, deg, exact_integrals);
+
+   INT_8 *basis_indices = (int8_t *)malloc((num_funcs*dim)*sizeof(INT_8));
+   BasisIndices(deg, dim, basis_indices);
 
    for(int i = 0; i < N; ++i)
    {
-      BasisSimplex(dims, deg, basis_id, &quad_S->x[dim*i], phi);
+      BasisSimplex(&dim, deg, basis_indices, &quad_S->x[dim*i], basis);
       for(int j = 0; j < num_funcs; ++j)
-         integrals[j] += phi[j]*quad_S->w[i];
+         quad_integrals[j] += basis[j]*quad_S->w[i];
    }
 
-   double ie1 = 1.0; for(int i = 1; i < dim; ++i) ie1 = ie1/(i+1);
-
-   double max_res = fabs(integrals[0] - ie1);
-   double res = max_res;
+   double max_res = fabs(quad_integrals[0] - exact_integrals[0]);
    for(int j = 1; j < num_funcs; ++j)
    {
-      res = fabs(integrals[j]);
+      double res = fabs(quad_integrals[j]-exact_integrals[j]);
       max_res = MAX(max_res, res);
    }
+   printf("\nTesting orthogonality of basis functions. Maximum error of basis functions = %.16e\n\n", max_res);
 
+   free(basis_indices);
+   free(basis);
+   free(quad_integrals);
+   free(exact_integrals);
    quadrature_free(quad_1D);
    quadrature_free(quad_S);
-   free(phi);
-   free(integrals);
 
-   return max_res;
 }

@@ -6,8 +6,9 @@
 #include "NodeElimination.h"
 
 #include "GetJacobian.h"
-#include "InsertionSort.h"
 #include "LeastSquaresNewton.h"
+#include "LeastSquaresNewtonPlasma.h"
+#include "ConstrainedOptimization.h"
 #include "Quadrature.h"
 #include "Matrix.h"
 #include "BasisIndices.h"
@@ -26,6 +27,7 @@
 
 extern int MAX_DIM;
 static void FreeMemory(INT_8 *basis, quadrature *q_temp, quadrature *q_new);
+static void InsertionSort(int num_entries, double *norms, int *arrayIndex);
 static double TwoNorm(int n, double *z);
 ATTR_UNUSED static bool TestQR(int numRows, int qiCols, const double *Q);
 
@@ -65,15 +67,13 @@ void NodeElimination(const quadrature *q_initial, quadrature *q_final, glist *hi
    PrintDouble(res, "initial residual in NodeElimination");
    if(fabs(res) > tol)
    {
-      bool SOL_FLAG = LeastSquaresNewton(ON, basis, q_temp, 0);
-      if(SOL_FLAG == SOL_FOUND)
-      {
+      bool SOL_FLAG = LeastSquaresNewtonPlasma(ON, basis, q_temp, 0);
+      if(SOL_FLAG == SOL_FOUND) {
          n_initial = q_temp->num_nodes;
          quadrature_realloc(q_temp->num_nodes, dim, dims, deg, q_new);
          quadrature_assign(q_temp, q_new);
       }
-      else if(SOL_FLAG == SOL_NOT_FOUND)
-      {
+      else if(SOL_FLAG == SOL_NOT_FOUND) {
          Print("Initial quadrature did not converge. The initial guess should be more accurate.\n");
          FreeMemory(basis, q_temp, q_new);
          return;
@@ -196,8 +196,7 @@ void NodeElimination(const quadrature *q_initial, quadrature *q_final, glist *hi
          if(QuadInConstraint(q_temp) == false)
          {
             quadrature *q_prev = quadrature_init_full(n_cur-1, dim, dims, deg, D);
-            for(count = 0, j = 0; j < n_cur; ++j)
-            {
+            for(count = 0, j = 0; j < n_cur; ++j) {
                if(j == arrayIndex[i]) continue;
                q_prev->w[count] = q_new->w[j];
                for(d = 0; d < dim; ++d)
@@ -206,8 +205,7 @@ void NodeElimination(const quadrature *q_initial, quadrature *q_final, glist *hi
             }
             ConstrainedOptimization(q_prev, q_temp, &cVectData);
 
-            if(cVectData.N_OR_W == WEIGHT)
-            {
+            if(cVectData.N_OR_W == WEIGHT) {
                temp_prev = q_temp->num_nodes;
                quadrature_remove_element(cVectData.boundaryNodeId, q_temp);
                removed_node = true;
@@ -217,7 +215,7 @@ void NodeElimination(const quadrature *q_initial, quadrature *q_final, glist *hi
          }
 
          int its = 0;
-         SOL_FLAG = LeastSquaresNewton(CONSTR_FLAG, basis, q_temp, &its);
+         SOL_FLAG = LeastSquaresNewtonPlasma(CONSTR_FLAG, basis, q_temp, &its);
          // store nodes and weights if Newton's method succeeded, update history
          if(SOL_FLAG == SOL_FOUND)
          {
@@ -272,6 +270,22 @@ static void FreeMemory(INT_8 *basis, quadrature *q_temp, quadrature *q_new)
    free(basis);
    quadrature_free(q_temp);
    quadrature_free(q_new);
+}
+
+static void InsertionSort(int num_entries, double *norms, int *arrayIndex)
+{
+   for(int i = 0; i < num_entries; ++i)
+   {
+      int j = i;
+      double temp = norms[i];
+      while( (j > 0) && (norms[j-1] > temp) ) {
+         arrayIndex[j] = arrayIndex[j-1];
+         norms[j] = norms[j-1];
+         --j;
+      }
+      arrayIndex[j] = i;
+      norms[j] = temp;
+   }
 }
 
 

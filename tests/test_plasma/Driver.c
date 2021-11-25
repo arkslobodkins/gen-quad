@@ -33,8 +33,8 @@ int main(int argc, char *argv[])
    printf("OPENMP enanbled with %i threads\n\n", omp_get_max_threads());
 #endif
 
-   int nrows = 7000;
-   int ncols = 6000;
+   int nrows = 200;
+   int ncols = 100;
    int NRHS  = 1;
    int LDA   = nrows;
    int LEAD_DIM = nrows>ncols ? nrows:ncols;
@@ -103,6 +103,7 @@ int main(int argc, char *argv[])
    double LP_END = get_cur_time();
    double la_sol_norm = compute_norm(ncols, b_copy);
 
+   free(WORK);
    free(A_copy);
    free(b_copy);
 

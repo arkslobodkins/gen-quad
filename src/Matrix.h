@@ -28,18 +28,18 @@ typedef struct CMatrix
    double **cid;
 } CMatrix;
 
-
 RMatrix RMatrix_init(int nRows, int nCols);
 void RMatrix_realloc(int nRows, int nCols, RMatrix *M);
 void RMatrix_free(RMatrix M);
-void RMatVec(RMatrix M, Vector V,    Vector O);
+void RMatVec(RMatrix M, Vector x, Vector y);
 void PrintRMatrix(const RMatrix M);
 
 CMatrix CMatrix_init(int nRows, int nCols);
-void CMatrix_Transpose(CMatrix A, CMatrix B);
 void CMatrix_realloc(int nRows, int nCols, CMatrix *M);
 void CMatrix_free(CMatrix M);
-void ColMatVec(CMatrix M, Vector V,    Vector O);
+void CMatrix_Assign(const CMatrix A, CMatrix B);
+void CMatrix_Transpose(const CMatrix A, CMatrix B);
+void CMatVec(const CMatrix M, const Vector x, Vector y);
 
 #ifdef __cplusplus
 }

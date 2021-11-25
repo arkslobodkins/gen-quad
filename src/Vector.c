@@ -4,13 +4,18 @@
  */
 
 #include "Vector.h"
-#include "GENERAL_QUADRATURE.h"
 
 #include <assert.h>
+#include <math.h>
 #include <stdlib.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <string.h>
 
+static inline double max_double(double x, double y)
+{
+   return x > y ? x : y;
+}
 
 Vector Vector_init(int n)
 {
@@ -30,8 +35,7 @@ void Vector_realloc(int n, Vector *V)
 void Vector_Assign(const Vector v1, Vector v2)
 {
    assert(v1.len == v2.len);
-   for(int i = 0; i < v1.len; ++i)
-      v2.id[i] = v1.id[i];
+   memcpy(v2.id, v1.id, v1.len*sizeof(double));
 }
 
 void Vector_free(Vector V)
@@ -59,7 +63,7 @@ double VDot(const Vector a, const Vector b)
 
 void VectorAddScale(double c1, const Vector V1, double c2, const Vector V2, Vector V3)
 {
-   assert(V1.len == V2.len  && V2.len == V3.len  && V3.len > 0);
+   assert(V1.len == V2.len && V2.len == V3.len && V3.len > 0);
    for(int i = 0; i < V3.len; ++i)
       V3.id[i] = c1*V1.id[i] + c2*V2.id[i];
 }
@@ -80,7 +84,6 @@ VMin VectorMin(const Vector v)
    return vMin;
 }
 
-
 void VectorRemoveElement(int index, Vector *z)
 {
    assert(index <= z->len-1);
@@ -91,16 +94,15 @@ void VectorRemoveElement(int index, Vector *z)
    Vector_realloc(z->len-1, z);
 }
 
-
 double V_ScaledTwoNorm(const Vector z)
 {
    assert(z.len > 0);
 
    double norm = 0.0;
    for(int i = 0; i < z.len; ++i)
-      norm += SQUARE(z.id[i]);
+      norm += z.id[i]*z.id[i];
 
-   norm = SQRT(norm/z.len);
+   norm = sqrt(norm/z.len);
    return norm;
 }
 
@@ -110,9 +112,9 @@ double V_TwoNorm(const Vector z)
 
    double norm = 0.0;
    for(int i = 0; i < z.len; ++i)
-      norm += SQUARE(z.id[i]);
+      norm += z.id[i]*z.id[i];
 
-   norm = SQRT(norm);
+   norm = sqrt(norm);
    return norm;
 }
 
@@ -122,7 +124,7 @@ double V_InfNorm(const Vector z)
 
    double norm = 0.0;
    for(int i = 0; i < z.len; ++i)
-      norm = MAX(fabs(z.id[i]), norm);
+      norm = max_double(fabs(z.id[i]), norm);
 
    return norm;
 }
@@ -132,7 +134,7 @@ bool V_CheckNan(const Vector z)
    assert(z.len > 0);
 
    for(int i = 0; i < z.len; ++i)
-      if(isnan(z.id[i]) == 1)
+      if(isnan(z.id[i]))
          return true;
 
    return false;
@@ -143,11 +145,12 @@ bool V_CheckInf(const Vector z)
    assert(z.len > 0);
 
    for(int i = 0; i < z.len; ++i)
-      if(isinf(z.id[i]) == 1)
+      if(isinf(z.id[i]))
          return true;
 
    return false;
 }
+
 
 int IntPower(int x, int power)
 {

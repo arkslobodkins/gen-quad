@@ -1,6 +1,7 @@
 #ifndef CONDITIONAL_DEBUG_H
 #define CONDITIONAL_DEBUG_H
 
+#include "Print.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -30,7 +31,6 @@ for(int i = 0; i < k; ++i)                                                      
          PrintInt(i, "ith node");                                                     \
          PrintNodesAndWeights(q_prev, "q_prev");                                      \
          PrintNodesAndWeights(q_next, "q_next");                                      \
-         RET_FLAG = CONSTR_FAILURE;                                                   \
       }                                                                               \
    }                                                                                  \
 }
@@ -54,24 +54,20 @@ if(QuadInConstraint( q_next_copy ) == 0)                                   \
 
 #define COND_TEST_4                                                                   \
 bool TEST_QR = TestQR(QW.rows, QW.cols, QW.id);                                       \
-                                                                                      \
 if(TEST_QR == FAILED)                                                                 \
-{                                                                                     \
-   PRINT_ERR("FAILED QR TEST, returning from NodeElimination", __LINE__, __FILE__);   \
-   free(REFL);                                                                        \
-   free(WORK);                                                                        \
-   CMatrix_free(J);                                                                   \
-   CMatrix_free(J_TR);                                                                \
-   CMatrix_free(QW);                                                                  \
-   break;                                                                             \
-}
+   PRINT_ERR("FAILED QR TEST", __LINE__, __FILE__);
 
-#else
+#define COND_PRINT_ERR(flag) \
+if(flag != GQ_SUCCESS) PRINT_ERR(ERR_STRING(flag), __LINE__, __FILE__);
+
+
+#else // QUAD_DEBUG_OFF
 
 #define COND_TEST_1
 #define COND_TEST_2
 #define COND_TEST_3
 #define COND_TEST_4
+#define COND_PRINT_ERR
 
 #endif
 

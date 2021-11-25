@@ -3,23 +3,22 @@ VERSION = -std=c99
 
 #uncomment "-DQUAD_DEBUG_OFF"   to disable debug mode
 #uncomment "-NDEBUG"            to disable assert statements
-CFLAGS=-g -pg -Wall -fopenmp        \
+CFLAGS=-g  -Wall -fopenmp           \
       #-DQUAD_DEBUG_OFF             \
       #-DNDEBUG
 
 
-LIBSLA = -llapack -llapacke
-LIBSBLAS= -lblas
+LIBSBLAS= -lblas -llapacke -llapack
 MATH= -lm
 RANLIB = ranlib
-VPATH= ../src:../src/Gauss_Lib:../../../Downloads/plasma-17.1/include
+VPATH= ../src:../src/Gauss_Lib
 
 all : quad results
-quad: Main.o InsertionSort.o BasisIntegrals.o LeastSquaresNewton.o GeneralGaussTensor.o                \
+quad: Main.o BasisIntegrals.o LeastSquaresNewton.o  LeastSquaresNewtonPlasma.o GeneralGaussTensor.o    \
       GetJacobian.o GetFunction.o NodeElimination.o BasisFunctions.o BasisIndices.o Output.o           \
-      AddDimension.o ComputeDomain.o QuadDriver.o Constraints.o Vector.o Matrix.o glist.o Print.o      \
-      Quadrature.o LINALG.o Polytope.o get_time.o libgaussq.a libplasma.a libcoreblas.a
-	$(CC) $(VERSION) $(CFLAGS) -o $@ $^ $(LIBSBLAS) $(LIBSLA)  $(MATH)
+      AddDimension.o ComputeDomain.o QuadDriver.o Constraints.o ConstrainedOptimization.o Vector.o     \
+	Matrix.o glist.o Print.o Quadrature.o LINALG.o Polytope.o get_time.o libgaussq.a libplasma.a libcoreblas.a
+	$(CC) $(VERSION) $(CFLAGS) -o $@ $^ $(LIBSBLAS) $(MATH)
 
 OBJS =  GaussCore.o Jacobi.o
 libgaussq.a: $(OBJS)
