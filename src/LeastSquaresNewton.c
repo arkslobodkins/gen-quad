@@ -15,7 +15,6 @@
 #include "Print.h"
 #include "Conditional_Debug.h"
 #include "get_time.h"
-#include "../plasma-17.1/include/plasma.h"
 
 #include <stdlib.h>
 #include <string.h>
