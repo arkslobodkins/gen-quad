@@ -53,6 +53,7 @@ extern "C" {
 #define size_quadrature sizeof(quadrature)
 
 
+typedef enum { LAPACK, PLASMA } LibraryType;
 typedef enum { ON, OFF } bool_enum;
 typedef enum { orthogonal, monomial } basis_type;
 typedef enum { INTERVAL, CUBE, SIMPLEX, CUBESIMPLEX, SIMPLEXSIMPLEX, CUBESIMPLEXSIMPLEX } DOMAIN_TYPE;

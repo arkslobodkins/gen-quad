@@ -214,6 +214,26 @@ quadrature *quadrature_make_full_copy(const quadrature *q)
    return q_copy;
 }
 
+
+quadrature *quadrature_without_element(quadrature *q, int i)
+{
+   int count, j, d;
+   int num_nodes = q->num_nodes;
+   int dim = q->dim;
+   quadrature *q_without = quadrature_init_full(num_nodes-1, q->dim, q->dims, q->deg, q->D);
+
+   for(count = 0, j = 0; j < num_nodes; ++j) {
+      if(j == i) continue;
+      q_without->w[count] = q->w[j];
+      for(d = 0; d < dim; ++d)
+         q_without->x[count*dim+d] = q->x[j*dim+d];
+      ++count;
+   }
+
+   return q_without;
+}
+
+
 // Assignment operator
 void quadrature_assign(const quadrature *q1, quadrature *q2)
 {

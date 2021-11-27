@@ -71,9 +71,9 @@ void VectorAddScale(double c1, const Vector V1, double c2, const Vector V2, Vect
 VMin VectorMin(const Vector v)
 {
    VMin vMin = {0};
+
    vMin.min_index = 0;
    vMin.min_value = v.id[0];
-
    for(int i = 1; i < v.len; ++i)
       if(v.id[i] < vMin.min_value)
       {
@@ -102,8 +102,7 @@ double V_ScaledTwoNorm(const Vector z)
    for(int i = 0; i < z.len; ++i)
       norm += z.id[i]*z.id[i];
 
-   norm = sqrt(norm/z.len);
-   return norm;
+   return sqrt(norm/z.len);
 }
 
 double V_TwoNorm(const Vector z)
@@ -114,8 +113,7 @@ double V_TwoNorm(const Vector z)
    for(int i = 0; i < z.len; ++i)
       norm += z.id[i]*z.id[i];
 
-   norm = sqrt(norm);
-   return norm;
+   return sqrt(norm);
 }
 
 double V_InfNorm(const Vector z)

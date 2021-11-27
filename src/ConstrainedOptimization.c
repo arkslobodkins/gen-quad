@@ -80,8 +80,7 @@ int ConstrainedProjection(const quadrature *q_prev, quadrature *q_next)
          }
       }
 
-
-      if(active_eqn_count > 0  && do_project == true)
+      if(do_project)
       {
          int count = 0;
          CMatrix eqn_matrix = CMatrix_init(dim, active_eqn_count);
@@ -107,7 +106,6 @@ int ConstrainedProjection(const quadrature *q_prev, quadrature *q_next)
 
          CMatrix_free(eqn_matrix);
       }
-
 
    }
    COND_TEST_1;

@@ -38,7 +38,7 @@ CMatrix CMatrix_init(int nRows, int nCols);
 void CMatrix_realloc(int nRows, int nCols, CMatrix *M);
 void CMatrix_free(CMatrix M);
 void CMatrix_Assign(const CMatrix A, CMatrix B);
-void CMatrix_Transpose(const CMatrix A, CMatrix B);
+CMatrix CMatrix_Transpose(const CMatrix A);
 void CMatVec(const CMatrix M, const Vector x, Vector y);
 
 #ifdef __cplusplus

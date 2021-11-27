@@ -326,9 +326,7 @@ void QuadDriver(int argc, char **argv)
          break;
    }
    extern double LSQ_TIME;
-   printf("wall clock time for LAPACK routine in LeastSquaresNewton = %le\n", LSQ_TIME);
-   extern double LSQPLASMA_TIME;
-   printf("wall clock time for PLASMA routine in LeastSquaresNewtonPlasma = %le\n", LSQPLASMA_TIME);
+   printf("wall clock time for least squares routine in LeastSquaresNewton = %le\n", LSQ_TIME);
    extern double JACOBIAN_TIME;
    printf("wall clock time for GetJacobian routine = %le\n", JACOBIAN_TIME);
    extern double FUNCTION_TIME;

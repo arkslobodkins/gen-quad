@@ -10,17 +10,18 @@
 #include "GetFunction.h"
 #include "GetJacobian.h"
 #include "Quadrature.h"
-#include "LINALG.h"
 #include "GENERAL_QUADRATURE.h"
 #include "Print.h"
 #include "Conditional_Debug.h"
 #include "get_time.h"
+#include "LINALG.h"
 
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
 #include <math.h>
 #include <assert.h>
+
 
 static int CheckForFail(int INFO, double errorNorm, double errorNormPrev, Vector least_sq_sol);
 
@@ -29,9 +30,9 @@ static int CheckForFail(int INFO, double errorNorm, double errorNormPrev, Vector
 // underdetermined systems of equations in the least
 // squares sense. Returns success if algorithm converged
 // and all nodes are inside of the domain and if all nodes are positive.
-#define MAX_ELIM_WEIGHTS 10
 double LSQ_TIME = 0.0;
-bool LeastSquaresNewton(const bool_enum FLAG_CONSTR, const INT_8 *basis, quadrature *q_orig, int *its)
+#define MAX_ELIM_WEIGHTS 10
+bool LeastSquaresNewton(LibraryType libType, const bool_enum FLAG_CONSTR, const INT_8 *basis, quadrature *q_orig, int *its)
 {
    assert(q_orig->num_nodes >= 1);
 
@@ -49,13 +50,9 @@ bool LeastSquaresNewton(const bool_enum FLAG_CONSTR, const INT_8 *basis, quadrat
    // initialize LAPACK
    int nrows  = numFuncs;
    int ncols = (dim+1)*k;
-   char TRANS = 'N';
-   int NRHS = 1;
-   int LDA = nrows;
    int LEAD_DIM = MAX(nrows, ncols);
    int SMALL_DIM = MIN(nrows, ncols);
    int LWORK = 5*ncols;
-   int INFO = 0;
    CMatrix JACOBIAN = CMatrix_init(nrows, ncols);
    Vector LEAST_SQ_SOL = Vector_init(LEAD_DIM);
    Vector RHS          = Vector_init(nrows);
@@ -67,6 +64,10 @@ bool LeastSquaresNewton(const bool_enum FLAG_CONSTR, const INT_8 *basis, quadrat
    int elim_weights = 0;
    double errorNorm = 1.0, errorNormPrev = 1.0, errorNormUpdate = 1.0;
    ConstrVectData cVectData = ConstrVectDataInit();
+
+   int (*leastsquares_ptr)(CMatrix A, Vector RHS_TO_X);
+   if(libType == LAPACK)      leastsquares_ptr = DGELS_LAPACK;
+   else if(libType == PLASMA) leastsquares_ptr = DGELS_PLASMA;
 
    // return if input is a satisfactory quadrature
    {
@@ -103,8 +104,7 @@ bool LeastSquaresNewton(const bool_enum FLAG_CONSTR, const INT_8 *basis, quadrat
       for(int i = SMALL_DIM; i < LEAD_DIM; ++i) LEAST_SQ_SOL.id[i] = 0.0;
 
       double start_time = get_cur_time();
-      dgels_(&TRANS, &nrows, &ncols, &NRHS, JACOBIAN.id, &LDA,
-             &LEAST_SQ_SOL.id[0], &LEAD_DIM, WORK, &LWORK, &INFO);
+      int INFO = leastsquares_ptr(JACOBIAN, LEAST_SQ_SOL);
       LSQ_TIME += get_cur_time() - start_time;
 
       for(int i = 0; i < ncols; ++i)
@@ -149,10 +149,10 @@ bool LeastSquaresNewton(const bool_enum FLAG_CONSTR, const INT_8 *basis, quadrat
 
 
    if( (itsLoc < maxiter)
-    && (isnan(errorNormUpdate) == 0)
-    && (isinf(errorNormUpdate) == 0)
-    && (errorNormUpdate <= q_tol)
-    && QuadInConstraint(q_next) )
+         && (isnan(errorNormUpdate) == 0)
+         && (isinf(errorNormUpdate) == 0)
+         && (errorNormUpdate <= q_tol)
+         && QuadInConstraint(q_next) )
    {
       quadrature_realloc(q_next->num_nodes, dim, dims, deg, q_orig);
       quadrature_assign(q_next, q_orig);
@@ -195,6 +195,4 @@ static int CheckForFail(int INFO, double errorNorm, double errorNormPrev, Vector
 
    else return GQ_SUCCESS;
 }
-
-
 

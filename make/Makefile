@@ -14,7 +14,7 @@ RANLIB = ranlib
 VPATH= ../src:../src/Gauss_Lib
 
 all : quad results
-quad: Main.o BasisIntegrals.o LeastSquaresNewton.o  LeastSquaresNewtonPlasma.o GeneralGaussTensor.o    \
+quad: Main.o BasisIntegrals.o LeastSquaresNewton.o  GeneralGaussTensor.o                               \
       GetJacobian.o GetFunction.o NodeElimination.o BasisFunctions.o BasisIndices.o Output.o           \
       AddDimension.o ComputeDomain.o QuadDriver.o Constraints.o ConstrainedOptimization.o Vector.o     \
 	Matrix.o glist.o Print.o Quadrature.o LINALG.o Polytope.o get_time.o libgaussq.a libplasma.a libcoreblas.a

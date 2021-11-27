@@ -44,7 +44,7 @@ if(cVectData->ACTIVE == OFF)                                              \
 }
 
 #define COND_TEST_3                                                        \
-if(QuadInConstraint( q_next_copy ) == 0)                                   \
+if(QuadInConstraint(q_next_copy) == 0)                                     \
 {                                                                          \
    PrintInt(cVectData->boundaryNodeId, "node_id");                         \
    PRINT_ERR("DID NOT SHORTEN SUCCESSFULLY", __LINE__, __FILE__);          \
@@ -53,7 +53,7 @@ if(QuadInConstraint( q_next_copy ) == 0)                                   \
 }
 
 #define COND_TEST_4                                                                   \
-bool TEST_QR = TestQR(QW.rows, QW.cols, QW.id);                                       \
+bool TEST_QR = TestQR(QWEIGHT.rows, QWEIGHT.cols, QWEIGHT.id);                        \
 if(TEST_QR == FAILED)                                                                 \
    PRINT_ERR("FAILED QR TEST", __LINE__, __FILE__);
 

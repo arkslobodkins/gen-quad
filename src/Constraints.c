@@ -74,7 +74,7 @@ void constraints_interval_free(constraints *constr)
 
 constraints *constraints_cube_init(int dims[1])
 {
-   assert(dims[0] > 1);
+   assert(dims[0] > 0);
 
    constraints *constr = (constraints *)malloc(sizeof(constraints));
    if(constr == NULL) return NULL;

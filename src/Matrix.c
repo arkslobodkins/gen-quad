@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <omp.h>
 
 RMatrix RMatrix_init(int nRows, int nCols)
 {
@@ -113,14 +114,19 @@ void CMatrix_Assign(const CMatrix A, CMatrix B)
    memcpy(B.id, A.id, A.len*sizeof(double));
 }
 
-void CMatrix_Transpose(const CMatrix A, CMatrix B)
+CMatrix CMatrix_Transpose(const CMatrix A)
 {
-   assert(A.rows == B.cols);
-   assert(A.cols == B.rows);
+   CMatrix A_TR = CMatrix_init(A.cols, A.rows);
+   int Acols = A.cols;
+   int Arows = A.rows;
 
-   for(int j = 0; j < A.cols; ++j)
-      for(int i = 0; i < A.rows; ++i)
-         B.cid[i][j] = A.cid[j][i];
+   #pragma omp parallel for default(shared) schedule(static) num_threads(omp_get_max_threads())
+   for(int j = 0; j < Acols; ++j)
+      for(int i = 0; i < Arows; ++i)
+         A_TR.cid[i][j] = A.cid[j][i];
+   CMatrix_free(A);
+
+   return A_TR;
 }
 
 void CMatVec(const CMatrix M, const Vector x, Vector y)
