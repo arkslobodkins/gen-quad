@@ -89,7 +89,6 @@ typedef struct
 
 typedef struct
 {
-   int            nodeId;
    int            eqnId;
    double         tMin;
    bool_enum      ACTIVE;

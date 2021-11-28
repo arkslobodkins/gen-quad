@@ -53,7 +53,7 @@ if(QuadInConstraint(q_next_copy) == 0)                                     \
 }
 
 #define COND_TEST_4                                                                   \
-bool TEST_QR = TestQR(QWEIGHT.rows, QWEIGHT.cols, QWEIGHT.id);                        \
+bool TEST_QR = TestQR(QWEIGHT);                                                       \
 if(TEST_QR == FAILED)                                                                 \
    PRINT_ERR("FAILED QR TEST", __LINE__, __FILE__);
 

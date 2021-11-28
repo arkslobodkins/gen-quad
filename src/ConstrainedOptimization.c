@@ -31,22 +31,20 @@ void ConstrVectDataReset(ConstrVectData *cVectData)
 ConstrNodeData ConstrNodeDataInit()
 {
    ConstrNodeData cNodeData;
-   cNodeData.nodeId = -1;
    cNodeData.eqnId  = -1;
    cNodeData.tMin   =  1.0;
-   cNodeData.ACTIVE =  OFF;
-   cNodeData.N_OR_W =  NONE;
+   cNodeData.ACTIVE = OFF;
+   cNodeData.N_OR_W = NONE;
 
    return cNodeData;
 }
 
 ATTR_UNUSED void ConstrNodeDataReset(ConstrNodeData *cNodeData)
 {
-   cNodeData->nodeId = -1;
    cNodeData->eqnId  = -1;
    cNodeData->tMin   =  1.0;
-   cNodeData->ACTIVE =  OFF;
-   cNodeData->N_OR_W =  NONE;
+   cNodeData->ACTIVE = OFF;
+   cNodeData->N_OR_W = NONE;
 }
 
 
@@ -193,7 +191,7 @@ int ShortenVector(const quadrature *q_prev, const quadrature *q_next, ConstrVect
       quadrature_get_elem(q_next, i, z_next_node);
 
       if( !QuadInConstraintElem(q_next, i) ) {
-         cNodeDataArr[i] = ShortenNode(i, A, b, z_prev_node, z_next_node);
+         cNodeDataArr[i] = ShortenNode(A, b, z_prev_node, z_next_node);
          if(cNodeDataArr[i].ACTIVE == ON) ++count;
          else {
             ConstrVectDataReset(cVectData);
@@ -237,7 +235,7 @@ int ShortenVector(const quadrature *q_prev, const quadrature *q_next, ConstrVect
 // provided that z_old satisfies A*z_old <= b_bound, and A*z_new > b_bound.
 // If both A*z_new <= b_bound, and A*z_old <= b_bound,
 // the routine does no further computations and default is returned.
-ConstrNodeData ShortenNode(int node_num, const RMatrix A, const Vector b_bound, const Vector z_old, const Vector z_new)
+ConstrNodeData ShortenNode(const RMatrix A, const Vector b_bound, const Vector z_old, const Vector z_new)
 {
    assert(A.rows == b_bound.len);
 
@@ -245,7 +243,6 @@ ConstrNodeData ShortenNode(int node_num, const RMatrix A, const Vector b_bound, 
    int out_count;
    int nrows = A.rows;
    int ncols = A.cols;
-   ConstrNodeData cNodeData = ConstrNodeDataInit();
 
    // Allocate vectors on stack
    Vector b_old, b_new, b_diff, t, dz;
@@ -267,7 +264,7 @@ ConstrNodeData ShortenNode(int node_num, const RMatrix A, const Vector b_bound, 
    // return if z_old does not satisfy inequality constraints
    for (i = 0; i < nrows; ++i)
       if(b_old.id[i] > b_bound.id[i])
-         return cNodeData;
+         return ConstrNodeDataInit();
 
    // compute t for those equations that z_new does not satisfy inequality constraints
    for (out_count = 0, i = 0; i < nrows; ++i)
@@ -277,7 +274,8 @@ ConstrNodeData ShortenNode(int node_num, const RMatrix A, const Vector b_bound, 
       }
 
    // return if z_new(and z_old) satisfies constraints
-   if(out_count == 0) return cNodeData;
+   if(out_count == 0)
+      return ConstrNodeDataInit();
 
    // most important case:
    // compute and return data if z_new does not(and z_old does) satisfy constraints
@@ -290,7 +288,7 @@ ConstrNodeData ShortenNode(int node_num, const RMatrix A, const Vector b_bound, 
             tMin  = t.id[i];
             eqnId = outEqn[i];
          }
-      cNodeData.nodeId = node_num;
+      ConstrNodeData cNodeData = ConstrNodeDataInit();
       cNodeData.eqnId  = eqnId;
       cNodeData.tMin   = tMin;
       cNodeData.ACTIVE = ON;
@@ -298,7 +296,6 @@ ConstrNodeData ShortenNode(int node_num, const RMatrix A, const Vector b_bound, 
       else if(cNodeData.eqnId > 0) cNodeData.N_OR_W = NODE;
       return cNodeData;
    }
-
 }
 
 

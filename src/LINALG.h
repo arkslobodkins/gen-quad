@@ -17,11 +17,13 @@ void dgels_(char *TRANS, int *M, int *N, int *NRHS,
 void dgeqr2_(int * M, int *N, double *A, int *LDA,
              double *TAU, double *WORK, int *INFO);
 
+void dgeqrf_(int * M, int *N, double *A, int *LDA,
+             double *TAU, double *WORK, int *LWORK, int *INFO);
+
 void dormqr_(char *SIDE, char *TRANS, int *M, int *N,
              int *size_TAU, double *Q, int *LDQ, double *TAU,
              double *C, int *LDC,
              double *WORK, int *LWORK, int *INFO);
-
 
 // Wrappers for LAPACK and PLASMA. All LAPACK routines are
 // performed in serial, whereas PLASMA routines use OMP with
@@ -30,11 +32,8 @@ void dormqr_(char *SIDE, char *TRANS, int *M, int *N,
 void MATMUL_LAPACK(int M, int K, int N, double *MAT1, double *MAT2, double *MAT3);
 
 int DGEQR2_LAPACK(CMatrix A, Vector TAU);
-int DORMQR_LAPACK_M(char SIDE, char TRANS, Vector TAU, CMatrix Q, CMatrix A);
-int DORMQR_LAPACK_V(char SIDE, char TRANS, double *REFL_Q, CMatrix Q, Vector A);
-
-int DGEQRF_PLASMA(CMatrix A);
-int DORMQR_PLASMA(char side, char trans, CMatrix Q, CMatrix A);
+int DGEQRF_LAPACK(CMatrix A, Vector TAU);
+int DORMQR_LAPACK(char SIDE, char TRANS, Vector TAU, CMatrix Q, CMatrix A);
 
 int DGELS_LAPACK(CMatrix A, Vector RHS_TO_X);
 int DGELS_PLASMA(CMatrix A, Vector RHS_TO_X);

@@ -24,7 +24,7 @@ ATTR_UNUSED void ConstrNodeDataReset(ConstrNodeData *cNodeData);
 int ConstrainedProjection(const quadrature *q_prev, quadrature *q_next);
 int ConstrainedOptimization(const quadrature *q_prev, quadrature *q_next, ConstrVectData *cVectData);
 int ShortenVector(const quadrature *q_prev, const quadrature *q_next, ConstrVectData *cVectData);
-ConstrNodeData ShortenNode(int node_num, const RMatrix A, const Vector b_bound, const Vector z_old, const Vector z_new);
+ConstrNodeData ShortenNode(const RMatrix A, const Vector b_bound, const Vector z_old, const Vector z_new);
 int ProjectNode(const CMatrix eqn_matrix, const Vector dx, Vector x_projected);
 
 #ifdef __cplusplus

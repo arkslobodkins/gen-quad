@@ -331,6 +331,9 @@ void QuadDriver(int argc, char **argv)
    printf("wall clock time for GetJacobian routine = %le\n", JACOBIAN_TIME);
    extern double FUNCTION_TIME;
    printf("wall clock time for GetFunction routine = %le\n", FUNCTION_TIME);
+   extern double PREDICTOR_TIME;
+   printf("wall clock time for predictor routine = %le\n", PREDICTOR_TIME);
+
    double time_end_wall = get_cur_time();
    printf("total wall clock time = %le\n", time_end_wall - time_start_wall);
 
