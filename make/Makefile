@@ -3,6 +3,7 @@ VERSION = -std=c99
 
 #uncomment "-DQUAD_DEBUG_OFF"   to disable debug mode
 #uncomment "-NDEBUG"            to disable assert statements
+#comment out -fopenmp           to disable OpenMP parallelism
 CFLAGS=-g  -Wall -fopenmp           \
       #-DQUAD_DEBUG_OFF             \
       #-DNDEBUG

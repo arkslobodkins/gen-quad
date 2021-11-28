@@ -12,7 +12,6 @@ void ComputeCube(int degree, int dim);
 void ComputeSimplex(int degree, int dim);
 void ComputeCubeSimplex(int degree, int dim1, int dim2);
 void ComputeSimplexSimplex(int degree, int dim1, int dim2);
-void ComputeCubeSimplexSimplex(int degree, int dim1, int dim2, int dim3);
 
 #ifdef __cplusplus
 }

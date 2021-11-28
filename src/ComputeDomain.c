@@ -17,7 +17,6 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <math.h>
 
 int MAX_DIM;
 
@@ -366,11 +365,6 @@ void ComputeSimplexSimplex(int deg, int dim1, int dim2)
    free(hist_ss);
 }// end ComputeSimplexSimplex
 
-
-void ComputeCubeSimplexSimplex(int degree, int dim1, int dim2, int dim3)
-{
-
-}
 
 
 static quadrature *ComputeSimplexNext(int deg, int dim_cur, int dim_next, const quadrature *q_cur, int hist_start, history **hist)

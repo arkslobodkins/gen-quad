@@ -3,7 +3,6 @@
 #define CONSTRAINED_OPTIMIZATION_H
 
 #include "GENERAL_QUADRATURE.h"
-#include <stdbool.h>
 
 #ifdef __cplusplus
 extern "C" {

@@ -11,7 +11,6 @@ void BasisIntegralsCube(int *dims, int deg, double *integrals);
 void BasisIntegralsSimplex(int *dims, int deg, double *integrals);
 void BasisIntegralsCubeSimplex(int *dims, int deg, double *integrals);
 void BasisIntegralsSimplexSimplex(int *dims, int deg, double *integrals);
-void BasisIntegralsCubeSimplexSimplex(int *dims, int deg, double *integrals);
 
 void IntegralsCubeMonomial(int *dims, int deg, double *integrals);
 

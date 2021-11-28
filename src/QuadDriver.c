@@ -43,11 +43,10 @@ void QuadDriver(int argc, char **argv)
    else if( strcasecmp("SIMPLEX", SHAPE) == 0 )            D = SIMPLEX;
    else if( strcasecmp("CUBESIMPLEX", SHAPE) == 0 )        D = CUBESIMPLEX;
    else if (strcasecmp("SIMPLEXSIMPLEX", SHAPE) == 0 )     D = SIMPLEXSIMPLEX;
-   else if (strcasecmp("CUBESIMPLEXSIMPLEX", SHAPE) == 0 ) D = CUBESIMPLEXSIMPLEX;
    else
    {
       fprintf(stderr, "Domain is not specified properly. Acceptable parameters:\n"
-            " 'INTERVAL', 'CUBE', 'SIMPLEX', 'CUBESIMPLEX', 'SIMPLEXSIMPLEX', 'CUBESIMPLEXSIMPLEX.");
+            " 'INTERVAL', 'CUBE', 'SIMPLEX', 'CUBESIMPLEX', 'SIMPLEXSIMPLEX'.");
 
       fprintf(stderr, "Exiting program.\n\n");
       exit(EXIT_FAILURE);
@@ -67,14 +66,12 @@ void QuadDriver(int argc, char **argv)
          {
             test = 1;
             deg = atoi(argv[2]);
-            if( !is_pos_int(2, argv[2]) )
-            {
+            if( !is_pos_int(2, argv[2]) ) {
                fprintf(stderr, "Degree of precision should be integer >= 1.\n");
                test = 0;
             }
             if(test == 0)
-            {
-               fprintf(stderr, "Exiting program.\n\n");
+            { fprintf(stderr, "Exiting program.\n\n");
                exit(EXIT_FAILURE);
             }
          }
@@ -98,18 +95,15 @@ void QuadDriver(int argc, char **argv)
          {
             test = 1;
             deg = atoi(argv[2]);
-            if( !is_pos_int(2, argv[2]) )
-            {
+            if( !is_pos_int(2, argv[2]) ) {
                fprintf(stderr, "Degree of precision should be integer >= 1.\n");
                test = 0;
             }
-            if( !is_pos_int(3, argv[3]) || (atoi(argv[3]) < 2 ) )
-            {
+            if( !is_pos_int(3, argv[3]) || (atoi(argv[3]) < 2 ) ) {
                fprintf(stderr, "Dimension for %s should be integer >= 2.\n", SHAPE);
                test = 0;
             }
-            if(test == 0)
-            {
+            if(test == 0) {
                fprintf(stderr, "Exiting program.\n\n");
                exit(EXIT_FAILURE);
             }
@@ -134,18 +128,15 @@ void QuadDriver(int argc, char **argv)
          {
             deg = atoi(argv[2]);
             test = 1;
-            if ( !is_pos_int(2, argv[2]) )
-            {
+            if ( !is_pos_int(2, argv[2]) ) {
                fprintf(stderr, "Degree of precision should be integer >= 1.\n");
                test = 0;
             }
-            if ( !is_pos_int(3, argv[3]) || (atoi(argv[3]) < 2) )
-            {
+            if ( !is_pos_int(3, argv[3]) || (atoi(argv[3]) < 2) ) {
                fprintf(stderr, "Dimension for %s should be integer >= 2.\n", SHAPE);
                test = 0;
             }
-            if(test == 0)
-            {
+            if(test == 0) {
                fprintf(stderr, "Exiting program.\n\n");
                exit(EXIT_FAILURE);
             }
@@ -170,23 +161,19 @@ void QuadDriver(int argc, char **argv)
          {
             deg = atoi(argv[2]);
             test = 1;
-            if ( !is_pos_int(2, argv[2]) )
-            {
+            if ( !is_pos_int(2, argv[2]) ) {
                fprintf(stderr, "Degree of precision should be integer >= 1.\n");
                test = 0;
             }
-            if ( !is_pos_int(3, argv[3]) )
-            {
+            if ( !is_pos_int(3, argv[3]) ) {
                fprintf(stderr, "First dimension for %s should be integer >= 1.\n", SHAPE);
                test = 0;
             }
-            if ( !is_pos_int(4, argv[4]) || (atoi(argv[4]) < 2) )
-            {
+            if ( !is_pos_int(4, argv[4]) || (atoi(argv[4]) < 2) ) {
                fprintf(stderr, "Second dimension for %s should be integer >= 2.\n", SHAPE);
                test = 0;
             }
-            if(test == 0)
-            {
+            if(test == 0) {
                fprintf(stderr, "Exiting program.\n\n");
                exit(EXIT_FAILURE);
             }
@@ -209,18 +196,15 @@ void QuadDriver(int argc, char **argv)
          {
             deg = atoi(argv[2]);
             test = 1;
-            if ( !is_pos_int(2, argv[2]))
-            {
+            if ( !is_pos_int(2, argv[2])) {
                fprintf(stderr, "Degree of precision should be integer >= 1.\n");
                test = 0;
             }
-            if ( !is_pos_int(3, argv[3]) || (atoi(argv[3]) < 2) )
-            {
+            if ( !is_pos_int(3, argv[3]) || (atoi(argv[3]) < 2) ) {
                fprintf(stderr, "First dimension for %s should be integer >= 2.\n", SHAPE);
                test = 0;
             }
-            if ( !is_pos_int(4, argv[4]) || (atoi(argv[4]) < 2) )
-            {
+            if ( !is_pos_int(4, argv[4]) || (atoi(argv[4]) < 2) ) {
                fprintf(stderr, "Second dimension for %s should be integer >= 2.\n", SHAPE);
                test = 0;
             }
@@ -234,51 +218,6 @@ void QuadDriver(int argc, char **argv)
          {
             fprintf(stderr, "Received redundant parameters for %s, exiting program.\n\n", SHAPE);
             exit(EXIT_FAILURE);
-         }
-         break;
-
-
-      case(CUBESIMPLEXSIMPLEX):
-         if( (argv[2] == NULL) || (argv[3] == NULL) || (argv[4] == NULL) || (argv[5] == NULL) )
-         {
-            fprintf(stderr, "Not enough input parameters for %s, exiting program.\n", SHAPE);
-            fprintf(stderr, "\n");
-            exit(EXIT_FAILURE);
-         }
-         else
-         {
-            deg = atoi(argv[2]);
-            test = 1;
-            if ( !is_pos_int(2, argv[2]) )
-            {
-               fprintf(stderr, "Degree of precision should be integer >= 1.\n");
-               test = 0;
-            }
-            if ( !is_pos_int(3, argv[3]) )
-            {
-               fprintf(stderr, "First dimension for %s should be integer >= 1.\n", SHAPE);
-               test = 0;
-            }
-            if ( !is_pos_int(4, argv[4]) || (atoi(argv[4]) < 2) )
-            {
-               fprintf(stderr, "Second dimension for %s should be integer >= 2.\n", SHAPE);
-               test = 0;
-            }
-            if ( !is_pos_int(5, argv[5]) || (atoi(argv[5]) < 2) )
-            {
-               fprintf(stderr, "Third dimension for %s should be integer >= 2.\n", SHAPE);
-               test = 0;
-            }
-            if (test == 0)
-            {
-               fprintf(stderr, "Exiting program.\n\n");
-               exit(EXIT_FAILURE);
-            }
-         }
-         if(argv[6] != NULL)
-         {
-            fprintf(stderr, "Received redundant parameters for %s, exiting program.\n\n", SHAPE);
-               exit(EXIT_FAILURE);
          }
          break;
    }
@@ -320,9 +259,6 @@ void QuadDriver(int argc, char **argv)
          break;
       case SIMPLEXSIMPLEX:
          ComputeSimplexSimplex(deg, dims[0], dims[1]);
-         break;
-      case CUBESIMPLEXSIMPLEX:
-         ComputeCubeSimplexSimplex(deg, dims[0], dims[1], dims[2]);
          break;
    }
    extern double LSQ_TIME;

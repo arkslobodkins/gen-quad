@@ -9,7 +9,6 @@
 #include "BasisFunctions.h"
 #include "BasisIntegrals.h"
 #include "Constraints.h"
-#include "GENERAL_QUADRATURE.h"
 #include "Print.h"
 
 #include <stdlib.h>
@@ -25,10 +24,8 @@ static void SetCubeFuncs(quadrature *q);
 static void SetSimplexFuncs(quadrature *q);
 static void SetCubeSimplexFuncs(quadrature *q);
 static void SetSimplexSimplexFuncs(quadrature *q);
-static void SetCubeSimplexSimplexFuncs(quadrature *q);
 static void quadrature_free_basic(quadrature *q);
 static void quadrature_free_full(quadrature *q);
-
 
 
 quadrature *quadrature_init_basic(int n, int dim, int *dims, int deg, DOMAIN_TYPE D)
@@ -56,10 +53,6 @@ quadrature *quadrature_init_basic(int n, int dim, int *dims, int deg, DOMAIN_TYP
 
       case SIMPLEXSIMPLEX:
          assert(dim == dims[0]+dims[1]);
-         break;
-
-      case CUBESIMPLEXSIMPLEX:
-         assert(dim == dims[0]+dims[1]+dims[2]);
          break;
 
       default:
@@ -100,9 +93,6 @@ quadrature *quadrature_init_basic(int n, int dim, int *dims, int deg, DOMAIN_TYP
          break;
       case SIMPLEXSIMPLEX:
          q->setFuncs = SetSimplexSimplexFuncs;
-         break;
-      case CUBESIMPLEXSIMPLEX:
-         q->setFuncs = SetCubeSimplexSimplexFuncs;
          break;
    }
 
@@ -645,19 +635,6 @@ static void SetSimplexSimplexFuncs(quadrature *q)
 }
 
 
-static void SetCubeSimplexSimplexFuncs(quadrature *q)
-{
-   q->evalBasis        = &BasisCubeSimplexSimplex;
-   q->evalBasisDer     = &BasisPrimeCubeSimplexSimplex;
-   q->basisIntegrals   = &BasisIntegralsCubeSimplexSimplex;
-
-   q->constr_init      = &constraints_cubesimplexsimplex_init;
-   q->constr_realloc   = &constraints_cubesimplexsimplex_realloc;
-   q->get_constr       = &get_constraints_cubesimplexsimplex;
-   q->constr_free      = &constraints_cubesimplexsimplex_free;
-}
-
-
 static inline int GetNumDims(DOMAIN_TYPE D)
 {
    switch(D)
@@ -667,7 +644,6 @@ static inline int GetNumDims(DOMAIN_TYPE D)
       case SIMPLEX:            return ONE;
       case CUBESIMPLEX:        return TWO;
       case SIMPLEXSIMPLEX:     return TWO;
-      case CUBESIMPLEXSIMPLEX: return THREE;
       default:                 return -1;
    }
 }

@@ -1,5 +1,4 @@
 #include "Print.h"
-#include "GENERAL_QUADRATURE.h"
 #include "Quadrature.h"
 
 #include <stdlib.h>
@@ -49,6 +48,22 @@ void PrintNodesAndWeights(const quadrature *q, const char *name)
    printf("\n");
 }
 
+void PrintNodesAndWeightsToFile(const quadrature *q, const char *name, FILE *file)
+{
+   int dim = q->dim;
+   fprintf(file, "nodes and weights for %s\n", name);
+   for(int i = 0; i < q->num_nodes; ++i)
+   {
+      fprintf(file, "w[%i] = %.6f ", i, q->w[i]);
+      for(int j = 0; j < dim; ++j)
+      {
+         fprintf(file, "x[%i][%i] = %.12lf" "  ", i, j, q->x[dim*i+j]);
+      }
+      fprintf(file, "\n");
+   }
+   fprintf(file, "\n");
+}
+
 void PrintQuadLSQInfo(int iters, double error_norm, const quadrature *q, const char *name)
 {
    printf("quadrature info for %s during iteration of LSQ\n", name);
@@ -92,6 +107,11 @@ void PRINT_ERR(const char *x, int line_num, const char *file_name)
       fprintf(stderr, "\nerror on line %d in %s, %s\n\n", line_num, file_name, x);
 }
 
+void PRINT_WARN(const char *x, int line_num, const char *file_name)
+{
+      fprintf(stderr, "\nwarning on line %d in %s, %s\n\n", line_num, file_name, x);
+}
+
 
 void PrintHistElem(void *data)
 {
@@ -105,43 +125,46 @@ const char *ERR_STRING(int return_val)
 {
    switch(return_val)
    {
-   case 0:
-      return STR_Q_SUCCESS;
+   case GQ_SUCCESS:
+      return STR_GQ_SUCCESS;
       break;
-   case -1:
+   case NULL_VAL:
       return STR_NULL_VAL;
       break;
-   case -2:
+   case ALLOC_FAIL:
       return STR_ALLOC_FAIL;
       break;
-   case -3:
+   case INV_INPUT:
       return STR_INV_INPUT;
       break;
-   case -4:
+   case INF_VAL:
       return STR_INF_VAL;
       break;
-   case -5:
+   case NAN_VAL:
       return STR_NAN_VAL;
       break;
-   case -6:
+   case QUAD_HUGE_ERR:
       return STR_QUAD_HUGE_ERR;
       break;
-   case -7:
+   case LAPACK_ERR:
       return STR_LAPACK_ERR;
       break;
-   case -8:
+   case PLASMA_ERR:
+      return STR_PLASMA_ERR;
+      break;
+   case DIV_BY_ZERO:
       return STR_DIV_BY_ZERO;
       break;
-   case -9:
+   case NOT_CONVERGE:
       return STR_NOT_CONVERGE;
       break;
-   case -10:
+   case DIVERGE_ERR:
       return STR_DIVERGE_ERR;
       break;
-   case -11:
+   case LARGE_RES:
       return STR_LARGE_RES;
       break;
-   case -12:
+   case CONSTR_ERROR:
       return STR_CONSTR_ERROR;
    default:
       return "OTHER";

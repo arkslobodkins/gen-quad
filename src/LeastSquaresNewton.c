@@ -10,7 +10,6 @@
 #include "GetFunction.h"
 #include "GetJacobian.h"
 #include "Quadrature.h"
-#include "GENERAL_QUADRATURE.h"
 #include "Print.h"
 #include "Conditional_Debug.h"
 #include "get_time.h"
@@ -18,8 +17,6 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include <stdbool.h>
-#include <math.h>
 #include <assert.h>
 
 
@@ -32,7 +29,7 @@ static int CheckForFail(int INFO, double errorNorm, double errorNormPrev, Vector
 // and all nodes are inside of the domain and if all nodes are positive.
 double LSQ_TIME = 0.0;
 #define MAX_ELIM_WEIGHTS 10
-bool LeastSquaresNewton(LibraryType libType, const bool_enum FLAG_CONSTR, const INT_8 *basis, quadrature *q_orig, int *its)
+bool LeastSquaresNewton(LibraryType libType, const bool_enum CONSTR_OPT, const INT_8 *basis, quadrature *q_orig, int *its)
 {
    assert(q_orig->num_nodes >= 1);
 
@@ -66,8 +63,15 @@ bool LeastSquaresNewton(LibraryType libType, const bool_enum FLAG_CONSTR, const 
    ConstrVectData cVectData = ConstrVectDataInit();
 
    int (*leastsquares_ptr)(CMatrix A, Vector RHS_TO_X);
+#ifdef _OPENMP
    if(libType == LAPACK)      leastsquares_ptr = DGELS_LAPACK;
    else if(libType == PLASMA) leastsquares_ptr = DGELS_PLASMA;
+#else
+   static int msg_count = 0;
+   if(libType == PLASMA  && msg_count++ < 1)
+      PRINT_WARN("Cannot use PLASMA because OpenMP not enabled, using LAPACK instead.", __LINE__, __FILE__);
+   leastsquares_ptr = DGELS_LAPACK;
+#endif
 
    // return if input is a satisfactory quadrature
    {
@@ -84,7 +88,7 @@ bool LeastSquaresNewton(LibraryType libType, const bool_enum FLAG_CONSTR, const 
    while( (itsLoc < maxiter) && (errorNormUpdate > q_tol) )
    {
 
-      if(FLAG_CONSTR == ON  && cVectData.ACTIVE == ON  && cVectData.N_OR_W == WEIGHT)
+      if(CONSTR_OPT == ON  && cVectData.ACTIVE == ON  && cVectData.N_OR_W == WEIGHT)
       {
          if( (k == 1) || (++elim_weights > MAX_ELIM_WEIGHTS) ) {
             SOL_FLAG = SOL_NOT_FOUND;
@@ -94,6 +98,7 @@ bool LeastSquaresNewton(LibraryType libType, const bool_enum FLAG_CONSTR, const 
          SMALL_DIM = MIN(nrows, ncols);
          LEAD_DIM  = MAX(nrows, ncols);
          CMatrix_realloc(nrows, ncols, &JACOBIAN);
+         Vector_realloc(LEAD_DIM, &LEAST_SQ_SOL);
          quadrature_remove_element(cVectData.boundaryNodeId, q_next);
          quadrature_remove_element(cVectData.boundaryNodeId, q_prev);
       }
@@ -119,7 +124,7 @@ bool LeastSquaresNewton(LibraryType libType, const bool_enum FLAG_CONSTR, const 
          goto FREERETURN;
       }
 
-      if(FLAG_CONSTR == ON) {
+      if(CONSTR_OPT == ON) {
          int P_FLAG = ConstrainedProjection(q_prev, q_next);
          if(P_FLAG != CONSTR_SUCCESS) {
             COND_PRINT_ERR(P_FLAG);

@@ -12,7 +12,6 @@
 #include "BasisIndices.h"
 #include "LINALG.h"
 #include "Print.h"
-#include "GENERAL_QUADRATURE.h"
 #include "Conditional_Debug.h"
 #include "get_time.h"
 
@@ -26,8 +25,10 @@
 
 extern int MAX_DIM;
 static void FreeMemory(INT_8 *basis_indices, quadrature *q_temp, quadrature *q_new);
-static RMatrix PredictorLapack(quadrature *q, INT_8 *basis_indices, int *arrayIndex);
+ATTR_UNUSED static RMatrix PredictorLapack(quadrature *q, INT_8 *basis_indices, int *arrayIndex);
+#ifdef _OPENMP
 static RMatrix PredictorPlasma(quadrature *q, INT_8 *basis_indices, int *arrayIndex);
+#endif
 static void ExtractFromPredictor(RMatrix Z, int arrayIndex, quadrature *q);
 static void ConstrainQTemp(quadrature *q_new, int arrayIndex, quadrature *q_temp);
 static void InsertionSort(int num_entries, double *norms, int *arrayIndex);
@@ -55,11 +56,16 @@ void NodeElimination(const quadrature *q_initial, quadrature *q_final, glist *hi
    int dim             = q_initial->dim;
    int *dims           = q_initial->dims;
    double tol = QUAD_TOL; // 10^(-15);
-   LibraryType libType = PLASMA;
 
+   LibraryType libType;
    RMatrix(*Predictor_Ptr)(quadrature *, INT_8 *, int *);
-   if(libType == LAPACK)      Predictor_Ptr = &PredictorLapack;
-   else if(libType == PLASMA) Predictor_Ptr = &PredictorPlasma;
+#ifdef _OPENMP
+   libType = PLASMA;
+   Predictor_Ptr = &PredictorPlasma;
+#else
+   libType = LAPACK;
+   Predictor_Ptr = &PredictorLapack;
+#endif
 
    INT_8 *basis_indices = (INT_8 *)malloc( (num_funcs*dim)*sizeof(INT_8) );
    BasisIndices(deg, dim, basis_indices);
@@ -184,7 +190,7 @@ static void FreeMemory(INT_8 *basis_indices, quadrature *q_temp, quadrature *q_n
 }
 
 // not an easy world we live in
-static RMatrix PredictorLapack(quadrature *q, INT_8 *basis_indices, int *arrayIndex)
+ATTR_UNUSED static RMatrix PredictorLapack(quadrature *q, INT_8 *basis_indices, int *arrayIndex)
 {
    int num_funcs = q->num_funcs;
    int dim = q->dim;
@@ -201,32 +207,32 @@ static RMatrix PredictorLapack(quadrature *q, INT_8 *basis_indices, int *arrayIn
    if(DGEQRF_LAPACK(J_TR, REFL) != 0)
       PRINT_ERR(STR_LAPACK_ERR, __LINE__, __FILE__);
 
+   CMatrix QWeight  = CMatrix_init(n_cur, n_cur*(dim+1));
+   RMatrix Z           = RMatrix_init(QWeight.rows, QWeight.cols);
+   RMatrix dZ          = RMatrix_init(QWeight.rows, QWeight.cols);
+   CMatrix Q2          = CMatrix_init(QWeight.rows, QWeight.cols);
+   double *signif_ind  = (double *)malloc(SIZE_DOUBLE(n_cur));
+   double *norm_Q2_ROW = (double *)malloc(QWeight.rows*sizeof(double));
+
    // initialize i*(dim+1)th rows of Q, which correspond to weight rows.
    // Entries that correspond to weight indices are initialized to 1.
-   CMatrix QWEIGHT  = CMatrix_init(n_cur, n_cur*(dim+1));
-   for(int i = 0; i < QWEIGHT.rows; ++i) C_ELEM_ID(QWEIGHT, i, i*(dim+1)) = 1.0;
-
-   // obtain i*(dim+1)th rows of Q(from J_TR) explicitly and store them in QWEIGHT rows
-   if(DORMQR_LAPACK('R',  'N', REFL, J_TR, QWEIGHT) != 0)
+   for(int i = 0; i < QWeight.rows; ++i) C_ELEM_ID(QWeight, i, i*(dim+1)) = 1.0;
+   // obtain i*(dim+1)th rows of Q(from J_TR) explicitly and store them in QWeight rows
+   if(DORMQR_LAPACK('R',  'N', REFL, J_TR, QWeight) != 0)
       PRINT_ERR(STR_LAPACK_ERR, __LINE__, __FILE__);
 //   COND_TEST_4;
 
-   RMatrix Z           = RMatrix_init(QWEIGHT.rows, QWEIGHT.cols);
-   RMatrix dZ          = RMatrix_init(QWEIGHT.rows, QWEIGHT.cols);
-   CMatrix Q2          = CMatrix_init(QWEIGHT.rows, QWEIGHT.cols);
-   double *signif_ind  = (double *)malloc(SIZE_DOUBLE(n_cur));
-   double *norm_Q2_ROW = (double *)malloc(QWEIGHT.rows*sizeof(double));
 
    // extract i*(dim+1)th rows of Q2 and compute their norm, where Q = [Q1, Q2]
-   for(int i = 0; i < QWEIGHT.rows; ++i) {
+   for(int i = 0; i < QWeight.rows; ++i) {
       for(int j = 0; j < num_funcs; ++j)            C_ELEM_ID(Q2, i, j) = 0.0;
-      for(int j = num_funcs; j < QWEIGHT.cols; ++j) C_ELEM_ID(Q2, i, j) = C_ELEM_ID(QWEIGHT, i, j);
+      for(int j = num_funcs; j < QWeight.cols; ++j) C_ELEM_ID(Q2, i, j) = C_ELEM_ID(QWeight, i, j);
    }
-   double *ith_row = (double *)malloc(QWEIGHT.cols*size_double);
-   for(int i = 0; i < QWEIGHT.rows; ++i) {
-      for(int j = 0; j < QWEIGHT.cols; ++j)
+   double *ith_row = (double *)malloc(QWeight.cols*size_double);
+   for(int i = 0; i < QWeight.rows; ++i) {
+      for(int j = 0; j < QWeight.cols; ++j)
          ith_row[j] = C_ELEM_ID(Q2, i, j);
-      norm_Q2_ROW[i] = TwoNorm(QWEIGHT.cols, ith_row);
+      norm_Q2_ROW[i] = TwoNorm(QWeight.cols, ith_row);
    }
 
    // multiply Q by i*(dim+1)th row of Q2 and store it as a column
@@ -236,9 +242,9 @@ static RMatrix PredictorLapack(quadrature *q, INT_8 *basis_indices, int *arrayIn
    Q2 = CMatrix_Transpose(Q2); // store again as a row
 
    // compute initial guesses for Newton's method and store them in Z
-   for(int i = 0; i < QWEIGHT.rows; ++i)
+   for(int i = 0; i < QWeight.rows; ++i)
    {
-      for(int j = 0; j < QWEIGHT.cols; ++j)
+      for(int j = 0; j < QWeight.cols; ++j)
          dZ.rid[i][j] = C_ELEM_ID(Q2, i, j) * q->w[i]/SQUARE(norm_Q2_ROW[i]);
       signif_ind[i] = TwoNorm(ncols, dZ.rid[i]);
 
@@ -257,12 +263,13 @@ static RMatrix PredictorLapack(quadrature *q, INT_8 *basis_indices, int *arrayIn
    Vector_free(REFL);
    RMatrix_free(dZ);
    CMatrix_free(J_TR);
-   CMatrix_free(QWEIGHT);
+   CMatrix_free(QWeight);
    CMatrix_free(Q2);
 
    return Z;
 }
 
+#ifdef _OPENMP
 static RMatrix PredictorPlasma(quadrature *q, INT_8 *basis_indices, int *arrayIndex)
 {
    int num_funcs = q->num_funcs;
@@ -270,6 +277,7 @@ static RMatrix PredictorPlasma(quadrature *q, INT_8 *basis_indices, int *arrayIn
    int n_cur = q->num_nodes;
    const int nrows = num_funcs;
    const int ncols = (dim+1) * n_cur;
+   int INFO;
 
    plasma_init(omp_get_max_threads());
 
@@ -280,44 +288,50 @@ static RMatrix PredictorPlasma(quadrature *q, INT_8 *basis_indices, int *arrayIn
    plasma_desc_t T;
    int LDJ = J_TR.rows;
    // construct QR factorization of transpose of the jacobian
-   plasma_dgeqrf(J_TR.rows, J_TR.cols, J_TR.id, LDJ, &T);
+   INFO = plasma_dgeqrf(J_TR.rows, J_TR.cols, J_TR.id, LDJ, &T);
+   if(INFO != 0)
+      PRINT_ERR(STR_PLASMA_ERR, __LINE__, __FILE__);
 
-   CMatrix QWEIGHT     = CMatrix_init(n_cur, n_cur*(dim+1));
-   RMatrix Z           = RMatrix_init(QWEIGHT.rows, QWEIGHT.cols);
-   RMatrix dZ          = RMatrix_init(QWEIGHT.rows, QWEIGHT.cols);
-   CMatrix Q2          = CMatrix_init(QWEIGHT.rows, QWEIGHT.cols);
+   CMatrix QWeight     = CMatrix_init(n_cur, n_cur*(dim+1));
+   RMatrix Z           = RMatrix_init(QWeight.rows, QWeight.cols);
+   RMatrix dZ          = RMatrix_init(QWeight.rows, QWeight.cols);
+   CMatrix Q2          = CMatrix_init(QWeight.rows, QWeight.cols);
    double *signif_ind  = (double *)malloc(SIZE_DOUBLE(n_cur));
-   double *norm_Q2_ROW = (double *)malloc(QWEIGHT.rows*sizeof(double));
+   double *norm_Q2_ROW = (double *)malloc(QWeight.rows*sizeof(double));
 
    // initialize i*(dim+1)th rows of Q, which correspond to weight rows.
    // Entries that correspond to weight indices are initialized to 1.
-   for(int i = 0; i < QWEIGHT.rows; ++i) C_ELEM_ID(QWEIGHT, i, i*(dim+1)) = 1.0;
+   for(int i = 0; i < QWeight.rows; ++i) C_ELEM_ID(QWeight, i, i*(dim+1)) = 1.0;
 
-   // obtain i*(dim+1)th rows of Q(from J_TR) explicitly and store them in QWEIGHT rows
+   // obtain i*(dim+1)th rows of Q(from J_TR) explicitly and store them in QWeight rows
    int n_refl = MIN(J_TR.rows, J_TR.cols);
-   plasma_dormqr(PlasmaRight, PlasmaNoTrans,
-                 QWEIGHT.rows, QWEIGHT.cols,
+   INFO = plasma_dormqr(PlasmaRight, PlasmaNoTrans,
+                 QWeight.rows, QWeight.cols,
                  n_refl, J_TR.id, LDJ, T,
-                 QWEIGHT.id, QWEIGHT.rows);
+                 QWeight.id, QWeight.rows);
+   if(INFO != 0)
+      PRINT_ERR(STR_PLASMA_ERR, __LINE__, __FILE__);
 
    // extract i*(dim+1)th rows of Q2 and compute their norm, where Q = [Q1, Q2]
-   for(int i = 0; i < QWEIGHT.rows; ++i) {
+   for(int i = 0; i < QWeight.rows; ++i) {
       for(int j = 0; j < num_funcs; ++j)            C_ELEM_ID(Q2, i, j) = 0.0;
-      for(int j = num_funcs; j < QWEIGHT.cols; ++j) C_ELEM_ID(Q2, i, j) = C_ELEM_ID(QWEIGHT, i, j);
+      for(int j = num_funcs; j < QWeight.cols; ++j) C_ELEM_ID(Q2, i, j) = C_ELEM_ID(QWeight, i, j);
    }
-   double *ith_row = (double *)malloc(QWEIGHT.cols*size_double);
-   for(int i = 0; i < QWEIGHT.rows; ++i) {
-      for(int j = 0; j < QWEIGHT.cols; ++j)
+   double *ith_row = (double *)malloc(QWeight.cols*size_double);
+   for(int i = 0; i < QWeight.rows; ++i) {
+      for(int j = 0; j < QWeight.cols; ++j)
          ith_row[j] = C_ELEM_ID(Q2, i, j);
-      norm_Q2_ROW[i] = TwoNorm(QWEIGHT.cols, ith_row);
+      norm_Q2_ROW[i] = TwoNorm(QWeight.cols, ith_row);
    }
 
    // multiply Q by i*(dim+1)th row of Q2 and store it as a column
    Q2 = CMatrix_Transpose(Q2);
-   plasma_dormqr(PlasmaLeft, PlasmaNoTrans,
+   INFO = plasma_dormqr(PlasmaLeft, PlasmaNoTrans,
                  Q2.rows, Q2.cols,
                  n_refl, J_TR.id, LDJ, T,
                  Q2.id, Q2.rows);
+   if(INFO != 0)
+      PRINT_ERR(STR_PLASMA_ERR, __LINE__, __FILE__);
    Q2 = CMatrix_Transpose(Q2); // store again as a row
 
    plasma_desc_destroy(&T);
@@ -325,9 +339,9 @@ static RMatrix PredictorPlasma(quadrature *q, INT_8 *basis_indices, int *arrayIn
 
 
    // compute initial guesses for Newton's method and store them in Z
-   for(int i = 0; i < QWEIGHT.rows; ++i)
+   for(int i = 0; i < QWeight.rows; ++i)
    {
-      for(int j = 0; j < QWEIGHT.cols; ++j)
+      for(int j = 0; j < QWeight.cols; ++j)
          dZ.rid[i][j] = C_ELEM_ID(Q2, i, j) * q->w[i]/SQUARE(norm_Q2_ROW[i]);
       signif_ind[i] = TwoNorm(ncols, dZ.rid[i]);
 
@@ -345,11 +359,12 @@ static RMatrix PredictorPlasma(quadrature *q, INT_8 *basis_indices, int *arrayIn
    free(signif_ind);
    RMatrix_free(dZ);
    CMatrix_free(J_TR);
-   CMatrix_free(QWEIGHT);
+   CMatrix_free(QWeight);
    CMatrix_free(Q2);
 
    return Z;
 }
+#endif
 
 static void ExtractFromPredictor(RMatrix Z, int arrayIndex, quadrature *q)
 {

@@ -5,7 +5,6 @@
 
 #include "GeneralGaussTensor.h"
 #include "Quadrature.h"
-#include "GENERAL_QUADRATURE.h"
 #include "Print.h"
 
 #include <assert.h>
@@ -167,7 +166,7 @@ void TestGeneralizedTensor()
    int d1 = 1;
    int *dims1 = &d1;
    int nodes1D = 3;
-   quadrature *quad1D = quadrature_init_basic(nodes1D, 1, dims1, deg, CUBE);
+   quadrature *quad1D = quadrature_init_basic(nodes1D, 1, dims1, deg, INTERVAL);
    quad1D->x[0] = 1.0; quad1D->x[1] = 2.0; quad1D->x[2] = 3.0;
    quad1D->w[0] = -1.0; quad1D->w[1] = -2.0; quad1D->w[2] = -3.0;
 
@@ -178,9 +177,13 @@ void TestGeneralizedTensor()
 
    GeneralizedNodesTensor(quad1D, quadTensor);
    GeneralizedWeightsTensor(quad1D, quadTensor);
-   printf("Testing Generalized Tensor product:");
-   PrintNodesAndWeights(quad1D, "quad1D");
-   PrintNodesAndWeights(quadTensor, "quadTensor");
+   FILE* file;
+   file = fopen("../results/TensorTest.txt", "w");
+
+   fprintf(file, "Testing Generalized Tensor product:");
+   PrintNodesAndWeightsToFile(quad1D, "quad1D", file);
+   PrintNodesAndWeightsToFile(quadTensor, "quadTensor", file);
+   fclose(file);
 
    quadrature_free(quad1D);
    quadrature_free(quadTensor);

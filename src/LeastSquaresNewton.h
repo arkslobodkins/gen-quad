@@ -2,7 +2,6 @@
 #define LEAST_SQUARES_NEWTONPLASMA_H
 
 #include "GENERAL_QUADRATURE.h"
-#include <stdbool.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -19,7 +18,7 @@ extern "C" {
 #define CONSTR_INV_INPUT -2
 #define CONSTR_UNEXPECTED -3
 
-bool LeastSquaresNewton(LibraryType LibraryType, const bool_enum FLAG_CONSTR, const INT_8 *basis, quadrature *q_orig, int *its);
+bool LeastSquaresNewton(LibraryType LibraryType, const bool_enum CONSTR_OPT, const INT_8 *basis, quadrature *q_orig, int *its);
 
 
 #ifdef __cplusplus

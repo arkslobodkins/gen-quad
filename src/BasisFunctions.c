@@ -15,9 +15,6 @@
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdint.h>
-#include <math.h>
-
 
 static void BasisSimplexPolyhedralOne(int dim, int *dims, int deg, const INT_8 *basis_id, const double *x, double *phi);
 static void BasisSimplexPolyhedralTwo(int dim, int *dims, int deg, const INT_8 *basis_id, const double *x, double *phi);
@@ -212,7 +209,7 @@ void BasisSimplex(int *dims, int deg, const INT_8 *basis_id, const double *x, do
       return;
    }
 
-   // dim > 3
+   // dim >=  3
    int i, j, k, d;
    double legendre[degPlus1];
    double dxlegendre[degPlus1];
@@ -618,114 +615,6 @@ void BasisPrimeSimplexSimplex(int *dims, int deg, const INT_8 *basis_id, const d
 
    free(phiPrimeSimplex);
 }
-
-
-// Generates orthogonal polynomial basis for the unit CUBESIMPLEXSIMPLEX
-void BasisCubeSimplexSimplex(int *dims, int deg, const INT_8 *basis_id, const double *x, double *phi)
-{
-//   assert(params->num_funcs == BasisSize(params->dim, params->deg));
-//   int k, d;
-//   int p = params->deg;
-//   int degPlus1 = p+1;
-//   int m = params->num_funcs;
-//   int dimSimplex1 = params->dims[0];
-//   int dimSimplex2 = params->dims[1];
-//   int dimCube = params->dims[2];
-//   int twoDims = dimSimplex1+dimSimplex2;
-//   int dim = params->dim;
-//   quadParams *newParams = (quadParams *)malloc(sizeof(quadParams));
-//   newParams->dims = (int *)malloc(3*sizeof(int));
-//   SetParams(dim, 3, newParams->dims, p, newParams);
-//   int size = BasisSize(dim, p); //number of basis functions in dim-dimensions
-//   double phiSimplex[m];
-//
-//   for(k = 0; k < m; ++k)
-//      phi[k] = 1.0;
-//
-//   BasisSimplexPolyhedralOne(basis_id, x, newParams, phiSimplex);
-//   for(k = 0; k < m; ++k)
-//      phi[k] *= phiSimplex[k];
-//
-//   BasisSimplexPolyhedralTwo(basis_id, x, newParams, phiSimplex);
-//   for(k = 0; k < m; ++k)
-//      phi[k] *= phiSimplex[k];
-//
-//   double* legendre = (double *)malloc(degPlus1*dimCube*sizeof(double));
-//   double* dxlegendre = (double *)malloc(degPlus1*dimCube*sizeof(double));
-//   for(d = 0; d < dimCube; ++d)
-//      LegendrePoly(degPlus1, 2*x[twoDims+d]-1, &legendre[(d)*degPlus1], &dxlegendre[d*degPlus1]);
-//
-//   for(k = 0; k < m; ++k)
-//   {
-//      for(d = 0; d < dimCube; ++d)
-//         phi[k] = phi[k] * legendre[basis_id[k*dim+twoDims+d]+degPlus1*d];
-//   }
-//   free(legendre);
-//   free(dxlegendre);
-//   free(newParams->dims);
-//   free(newParams);
-}// BasisCubeSimplexSimplex
-
-
-// Generates derivatives of orthogonal polynomial basis for the unit CUBESIMPLEXSIMPLEX
-void BasisPrimeCubeSimplexSimplex(int *dims, int deg, const INT_8 *basis_id, const double *x, double *phiPrime)
-{
-   int j, k, d;
-   int dim = dims[0]+dims[1]+dims[2];
-   int dimSimplex1 = dims[0];
-   int dimSimplex2 = dims[1];
-   int dimCube = dims[2];
-   int twoDims = dimSimplex1+dimSimplex2;
-   int num_funcs = BasisSize(deg, dim);
-   int degPlus1 = deg+1;
-   double phiPrimeSimplex[num_funcs*dim];
-
-   for(k = 0; k < num_funcs*dim; ++k)
-      phiPrime[k] = 1.0;
-
-   BasisPrimeSimplexPolyhedralOne(dim, dims, deg, basis_id, x, phiPrimeSimplex);
-   for(k = 0; k < num_funcs*dim; ++k)
-      phiPrime[k] = phiPrime[k] * phiPrimeSimplex[k];
-
-   BasisPrimeSimplexPolyhedralTwo(dim, dims, deg, basis_id, x, phiPrimeSimplex);
-   for(k = 0; k < num_funcs*dim; ++k)
-      phiPrime[k] = phiPrime[k] * phiPrimeSimplex[k];
-
-   double* legendre = (double *)malloc(degPlus1*dimCube*sizeof(double));
-   double* dxlegendre = (double *)malloc(degPlus1*dimCube*sizeof(double));
-   for(d = 0; d < dimCube; ++d)
-      LegendrePoly(degPlus1, 2*x[twoDims+d]-1, &legendre[d*degPlus1], &dxlegendre[d*degPlus1]);
-
-   for(d = 0; d < dim; ++d)
-   {
-      for(k = 0; k < num_funcs; ++k)
-      {
-         for(j = twoDims; j < dim; ++j)
-         {
-            if(j != d)
-               phiPrime[k+d*num_funcs] = phiPrime[k+d*num_funcs] * legendre[basis_id[k*dim+j] + degPlus1*(j-twoDims)];
-
-            if(j == d)
-               phiPrime[k+d*num_funcs] = 2*phiPrime[k+d*num_funcs] * dxlegendre[basis_id[k*dim+j] + degPlus1*(j-twoDims)];
-         }
-      }
-   }
-
-   free(legendre);
-   free(dxlegendre);
-
-#ifdef QUAD_DEBUG_ON
-   void (*phi_func)(int *dims, int deg, const INT_8 *basis_id, const double *x, double *phi) = &BasisCubeSimplexSimplex;
-   int flag = finite_difference_test(dim, dims, deg, basis_id, x, phiPrime, phi_func);
-   if(flag == 1)
-   {
-      PRINT_ERR("failed finite_difference_test", __LINE__, __FILE__);
-      for(int d = 0; d < dim; ++d)
-         printf("x[%i] = %lf  ", d, x[d]);
-      printf("\n");
-   }
-#endif
-}// end BasisPrimeCubeSimplexSimplex
 
 
 // Generates orthogonal polynomial basis for the first [0, dim1-1] coordinates

@@ -32,11 +32,6 @@ void get_constraints_simplexsimplex(constraints *constr);
 void constraints_simplexsimplex_free(constraints *constr);
 void constraints_simplexsimplex_realloc(constraints *constr, int dims[2]);
 
-constraints *constraints_cubesimplexsimplex_init(int dims[3]);
-void get_constraints_cubesimplexsimplex(constraints *constr);
-void constraints_cubesimplexsimplex_free(constraints *constr);
-void constraints_cubesimplexsimplex_realloc(constraints *constr, int dims[3]);
-
 void TestConstraints();
 void PrintConstraints(constraints *constr);
 

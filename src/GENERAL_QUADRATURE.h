@@ -25,6 +25,12 @@ extern "C" {
 #define ATTR_UNUSED
 #endif
 
+#ifdef _OPENMP
+#define if_omp(omp_statement) #omp_statement
+#else
+#define if_omp(omp_statement)
+#endif
+
 
 #define GQ_TRUE 1
 #define GQ_FALSE 0
@@ -56,17 +62,17 @@ extern "C" {
 typedef enum { LAPACK, PLASMA } LibraryType;
 typedef enum { ON, OFF } bool_enum;
 typedef enum { orthogonal, monomial } basis_type;
-typedef enum { INTERVAL, CUBE, SIMPLEX, CUBESIMPLEX, SIMPLEXSIMPLEX, CUBESIMPLEXSIMPLEX } DOMAIN_TYPE;
+typedef enum { INTERVAL, CUBE, SIMPLEX, CUBESIMPLEX, SIMPLEXSIMPLEX } DOMAIN_TYPE;
 typedef enum { NODE, WEIGHT, NONE } NODE_OR_WEIGHT;
 
 
-typedef struct
-{
-   int tot_elims;
-   int *nodes_tot;
-   int *success_node;
-   int *success_its;
-} elim_history;
+//typedef struct
+//{
+//   int tot_elims;
+//   int *nodes_tot;
+//   int *success_node;
+//   int *success_its;
+//} elim_history;
 
 typedef struct
 {
@@ -178,7 +184,7 @@ struct quadrature
 };
 
 
-#define GQ_SUCCESS       0
+#define GQ_SUCCESS      0
 #define NULL_VAL       -1
 #define ALLOC_FAIL     -2
 #define INV_INPUT      -3
@@ -186,13 +192,14 @@ struct quadrature
 #define NAN_VAL        -5
 #define QUAD_HUGE_ERR  -6
 #define LAPACK_ERR     -7
-#define DIV_BY_ZERO    -8
-#define NOT_CONVERGE   -9
-#define DIVERGE_ERR    -10
-#define LARGE_RES      -11
-#define CONSTR_ERROR   -12
+#define PLASMA_ERR     -8
+#define DIV_BY_ZERO    -9
+#define NOT_CONVERGE   -10
+#define DIVERGE_ERR    -11
+#define LARGE_RES      -12
+#define CONSTR_ERROR   -13
 
-#define STR_Q_SUCCESS "GQ_SUCCESS"
+#define STR_GQ_SUCCESS "GQ_SUCCESS"
 #define STR_NULL_VAL "NULL_VAL"
 #define STR_ALLOC_FAIL "ALLOC_FAIL"
 #define STR_INV_INPUT "INV_INPUT"
@@ -200,6 +207,7 @@ struct quadrature
 #define STR_NAN_VAL "NAN_VAL"
 #define STR_QUAD_HUGE_ERR "QUAD_HUGE_ERR"
 #define STR_LAPACK_ERR "LAPACK_ERR"
+#define STR_PLASMA_ERR "PLASMA_ERR"
 #define STR_DIV_BY_ZERO "DIV_BY_ZERO"
 #define STR_NOT_CONVERGE "NOT_CONVERGE"
 #define STR_DIVERGE_ERR "DIVERGE_ERR"

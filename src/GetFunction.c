@@ -37,17 +37,21 @@ void GetFunction(const INT_8 *basisIndices, quadrature *q, Vector f)
       f.id[i] = -1.0 * b[i];
    free(b);
 
+   #ifdef _OPENMP
    int OMP_CONDITION;
    if(dim == 3  && deg >= 12)      OMP_CONDITION = GQ_TRUE;
    else if(dim == 4  && deg  >= 6) OMP_CONDITION = GQ_TRUE;
    else if(dim == 5  && deg  >= 5) OMP_CONDITION = GQ_TRUE;
    else if(dim > 5)                OMP_CONDITION = GQ_TRUE;
    else                            OMP_CONDITION = GQ_FALSE;
+   #endif
 
    // achieves speedup when dim >= 3 and quadrature degree is sufficiently high
    // if dim == 3, degree should be  > 10 for speedup
    // The higher the dimension, the lower becomes the degree requirement.
+   #ifdef _OPENMP
    #pragma omp parallel if(OMP_CONDITION) default(shared) num_threads(omp_get_max_threads())
+   #endif
    {
       double *basisLoc   = (double *)malloc(SIZE_DOUBLE(len));
       double *fLoc     = (double *)malloc(SIZE_DOUBLE(len));
@@ -55,7 +59,9 @@ void GetFunction(const INT_8 *basisIndices, quadrature *q, Vector f)
       INT_8 *basisIndCopy = (INT_8 *)malloc(dim*q->num_funcs*sizeof(INT_8));
       memcpy(basisIndCopy, basisIndices, dim*q->num_funcs*sizeof(INT_8));
 
+      #ifdef _OPENMP
       #pragma omp for schedule(static)
+      #endif
       for(int j = 0; j < nodes; ++j)
       {
          double curNode[dim];
@@ -66,7 +72,9 @@ void GetFunction(const INT_8 *basisIndices, quadrature *q, Vector f)
          for(int i = 0; i < len; ++i)
             fLoc[i] += basisLoc[i] * w[j];
       }
+      #ifdef _OPENMP
       #pragma omp critical(UpdateFunction)
+      #endif
       for(int i = 0; i < len; ++i)
          f.id[i] += fLoc[i];
 

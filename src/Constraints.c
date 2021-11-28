@@ -3,7 +3,6 @@
  * August 2021
  */
 
-#include "GENERAL_QUADRATURE.h"
 #include "Constraints.h"
 #include "Vector.h"
 
@@ -380,52 +379,6 @@ void constraints_simplexsimplex_free(constraints *constr)
 }
 
 
-
-/************************************************
-\* Routines for cubesimplexsimplex constraints \*
-************************************************/
-
-constraints *constraints_cubesimplexsimplex_init(int dims[3])
-{
-   assert( (dims[0] > 1) && (dims[1] > 1)  && (dims[2] > 0) );
-
-   constraints *constr = (constraints *)malloc(sizeof(constraints));
-   if(constr == NULL) return NULL;
-
-   int dim = dims[0] + dims[1] + dims[2];
-   int n_rows =  (dims[0] + ONE) + (dims[1]+ ONE) + (TWO * dims[2]); // double check the order
-   int n_cols = dim;
-   constr->dim = dim;
-   constr->dims = dims;
-   constr->M = RMatrix_init(n_rows, n_cols);
-   constr->b = Vector_init(n_rows);
-   constr->M_FULL = RMatrix_init(n_rows+1, n_cols+1);
-   constr->b_FULL = Vector_init(n_rows+1);
-
-   return constr;
-}
-
-void constraints_cubesimplexsimplex_realloc(constraints *constr, int dims[3])
-{
-   assert( (dims[0] > 1) && (dims[1] > 1)  && (dims[2] > 0) );
-
-   int dim = dims[0] + dims[1] + dims[2];
-   int n_rows =  (dims[0] + ONE) + (dims[1]+ ONE) + (TWO * dims[2]); // double check the order
-   int n_cols = dim;
-   RMatrix_realloc(n_rows, n_cols, &constr->M);
-   Vector_realloc(n_rows, &constr->b);
-   RMatrix_realloc(n_rows+1, n_cols+1, &constr->M_FULL);
-   Vector_realloc(n_rows+1, &constr->b_FULL);
-}
-
-void get_constraints_cube_simplex_simplex(constraints *constr)
-{
-}
-
-void get_constraints_cubesimplexsimplex(constraints *constr)
-{
-}
-
 void constraints_cubesimplexsimplex_free(constraints *constr)
 {
    if(constr == NULL) return;
@@ -492,11 +445,12 @@ void TestConstraints()
 void PrintConstraints(constraints *constr)
 {
    printf("printing constraint Matrix:\n");
-   PrintRMatrix(constr->M);
+   RMatrixPrint(constr->M);
    printf("printing full constraint Matrix:\n");
-   PrintRMatrix(constr->M_FULL);
+   RMatrixPrint(constr->M_FULL);
    printf("printing constraint vector:\n");
    VPrint(constr->b);
    printf("printing full constraint vector:\n");
    VPrint(constr->b_FULL);
 }
+

@@ -4,7 +4,6 @@
  */
 
 #include "GetJacobian.h"
-#include "GENERAL_QUADRATURE.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -33,25 +32,31 @@ void GetJacobian(const INT_8 *basisIndices, quadrature *q, CMatrix JACOBIAN)
    int dims[num_dims];
    memcpy(dims, q->dims, num_dims*size_int);
 
+   #ifdef _OPENMP
    int OMP_CONDITION;
    if(dim == 3  && deg >= 12)      OMP_CONDITION = GQ_TRUE;
    else if(dim == 4  && deg  >= 6) OMP_CONDITION = GQ_TRUE;
    else if(dim == 5  && deg  >= 5) OMP_CONDITION = GQ_TRUE;
    else if(dim > 5)                OMP_CONDITION = GQ_TRUE;
    else                            OMP_CONDITION = GQ_FALSE;
+   #endif
 
    // achieves speedup when dim >= 3 and quadrature degree is sufficiently high
    // if dim == 3, degree should be  > 10 for speedup
    // The higher the dimension, the lower becomes the degree requirement.
    // In the future number of threads will be selected as a function of problem size.
+   #ifdef _OPENMP
    #pragma omp parallel default(shared) if(OMP_CONDITION) num_threads(omp_get_max_threads())
+   #endif
    {
       double *basisLoc      = (double *)malloc(SIZE_DOUBLE(rows));
       double *basisPrimeLoc = (double *)malloc(SIZE_DOUBLE(rows*dim));
       INT_8 *basisIndCopy   = (INT_8 *)malloc(dim*q->num_funcs*sizeof(INT_8));
       memcpy(basisIndCopy, basisIndices, dim*q->num_funcs*sizeof(INT_8));
 
+      #ifdef _OPENMP
       #pragma omp for schedule(static)
+      #endif
       for(int j = 0; j < cols; ++j)
       {
          double curNode[dim];

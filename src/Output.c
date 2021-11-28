@@ -5,7 +5,6 @@
 // to do: ensure results directory exists
 
 #include "Output.h"
-#include "GENERAL_QUADRATURE.h"
 #include <stdio.h>
 
 static char *get_domain_string(DOMAIN_TYPE D);
@@ -86,8 +85,6 @@ static char *get_domain_string(DOMAIN_TYPE D)
          return (char *)"CUBESIMPLEX";
       case SIMPLEXSIMPLEX:
          return  (char *)"SIMPLEXSIMPLEX";
-      case CUBESIMPLEXSIMPLEX:
-         return (char *)"CUBESIMPLEXSIMPLEX";
       default:
          return (char *)"0";
    }

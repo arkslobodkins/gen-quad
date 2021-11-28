@@ -1,7 +1,7 @@
 #ifndef GENERALIZED_TENSOR_H
 #define GENERALIZED_TENSOR_H
 
-#include "Quadrature.h"
+#include "GENERAL_QUADRATURE.h"
 
 #ifdef __cplusplus
 extern "C" {

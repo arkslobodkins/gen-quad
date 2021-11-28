@@ -1,5 +1,4 @@
 #include "LINALG.h"
-#include "GENERAL_QUADRATURE.h"
 
 #include <stdlib.h>
 #include <omp.h>
@@ -21,11 +20,10 @@ int DGEQR2_LAPACK(CMatrix A, Vector TAU)
 
    int INFO;
    int LDA = A.rows;
-   double *WORK = (double *)malloc(2*A.cols*size_double);
-
+   double *WORK = (double *)malloc(SIZE_DOUBLE(2*A.cols));
    dgeqr2_(&A.rows, &A.cols, A.id, &LDA, TAU.id, WORK, &INFO);
-
    free(WORK);
+
    return INFO;
 }
 
@@ -37,10 +35,9 @@ int DGEQRF_LAPACK(CMatrix A, Vector TAU)
    int LDA = A.rows;
    int LWORK = 2*A.cols;
    double *WORK = (double *)malloc(SIZE_DOUBLE(LWORK));
-
    dgeqrf_(&A.rows, &A.cols, A.id, &LDA, TAU.id, WORK, &LWORK, &INFO);
-
    free(WORK);
+
    return INFO;
 }
 
@@ -52,48 +49,51 @@ int DORMQR_LAPACK(char SIDE, char TRANS, Vector TAU, CMatrix Q, CMatrix A)
    int lworkQR = SIDE == 'L' ? 2*A.cols : 2*A.rows;
    double *workQR = (double *)malloc(SIZE_DOUBLE(lworkQR));
    dormqr_(&SIDE, &TRANS, &A.rows, &A.cols, &TAU.len, Q.id, &LDQ, TAU.id, A.id, &LDA, workQR, &lworkQR, &INFO);
-
    free(workQR);
+
    return INFO;
 }
 
 int DGELS_LAPACK(CMatrix A, Vector RHS_TO_X)
 {
-   int LWORK = 5*A.cols;
-   Vector WORK = Vector_init(LWORK);
+   assert(RHS_TO_X.len == MAX(A.rows, A.cols));
 
    int INFO;
    char TRANS = 'N';
    int NRHS = 1;
    int LDA = A.rows;
    int LEAD_DIM = MAX(A.rows, A.cols);
+   int LWORK = 5*A.cols;
+   Vector WORK = Vector_init(LWORK);
 
    dgels_(&TRANS, &A.rows, &A.cols, &NRHS, A.id, &LDA,
-         RHS_TO_X.id, &LEAD_DIM, WORK.id, &WORK.len, &INFO);
-
+          RHS_TO_X.id, &LEAD_DIM, WORK.id, &WORK.len, &INFO);
    Vector_free(WORK);
+
    return INFO;
 }
 
+#ifdef _OPENMP
 int DGELS_PLASMA(CMatrix A, Vector RHS_TO_X)
 {
+   assert(RHS_TO_X.len == MAX(A.rows, A.cols));
+
    int NRHS = 1;
    int LDA = A.rows;
    int LEAD_DIM = MAX(A.rows, A.cols);
 
    plasma_init(omp_get_max_threads());
    plasma_desc_t T;
-
    int INFO = plasma_dgels(PlasmaNoTrans,
-         A.rows, A.cols, NRHS,
-         A.id, LDA, &T,
-         RHS_TO_X.id, LEAD_DIM);
-
+                           A.rows, A.cols, NRHS,
+                           A.id, LDA, &T,
+                           RHS_TO_X.id, LEAD_DIM);
    plasma_desc_destroy(&T);
    plasma_finalize();
 
    return INFO;
 }
+#endif
 
 // Simple transpose
 void Transpose(int M, int N, const double *A, double *B)

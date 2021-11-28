@@ -62,21 +62,6 @@ void BasisIntegralsSimplexSimplex(int *dims, int deg, double *integrals)
       integrals[0] /= i;
 }
 
-void BasisIntegralsCubeSimplexSimplex(int *dims, int deg, double *integrals)
-{
-   int dim = dims[0]+dims[1]+dims[1];
-   int dim2 = dims[1];
-   int dim3 = dims[1];
-   int m = BasisSize(deg, dim);
-
-   memset(integrals, 0, SIZE_DOUBLE(m));
-   integrals[0] = 1;
-   for(int i = 1; i <= dim2; ++i)
-      integrals[0] /= i;
-
-   for(int i = 1; i <= dim3; ++i)
-      integrals[0] /= i;
-}
 
 // In the future, basis indices will be provided by the polygon object
 void IntegralsCubeMonomial(int *dims, int deg, double *integrals)

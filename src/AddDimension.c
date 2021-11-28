@@ -30,8 +30,7 @@ void AddLineFirst(const quadrature *q1D, const quadrature *quad_prev, quadrature
    for(int j = 0; j < n_prev; ++j)
    {
       int jxdim_minus_1 = j*(dim-1);
-      for(int i = 0; i < n1D; ++i)
-      {
+      for(int i = 0; i < n1D; ++i) {
          int ind = i*dim*n_prev + j*dim;
          x_new[ind] = x1D[i];
          for(int d = 1; d < dim; ++d)

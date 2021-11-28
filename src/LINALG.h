@@ -1,7 +1,7 @@
 #ifndef LIN_ALG_H
 #define LIN_ALG_H
 
-#include "Matrix.h"
+#include "GENERAL_QUADRATURE.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -36,7 +36,9 @@ int DGEQRF_LAPACK(CMatrix A, Vector TAU);
 int DORMQR_LAPACK(char SIDE, char TRANS, Vector TAU, CMatrix Q, CMatrix A);
 
 int DGELS_LAPACK(CMatrix A, Vector RHS_TO_X);
+#ifdef _OPENMP
 int DGELS_PLASMA(CMatrix A, Vector RHS_TO_X);
+#endif
 
 void Transpose(int M, int N, const double *A, double *B); // hand-written
 

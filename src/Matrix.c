@@ -59,7 +59,7 @@ void RMatVec(RMatrix M, Vector x, Vector y)
          y.id[i] += R_ELEM_ID(M, i, j) * x.id[j];
 }
 
-void PrintRMatrix(const RMatrix M)
+void RMatrixPrint(const RMatrix M)
 {
    for(int i = 0; i < M.rows; ++i)
    {
@@ -114,13 +114,15 @@ void CMatrix_Assign(const CMatrix A, CMatrix B)
    memcpy(B.id, A.id, A.len*sizeof(double));
 }
 
-CMatrix CMatrix_Transpose(const CMatrix A)
+CMatrix CMatrix_Transpose(CMatrix A)
 {
    CMatrix A_TR = CMatrix_init(A.cols, A.rows);
    int Acols = A.cols;
    int Arows = A.rows;
 
+   #ifdef _OPENMP
    #pragma omp parallel for default(shared) schedule(static) num_threads(omp_get_max_threads())
+   #endif
    for(int j = 0; j < Acols; ++j)
       for(int i = 0; i < Arows; ++i)
          A_TR.cid[i][j] = A.cid[j][i];
@@ -138,4 +140,15 @@ void CMatVec(const CMatrix M, const Vector x, Vector y)
    for(int j = 0; j < M.cols; ++j)
       for(int i = 0; i < M.rows; ++i)
          y.id[i] += C_ELEM_ID(M, i, j) * x.id[j];
+}
+
+void CMatrixPrint(const CMatrix M)
+{
+   for(int i = 0; i < M.rows; ++i)
+   {
+      for(int j = 0; j < M.cols; ++j)
+         printf("M[%i][%i] = %.10e \n", i, j, C_ELEM_ID(M, i, j));
+
+      printf("\n");
+   }
 }
