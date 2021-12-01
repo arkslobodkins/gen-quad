@@ -32,7 +32,7 @@ void Vector_realloc(int n, Vector *V)
    V->len = n;
 }
 
-void Vector_Assign(const Vector v1, Vector v2)
+void Vector_Assign(Vector v1, Vector v2)
 {
    assert(v1.len == v2.len);
    memcpy(v2.id, v1.id, v1.len*sizeof(double));
@@ -43,14 +43,14 @@ void Vector_free(Vector V)
    if(V.id != NULL) { free(V.id); V.id = NULL; }
 }
 
-void VPrint(const Vector V)
+void VPrint(Vector V)
 {
    for(int i = 0; i < V.len; ++i)
       printf("V[%i] = %.6e\n", i, V.id[i]);
    printf("\n");
 }
 
-double VDot(const Vector a, const Vector b)
+double VDot(Vector a, Vector b)
 {
    assert(a.len == b.len && b.len > 0);
 
@@ -61,14 +61,14 @@ double VDot(const Vector a, const Vector b)
    return dot;
 }
 
-void VectorAddScale(double c1, const Vector V1, double c2, const Vector V2, Vector V3)
+void VectorAddScale(double c1, Vector V1, double c2, Vector V2, Vector V3)
 {
    assert(V1.len == V2.len && V2.len == V3.len && V3.len > 0);
    for(int i = 0; i < V3.len; ++i)
       V3.id[i] = c1*V1.id[i] + c2*V2.id[i];
 }
 
-VMin VectorMin(const Vector v)
+VMin VectorMin(Vector v)
 {
    VMin vMin = {0};
 
@@ -94,7 +94,7 @@ void VectorRemoveElement(int index, Vector *z)
    Vector_realloc(z->len-1, z);
 }
 
-double V_ScaledTwoNorm(const Vector z)
+double V_ScaledTwoNorm(Vector z)
 {
    assert(z.len > 0);
 
@@ -105,7 +105,7 @@ double V_ScaledTwoNorm(const Vector z)
    return sqrt(norm/z.len);
 }
 
-double V_TwoNorm(const Vector z)
+double V_TwoNorm(Vector z)
 {
    assert(z.len > 0);
 
@@ -116,7 +116,7 @@ double V_TwoNorm(const Vector z)
    return sqrt(norm);
 }
 
-double V_InfNorm(const Vector z)
+double V_InfNorm(Vector z)
 {
    assert(z.len > 0);
 
@@ -127,7 +127,7 @@ double V_InfNorm(const Vector z)
    return norm;
 }
 
-bool V_CheckNan(const Vector z)
+bool V_CheckNan(Vector z)
 {
    assert(z.len > 0);
 
@@ -138,7 +138,7 @@ bool V_CheckNan(const Vector z)
    return false;
 }
 
-bool V_CheckInf(const Vector z)
+bool V_CheckInf(Vector z)
 {
    assert(z.len > 0);
 
@@ -150,11 +150,3 @@ bool V_CheckInf(const Vector z)
 }
 
 
-int IntPower(int x, int power)
-{
-   int result = 1;
-   for(int i = 0; i < power; ++i)
-      result *= x;
-
-   return result;
-}

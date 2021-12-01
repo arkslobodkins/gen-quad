@@ -32,15 +32,15 @@ RMatrix RMatrix_init(int nRows, int nCols);
 void RMatrix_realloc(int nRows, int nCols, RMatrix *M);
 void RMatrix_free(RMatrix M);
 void RMatVec(RMatrix M, Vector x, Vector y);
-void RMatrixPrint(const RMatrix M);
+void RMatrixPrint(RMatrix M);
 
 CMatrix CMatrix_init(int nRows, int nCols);
 void CMatrix_realloc(int nRows, int nCols, CMatrix *M);
 void CMatrix_free(CMatrix M);
-void CMatrix_Assign(const CMatrix A, CMatrix B);
+void CMatrix_Assign(CMatrix A, CMatrix B);
 CMatrix CMatrix_Transpose(CMatrix A);
-void CMatVec(const CMatrix M, const Vector x, Vector y);
-void CMatrixPrint(const CMatrix M);
+void CMatVec(CMatrix M, Vector x, Vector y);
+void CMatrixPrint(CMatrix M);
 
 #ifdef __cplusplus
 }

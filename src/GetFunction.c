@@ -38,19 +38,14 @@ void GetFunction(const INT_8 *basisIndices, quadrature *q, Vector f)
    free(b);
 
    #ifdef _OPENMP
-   int OMP_CONDITION;
-   if(dim == 3  && deg >= 12)      OMP_CONDITION = GQ_TRUE;
-   else if(dim == 4  && deg  >= 6) OMP_CONDITION = GQ_TRUE;
-   else if(dim == 5  && deg  >= 5) OMP_CONDITION = GQ_TRUE;
-   else if(dim > 5)                OMP_CONDITION = GQ_TRUE;
-   else                            OMP_CONDITION = GQ_FALSE;
+   int omp_condition = OMP_CONDITION(deg, dim);
    #endif
 
    // achieves speedup when dim >= 3 and quadrature degree is sufficiently high
    // if dim == 3, degree should be  > 10 for speedup
    // The higher the dimension, the lower becomes the degree requirement.
    #ifdef _OPENMP
-   #pragma omp parallel if(OMP_CONDITION) default(shared) num_threads(omp_get_max_threads())
+   #pragma omp parallel if(omp_condition) default(shared) num_threads(omp_get_max_threads())
    #endif
    {
       double *basisLoc   = (double *)malloc(SIZE_DOUBLE(len));

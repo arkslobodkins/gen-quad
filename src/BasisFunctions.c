@@ -27,11 +27,8 @@ typedef void(*BasisFunc)(int *dims, int deg, const INT_8 *basis_id, const double
 ATTR_UNUSED static int finite_difference_test(int dim, int *dims, int deg, const INT_8 *basis_id,
                                               const double *x, const double *phi_prime, BasisFunc func);
 
-static void LegendrePoly(int order, double x, double *p, double *dp);
-static void JacobiPoly(int order, double x, double alpha, double beta, double *p);
-static void JacobiPolyPrime(int order, double x, double alpha, double beta, double *dp);
 
-static void LegendrePoly(int order, double x, double *p, double *dp)
+void LegendrePoly(int order, double x, double *p, double *dp)
 {
    int k;
    double fac1 = 0.0, fac2 = 0.0;
@@ -54,7 +51,7 @@ static void LegendrePoly(int order, double x, double *p, double *dp)
 #define SQUARE(x) ((x)*(x))
 #define ADD(x, y) (x)+(y)
 #define SUB(x, y) (x)-(y)
-static void JacobiPoly(int order, double x, double alpha, double beta, double *p)
+void JacobiPoly(int order, double x, double alpha, double beta, double *p)
 {
    // compute constants to be used inside a for loop to avoid redundant computations
    double fac1 = 0.0, fac2 = 0.0, fac3 = 0.0;
@@ -85,7 +82,7 @@ static void JacobiPoly(int order, double x, double alpha, double beta, double *p
 }
 
 
-static void JacobiPolyPrime(int order, double x, double alpha, double beta, double *dp)
+void JacobiPolyPrime(int order, double x, double alpha, double beta, double *dp)
 {
    double p[order];
    double a_plus_b_plus1 = 1.0+alpha+beta;
@@ -101,7 +98,7 @@ static void JacobiPolyPrime(int order, double x, double alpha, double beta, doub
 
 
 // Generates orthogonal polynomial basis for the unit cube
-void BasisCube(int *dims, int deg, const INT_8 *basis_id, const double *x, double *phi)
+void CubeBasisFuncs(int *dims, int deg, const INT_8 *basis_id, const double *x, double *phi)
 {
    int dim = dims[0];
    assert(dim >= 1);
@@ -124,7 +121,7 @@ void BasisCube(int *dims, int deg, const INT_8 *basis_id, const double *x, doubl
 
 
 // Generates derivatives of orthogonal polynomial basis for the unit cube
-void BasisPrimeCube(int *dims, int deg, const INT_8 *basis_id, const double* x, double *phiPrime)
+void CubeBasisFuncsDer(int *dims, int deg, const INT_8 *basis_id, const double* x, double *phiPrime)
 {
    assert(dims[0] >= 1);
    int dim      = dims[0];
@@ -165,7 +162,7 @@ void BasisPrimeCube(int *dims, int deg, const INT_8 *basis_id, const double* x, 
    }
 
 #ifdef QUAD_DEBUG_ON
-   BasisFunc phi_func = &BasisCube;
+   BasisFunc phi_func = &CubeBasisFuncs;
    int flag = finite_difference_test(dim, dims, deg, basis_id, x, phiPrime, phi_func);
    if(flag == 1)
    {

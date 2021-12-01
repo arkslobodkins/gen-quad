@@ -33,12 +33,7 @@ void GetJacobian(const INT_8 *basisIndices, quadrature *q, CMatrix JACOBIAN)
    memcpy(dims, q->dims, num_dims*size_int);
 
    #ifdef _OPENMP
-   int OMP_CONDITION;
-   if(dim == 3  && deg >= 12)      OMP_CONDITION = GQ_TRUE;
-   else if(dim == 4  && deg  >= 6) OMP_CONDITION = GQ_TRUE;
-   else if(dim == 5  && deg  >= 5) OMP_CONDITION = GQ_TRUE;
-   else if(dim > 5)                OMP_CONDITION = GQ_TRUE;
-   else                            OMP_CONDITION = GQ_FALSE;
+   int omp_condition = OMP_CONDITION(deg, dim);
    #endif
 
    // achieves speedup when dim >= 3 and quadrature degree is sufficiently high
@@ -46,7 +41,7 @@ void GetJacobian(const INT_8 *basisIndices, quadrature *q, CMatrix JACOBIAN)
    // The higher the dimension, the lower becomes the degree requirement.
    // In the future number of threads will be selected as a function of problem size.
    #ifdef _OPENMP
-   #pragma omp parallel default(shared) if(OMP_CONDITION) num_threads(omp_get_max_threads())
+   #pragma omp parallel default(shared) if(omp_condition) num_threads(omp_get_max_threads())
    #endif
    {
       double *basisLoc      = (double *)malloc(SIZE_DOUBLE(rows));

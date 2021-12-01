@@ -27,6 +27,7 @@ static int CheckForFail(int INFO, double errorNorm, double errorNormPrev, Vector
 // underdetermined systems of equations in the least
 // squares sense. Returns success if algorithm converged
 // and all nodes are inside of the domain and if all nodes are positive.
+double CONSTR_TIME = 0.0;
 double LSQ_TIME = 0.0;
 #define MAX_ELIM_WEIGHTS 10
 bool LeastSquaresNewton(LibraryType libType, const bool_enum CONSTR_OPT, const INT_8 *basis, quadrature *q_orig, int *its)
@@ -125,6 +126,7 @@ bool LeastSquaresNewton(LibraryType libType, const bool_enum CONSTR_OPT, const I
       }
 
       if(CONSTR_OPT == ON) {
+         start_time = get_cur_time();
          int P_FLAG = ConstrainedProjection(q_prev, q_next);
          if(P_FLAG != CONSTR_SUCCESS) {
             COND_PRINT_ERR(P_FLAG);
@@ -137,6 +139,7 @@ bool LeastSquaresNewton(LibraryType libType, const bool_enum CONSTR_OPT, const I
             SOL_FLAG = SOL_NOT_FOUND;
             goto FREERETURN;
          }
+         CONSTR_TIME += get_cur_time() - start_time;
       }
       else {
          if(!QuadInConstraint(q_next) && itsLoc > 5) {

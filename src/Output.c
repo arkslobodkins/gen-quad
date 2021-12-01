@@ -7,12 +7,11 @@
 #include "Output.h"
 #include <stdio.h>
 
-static char *get_domain_string(DOMAIN_TYPE D);
 
 // Prints history and quadrature parameters to a file.
 void HistoryToFile(const quadrature *q, int arr_size, history **hist_arr)
 {
-   char str[50];
+   char str[80];
    int i,j;
    int deg = q->deg;
    int dim = q->dim;
@@ -71,21 +70,3 @@ void QuadratureToFile(const quadrature *quad)
    fclose(FID);
 }
 
-static char *get_domain_string(DOMAIN_TYPE D)
-{
-   switch(D)
-   {
-      case INTERVAL:
-         return (char *)"LINE";
-      case CUBE:
-         return (char *)"CUBE";
-      case SIMPLEX:
-         return (char *)"SIMPLEX";
-      case CUBESIMPLEX:
-         return (char *)"CUBESIMPLEX";
-      case SIMPLEXSIMPLEX:
-         return  (char *)"SIMPLEXSIMPLEX";
-      default:
-         return (char *)"0";
-   }
-}

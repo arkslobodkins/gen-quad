@@ -124,8 +124,8 @@ int ConstrainedOptimization(const quadrature *q_prev, quadrature *q_next, Constr
    for(int i = 0; i < q_len; ++i)
       q_diff.id[i] = q_prev->z.id[i] - q_next_copy->z.id[i];
 
-   if( ( QuadInConstraint( q_next_copy) == false )
-         && ( QuadInConstraint(q_prev ) == true ) )
+   if( ( QuadInConstraint(q_next_copy) == false )
+         && ( QuadInConstraint(q_prev) == true ) )
    {
       RET_FLAG = ShortenVector(q_prev, q_next_copy, cVectData);
       COND_TEST_2;
@@ -178,9 +178,9 @@ int ShortenVector(const quadrature *q_prev, const quadrature *q_next, ConstrVect
 
    // allocate vectors on the stack
    Vector z_prev_node = {0}; z_prev_node.len = dim+1;
-   double z_prev_id[dim+1]; z_prev_node.id = z_prev_id;
+   double z_prev_id[dim+1];  z_prev_node.id = z_prev_id;
    Vector z_next_node = {0}; z_next_node.len = dim+1;
-   double z_next_id[dim+1]; z_next_node.id = z_next_id;
+   double z_next_id[dim+1];  z_next_node.id = z_next_id;
 
    if(!QuadInConstraint(q_prev)) return CONSTR_INV_INPUT;
    if(QuadInConstraint(q_next))  return CONSTR_SUCCESS;

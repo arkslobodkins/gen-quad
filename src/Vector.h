@@ -21,21 +21,19 @@ typedef struct
 
 Vector Vector_init(int n);
 void Vector_realloc(int n, Vector *V);
-void Vector_Assign(const Vector v1, Vector v2);
+void Vector_Assign(Vector v1, Vector v2);
 void Vector_free(Vector V);
 
-void VPrint(const Vector V);
-double VDot(const Vector a, const Vector b);
-void VectorAddScale(double c1, const Vector V1, double c2, const Vector V2, Vector V3);
-VMin VectorMin(const Vector v);
+void VPrint(Vector V);
+double VDot(Vector a, Vector b);
+void VectorAddScale(double c1, Vector V1, double c2, Vector V2, Vector V3);
+VMin VectorMin(Vector v);
 void VectorRemoveElement(int index, Vector *z);
-double V_ScaledTwoNorm(const Vector z);
-double V_TwoNorm(const Vector z);
-double V_InfNorm(const Vector z);
-bool V_CheckNan(const Vector z);
-bool V_CheckInf(const Vector z);
-
-int IntPower(int x, int power);
+double V_ScaledTwoNorm(Vector z);
+double V_TwoNorm(Vector z);
+double V_InfNorm(Vector z);
+bool V_CheckNan(Vector z);
+bool V_CheckInf(Vector z);
 
 #ifdef __cplusplus
 }

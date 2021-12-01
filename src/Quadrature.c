@@ -99,7 +99,7 @@ quadrature *quadrature_init_basic(int n, int dim, int *dims, int deg, DOMAIN_TYP
    q->D = D;
    q->evalBasisMonomial = &BasisMonomial;
 
-   q->constr = NULL;
+   q->constr           = NULL;
    q->evalBasis        = NULL;
    q->evalBasisDer     = NULL;
    q->basisIntegrals   = NULL;
@@ -107,8 +107,9 @@ quadrature *quadrature_init_basic(int n, int dim, int *dims, int deg, DOMAIN_TYP
    q->constr_realloc   = NULL;
    q->get_constr       = NULL;
    q->constr_free      = NULL;
-
    q->free_ptr = &quadrature_free_basic;
+
+   q->isFullyInitialized = GQ_FALSE;
 
    return q;
 }
@@ -119,11 +120,9 @@ quadrature *quadrature_init_full(int n, int dim, int *dims, int deg, DOMAIN_TYPE
    quadrature *q = quadrature_init_basic(n, dim, dims, deg, D);
 
    q->setFuncs(q);
-
    q->constr = q->constr_init(q->dims);
    q->get_constr(q->constr);
-   q->setFuncsConstrFlag = 1;
-
+   q->isFullyInitialized = GQ_TRUE;
    q->free_ptr = &quadrature_free_full;
 
    return q;
@@ -147,7 +146,7 @@ void quadrature_realloc(int n, int dim, int *dims, int deg, quadrature *q)
    for(int i = 0; i < q->num_dims; ++i)
       q->dims[i] = dims[i];
 
-   if(q->setFuncsConstrFlag == 1) {
+   if(q->isFullyInitialized == GQ_TRUE) {
       q->constr_realloc(q->constr, dims);
       q->get_constr(q->constr);
    }
@@ -185,7 +184,7 @@ void quadrature_reinit(int n, quadrature *q)
 
 quadrature *quadrature_make_full_copy(const quadrature *q)
 {
-   if(q->setFuncsConstrFlag == 0) {
+   if(q->isFullyInitialized == GQ_FALSE) {
       PRINT_ERR("supplied quadrature object was not fully initialized", __LINE__, __FILE__);
       return NULL;
    }
@@ -297,7 +296,7 @@ void quadrature_free(quadrature *q)
 
 static void quadrature_free_basic(quadrature *q)
 {
-   if(q->setFuncsConstrFlag == 1)
+   if(q->isFullyInitialized == GQ_TRUE)
    {
       PRINT_ERR("full destructor should be called", __LINE__, __FILE__);
       return;
@@ -312,7 +311,7 @@ static void quadrature_free_basic(quadrature *q)
 
 static void quadrature_free_full(quadrature *q)
 {
-   if(q->setFuncsConstrFlag == 0)
+   if(q->isFullyInitialized == GQ_FALSE)
    {
       PRINT_ERR("basic destructor should be called", __LINE__, __FILE__);
       return;
@@ -321,7 +320,7 @@ static void quadrature_free_full(quadrature *q)
 
    Vector_free(q->z);
    if(q->dims != NULL) { free(q->dims); q->dims = NULL; }
-   if(q->setFuncsConstrFlag) q->constr_free(q->constr);
+   if(q->isFullyInitialized) q->constr_free(q->constr);
    if(q->dims != NULL) { free(q->dims); q->dims = NULL; }
    free(q); q = NULL;
 }
@@ -329,7 +328,7 @@ static void quadrature_free_full(quadrature *q)
 
 bool QuadOnTheBoundary(const quadrature *q, int elem)
 {
-   if(q->setFuncsConstrFlag == 0) {
+   if(q->isFullyInitialized == GQ_FALSE) {
       PRINT_ERR("constraints have not been initialized", __LINE__, __FILE__);
       return false;
    }
@@ -357,7 +356,7 @@ bool QuadOnTheBoundary(const quadrature *q, int elem)
 
 bool QuadInDomain(const quadrature *q)
 {
-   if(q->setFuncsConstrFlag == 0) {
+   if(q->isFullyInitialized == GQ_FALSE) {
       PRINT_ERR("constraints have not been initialized", __LINE__, __FILE__);
       return false;
    }
@@ -542,8 +541,7 @@ double QuadTestIntegralMonomial(const quadrature *q)
 
 bool QuadEqnOnTheBoundary(const quadrature *q, int elem, int eqn)
 {
-   if(q->constr == NULL || q->setFuncsConstrFlag == 0)
-   {
+   if(q->constr == NULL || q->isFullyInitialized == GQ_FALSE) {
       PRINT_ERR("constraints have not been initialized", __LINE__, __FILE__);
       return false;
    }
@@ -561,7 +559,6 @@ bool QuadEqnOnTheBoundary(const quadrature *q, int elem, int eqn)
       return true;
 
    return false;
-
 }
 
 
@@ -571,8 +568,8 @@ bool QuadEqnOnTheBoundary(const quadrature *q, int elem, int eqn)
 
 static void SetIntervalFuncs(quadrature *q)
 {
-   q->evalBasis        = &BasisCube;
-   q->evalBasisDer     = &BasisPrimeCube;
+   q->evalBasis        = &CubeBasisFuncs;
+   q->evalBasisDer     = &CubeBasisFuncsDer;
    q->basisIntegrals   = &BasisIntegralsCube;
 
    q->constr_init      = &constraints_interval_init;
@@ -584,8 +581,8 @@ static void SetIntervalFuncs(quadrature *q)
 
 static void SetCubeFuncs(quadrature *q)
 {
-   q->evalBasis        = &BasisCube;
-   q->evalBasisDer     = &BasisPrimeCube;
+   q->evalBasis        = &CubeBasisFuncs;
+   q->evalBasisDer     = &CubeBasisFuncsDer;
    q->basisIntegrals   = &BasisIntegralsCube;
    q->basisIntegralsMonomial = &IntegralsCubeMonomial; // Will add to other polygons as well
 

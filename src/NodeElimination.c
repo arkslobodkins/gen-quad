@@ -25,9 +25,9 @@
 
 extern int MAX_DIM;
 static void FreeMemory(INT_8 *basis_indices, quadrature *q_temp, quadrature *q_new);
-ATTR_UNUSED static RMatrix PredictorLapack(quadrature *q, INT_8 *basis_indices, int *arrayIndex);
+RMatrix PredictorLapack(quadrature *q, INT_8 *basis_indices, int *arrayIndex);
 #ifdef _OPENMP
-static RMatrix PredictorPlasma(quadrature *q, INT_8 *basis_indices, int *arrayIndex);
+RMatrix PredictorPlasma(quadrature *q, INT_8 *basis_indices, int *arrayIndex);
 #endif
 static void ExtractFromPredictor(RMatrix Z, int arrayIndex, quadrature *q);
 static void ConstrainQTemp(quadrature *q_new, int arrayIndex, quadrature *q_temp);
@@ -45,10 +45,14 @@ ATTR_UNUSED static bool TestQR(const CMatrix Q);
 double PREDICTOR_TIME = 0.0;
 void NodeElimination(const quadrature *q_initial, quadrature *q_final, glist *history)
 {
-   if(q_initial->setFuncsConstrFlag!= 1)
+   if(q_initial->isFullyInitialized != GQ_TRUE) {
       PRINT_ERR("Functions and constraints for q_initial are not set", __LINE__, __FILE__);
-   if(q_final->setFuncsConstrFlag != 1)
+      return;
+   }
+   if(q_final->isFullyInitialized != GQ_TRUE) {
       PRINT_ERR("Functions and constraints for q_final are not set",  __LINE__, __FILE__);
+      return;
+   }
 
    int n_initial       = q_initial->num_nodes;
    int num_funcs       = q_initial->num_funcs;
@@ -60,8 +64,14 @@ void NodeElimination(const quadrature *q_initial, quadrature *q_final, glist *hi
    LibraryType libType;
    RMatrix(*Predictor_Ptr)(quadrature *, INT_8 *, int *);
 #ifdef _OPENMP
-   libType = PLASMA;
-   Predictor_Ptr = &PredictorPlasma;
+   int omp_condition = OMP_CONDITION(deg, dim);
+   if(omp_condition) {
+      libType = PLASMA;
+      Predictor_Ptr = &PredictorPlasma;
+   } else {
+      libType = LAPACK;
+      Predictor_Ptr = &PredictorLapack;
+   }
 #else
    libType = LAPACK;
    Predictor_Ptr = &PredictorLapack;
@@ -83,7 +93,7 @@ void NodeElimination(const quadrature *q_initial, quadrature *q_final, glist *hi
       bool SOL_FLAG = LeastSquaresNewton(libType, ON, basis_indices, q_temp, 0);
       if(SOL_FLAG == SOL_FOUND) {
          n_initial = q_temp->num_nodes;
-         quadrature_realloc(q_temp->num_nodes, dim, dims, deg, q_new);
+         quadrature_realloc(n_initial, dim, dims, deg, q_new);
          quadrature_assign(q_temp, q_new);
       }
       else if(SOL_FLAG == SOL_NOT_FOUND) {
@@ -111,11 +121,9 @@ void NodeElimination(const quadrature *q_initial, quadrature *q_final, glist *hi
       else CONSTR_FLAG = OFF;
       n_prev = n_cur;
 
-      // Initialize parameters and arrays
       quadrature_reinit(n_cur-1, q_temp);
       quadrature_reinit(n_cur, q_new);
 
-      // extract initial guesses and run Newton's method
       int *arrayIndex = (int *)malloc(SIZE_INT(n_cur));
       double start_time = get_cur_time();
       RMatrix Z = Predictor_Ptr(q_new, basis_indices, arrayIndex);
@@ -190,13 +198,16 @@ static void FreeMemory(INT_8 *basis_indices, quadrature *q_temp, quadrature *q_n
 }
 
 // not an easy world we live in
-ATTR_UNUSED static RMatrix PredictorLapack(quadrature *q, INT_8 *basis_indices, int *arrayIndex)
+RMatrix PredictorLapack(quadrature *q, INT_8 *basis_indices, int *arrayIndex)
 {
-   int num_funcs = q->num_funcs;
-   int dim = q->dim;
-   int n_cur = q->num_nodes;
-   const int nrows = num_funcs;
-   const int ncols = (dim+1) * n_cur;
+   const int num_funcs = q->num_funcs;
+   const int dim       = q->dim;
+   const int n_cur     = q->num_nodes;
+   const int nrows     = num_funcs;
+   const int ncols     = (dim+1) * n_cur;
+
+//   if(ncols < nrows) return NULL;
+
    CMatrix J = CMatrix_init(nrows, ncols);
    GetJacobian(basis_indices, q, J);
    CMatrix J_TR = CMatrix_Transpose(J);
@@ -248,7 +259,6 @@ ATTR_UNUSED static RMatrix PredictorLapack(quadrature *q, INT_8 *basis_indices, 
          dZ.rid[i][j] = C_ELEM_ID(Q2, i, j) * q->w[i]/SQUARE(norm_Q2_ROW[i]);
       signif_ind[i] = TwoNorm(ncols, dZ.rid[i]);
 
-      // compute new initial guesses and store them in predictor Z
       for(int j = 0; j < Z.cols/(dim+1); ++j) {
          Z.rid[i][j] = q->w[j] - dZ.rid[i][(dim+1)*j];
          for(int d = 0; d < dim; ++d)
@@ -270,16 +280,19 @@ ATTR_UNUSED static RMatrix PredictorLapack(quadrature *q, INT_8 *basis_indices, 
 }
 
 #ifdef _OPENMP
-static RMatrix PredictorPlasma(quadrature *q, INT_8 *basis_indices, int *arrayIndex)
+RMatrix PredictorPlasma(quadrature *q, INT_8 *basis_indices, int *arrayIndex)
 {
-   int num_funcs = q->num_funcs;
-   int dim = q->dim;
-   int n_cur = q->num_nodes;
-   const int nrows = num_funcs;
-   const int ncols = (dim+1) * n_cur;
+   const int num_funcs = q->num_funcs;
+   const int dim       = q->dim;
+   const int n_cur     = q->num_nodes;
+   const int nrows     = num_funcs;
+   const int ncols     = (dim+1) * n_cur;
+
+//   if(ncols < nrows) return NULL;
    int INFO;
 
    plasma_init(omp_get_max_threads());
+
 
    CMatrix J = CMatrix_init(nrows, ncols);
    GetJacobian(basis_indices, q, J);
@@ -345,7 +358,6 @@ static RMatrix PredictorPlasma(quadrature *q, INT_8 *basis_indices, int *arrayIn
          dZ.rid[i][j] = C_ELEM_ID(Q2, i, j) * q->w[i]/SQUARE(norm_Q2_ROW[i]);
       signif_ind[i] = TwoNorm(ncols, dZ.rid[i]);
 
-      // compute new initial guesses and store them in predictor Z
       for(int j = 0; j < Z.cols/(dim+1); ++j) {
          Z.rid[i][j] = q->w[j] - dZ.rid[i][(dim+1)*j];
          for(int d = 0; d < dim; ++d)

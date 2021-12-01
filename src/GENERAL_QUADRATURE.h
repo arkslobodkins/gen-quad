@@ -10,6 +10,7 @@
 #include <math.h>
 
 
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -64,7 +65,14 @@ typedef enum { ON, OFF } bool_enum;
 typedef enum { orthogonal, monomial } basis_type;
 typedef enum { INTERVAL, CUBE, SIMPLEX, CUBESIMPLEX, SIMPLEXSIMPLEX } DOMAIN_TYPE;
 typedef enum { NODE, WEIGHT, NONE } NODE_OR_WEIGHT;
+typedef int GQ_BOOL;
 
+char *get_domain_string(DOMAIN_TYPE D);
+bool string_to_domain(const char *shape, DOMAIN_TYPE *D);
+int IntPower(int x, int power);
+#ifdef _OPENMP
+GQ_BOOL OMP_CONDITION(int deg, int dim);
+#endif
 
 //typedef struct
 //{
@@ -113,7 +121,6 @@ typedef struct
 
 
 typedef struct quadrature quadrature;
-typedef struct const_quadrature const_quadrature;
 
 typedef void(*EvalBasis)(int *dims, int deg, const INT_8 *basis, const double *x, double *phi);
 typedef void(*EvalBasisMonomial)(int dim, int deg, const INT_8 *basis, const double *x, double *phi);
@@ -121,14 +128,14 @@ typedef void(*EvalBasisDer)(int *dims, int deg, const INT_8 *basis, const double
 typedef void(*BasisIntegrals)(int *dims, int deg, double *integrals);
 typedef void(*BasisIntegralsMonomial)(int *dims, int deg, double *integrals);
 
-typedef bool(*InDomainElem)(const_quadrature *quad, int elem);
-typedef bool(*InConstraint)(const_quadrature *q);
-typedef bool(*InConstraintElem)(const_quadrature *quad, int elem);
-typedef bool(*PosWeights)(const_quadrature *q);
-typedef bool(*PosWeightsElem)(const_quadrature *q, int elem);
-typedef bool(*OnTheBoundary)(const_quadrature *q, int elem);
-typedef bool(*EqnOnTheBoundary)(const_quadrature *q, int elem, int eqn);
-typedef double(*TestIntegral)(const_quadrature *q);
+typedef bool(*InDomainElem)(quadrature *quad, int elem);
+typedef bool(*InConstraint)(quadrature *q);
+typedef bool(*InConstraintElem)(quadrature *quad, int elem);
+typedef bool(*PosWeights)(quadrature *q);
+typedef bool(*PosWeightsElem)(quadrature *q, int elem);
+typedef bool(*OnTheBoundary)(quadrature *q, int elem);
+typedef bool(*EqnOnTheBoundary)(quadrature *q, int elem, int eqn);
+typedef double(*TestIntegral)(quadrature *q);
 typedef void(*SetFuncs)(quadrature *q);
 typedef void(*SetParams)(int dim, int num_dims, int *dims, int deg, quadrature *q);
 typedef void(*FreePtr)(quadrature *quad);
@@ -167,7 +174,7 @@ struct quadrature
    Vector z;
    constraints *constr;
 
-   int setFuncsConstrFlag;
+   int isFullyInitialized;
    SetFuncs setFuncs; // Function that sets up all domain functions to point to appropriate domain
 
    EvalBasis           evalBasis;

@@ -19,9 +19,9 @@ void AddLineFirst(const quadrature *q1D, const quadrature *quad_prev, quadrature
    assert(q1D->dim + quad_prev->dim == quad_new->dim);
    assert(q1D->num_nodes * quad_prev->num_nodes == quad_new->num_nodes);
 
-   int dim = quad_new->dim;
-   int n1D = q1D->num_nodes;
-   int n_prev = quad_prev->num_nodes;
+   const int dim = quad_new->dim;
+   const int n1D = q1D->num_nodes;
+   const int n_prev = quad_prev->num_nodes;
    const double *x1D = q1D->x;
    const double *x_prev = quad_prev->x;
    double *x_new = quad_new->x;
@@ -98,11 +98,11 @@ void MixedTensor(const quadrature *q1, const quadrature *q2, quadrature *q_tp)
    assert(q1->dim + q2->dim == q_tp->dim);
    assert(q1->num_nodes * q2->num_nodes == q_tp->num_nodes);
 
-   int n1 = q1->num_nodes;
-   int n2 = q2->num_nodes;
-   int dim1 = q1->dim;
-   int dim2 = q2->dim;
-   int dim_tp = q_tp->dim;
+   const int n1 = q1->num_nodes;
+   const int n2 = q2->num_nodes;
+   const int dim1 = q1->dim;
+   const int dim2 = q2->dim;
+   const int dim_tp = q_tp->dim;
 
    for(int i = 0; i < n1; ++i)
    {

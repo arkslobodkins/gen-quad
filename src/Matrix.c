@@ -59,7 +59,7 @@ void RMatVec(RMatrix M, Vector x, Vector y)
          y.id[i] += R_ELEM_ID(M, i, j) * x.id[j];
 }
 
-void RMatrixPrint(const RMatrix M)
+void RMatrixPrint(RMatrix M)
 {
    for(int i = 0; i < M.rows; ++i)
    {
@@ -107,7 +107,7 @@ void CMatrix_free(CMatrix M)
    if(M.cid != NULL) { free(M.cid); M.cid = NULL; }
 }
 
-void CMatrix_Assign(const CMatrix A, CMatrix B)
+void CMatrix_Assign(CMatrix A, CMatrix B)
 {
    assert(A.rows == B.rows);
    assert(A.cols == B.cols);
@@ -131,7 +131,7 @@ CMatrix CMatrix_Transpose(CMatrix A)
    return A_TR;
 }
 
-void CMatVec(const CMatrix M, const Vector x, Vector y)
+void CMatVec(CMatrix M, Vector x, Vector y)
 {
    assert(M.cols == x.len);
    assert(y.len == M.rows);
@@ -142,7 +142,7 @@ void CMatVec(const CMatrix M, const Vector x, Vector y)
          y.id[i] += C_ELEM_ID(M, i, j) * x.id[j];
 }
 
-void CMatrixPrint(const CMatrix M)
+void CMatrixPrint(CMatrix M)
 {
    for(int i = 0; i < M.rows; ++i)
    {

@@ -11,12 +11,17 @@
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <strings.h>
 #include <omp.h>
 
+static void TimesToScreen(DOMAIN_TYPE D, int deg, int dim, double total_time);
+static void TimesToFile(DOMAIN_TYPE D, int deg, int dim, double total_time);
+static bool checkIntervalParams(char **argv);
+static bool checkCubeParams(char **argv);
+static bool checkSimplexParams(char **argv);
+static bool checkCubeSimplexParams(char **argv);
+static bool checkSimplexSimplexParams(char **argv);
 static int is_int(const char *number);
 static int is_pos_int(int, char *);
-
 
 
 // Receives dimension sizes and degree of precision as command line arguments.
@@ -26,203 +31,56 @@ void QuadDriver(int argc, char **argv)
 {
    printf("\n");
 
-   const char *SHAPE;
-   int deg, dims[3];
-
-   if(argv[1] == NULL)
-   {
-      fprintf(stderr, "No input parameters specified, exiting program.\n\n");
+   if(argv[1] == NULL) {
+      fprintf(stderr, "No input parameters, exiting program.\n\n");
       exit(EXIT_FAILURE);
    }
-   else
-      SHAPE = argv[1];
 
+   const char *SHAPE = argv[1];
    DOMAIN_TYPE D;
-   if( strcasecmp("INTERVAL", SHAPE) == 0 )                D = INTERVAL;
-   else if( strcasecmp("CUBE", SHAPE) == 0 )               D = CUBE;
-   else if( strcasecmp("SIMPLEX", SHAPE) == 0 )            D = SIMPLEX;
-   else if( strcasecmp("CUBESIMPLEX", SHAPE) == 0 )        D = CUBESIMPLEX;
-   else if (strcasecmp("SIMPLEXSIMPLEX", SHAPE) == 0 )     D = SIMPLEXSIMPLEX;
-   else
-   {
+   if(!string_to_domain(SHAPE, &D)) {
       fprintf(stderr, "Domain is not specified properly. Acceptable parameters:\n"
             " 'INTERVAL', 'CUBE', 'SIMPLEX', 'CUBESIMPLEX', 'SIMPLEXSIMPLEX'.");
-
-      fprintf(stderr, "Exiting program.\n\n");
+      fprintf(stderr, "Invalid input, exiting program.\n\n");
       exit(EXIT_FAILURE);
    }
-
-   int test;
    switch(D)
    {
+   case(INTERVAL):
+      if(!checkIntervalParams(argv)) {
+         fprintf(stderr, "Invalid input, exiting program.\n\n");
+         exit(EXIT_FAILURE);
+      }
+      break;
 
-      case(INTERVAL):
-         if( argv[2] == NULL )
-         {
-            fprintf(stderr, "Not enough input parameters for %s, exiting program.\n\n", SHAPE);
-            exit(EXIT_FAILURE);
-         }
-         else
-         {
-            test = 1;
-            deg = atoi(argv[2]);
-            if( !is_pos_int(2, argv[2]) ) {
-               fprintf(stderr, "Degree of precision should be integer >= 1.\n");
-               test = 0;
-            }
-            if(test == 0)
-            { fprintf(stderr, "Exiting program.\n\n");
-               exit(EXIT_FAILURE);
-            }
-         }
-
-         if(argv[3] != NULL)
-         {
-            fprintf(stderr, "Received redundant parameters for %s, exiting program.\n\n", SHAPE);
-            exit(EXIT_FAILURE);
-         }
-         break;
-
-
-
-      case(CUBE):
-         if( (argv[2] == NULL) || (argv[3] == NULL) )
-         {
-            fprintf(stderr, "Not enough input parameters for %s, exiting program.\n\n", SHAPE);
-            exit(EXIT_FAILURE);
-         }
-         else
-         {
-            test = 1;
-            deg = atoi(argv[2]);
-            if( !is_pos_int(2, argv[2]) ) {
-               fprintf(stderr, "Degree of precision should be integer >= 1.\n");
-               test = 0;
-            }
-            if( !is_pos_int(3, argv[3]) || (atoi(argv[3]) < 2 ) ) {
-               fprintf(stderr, "Dimension for %s should be integer >= 2.\n", SHAPE);
-               test = 0;
-            }
-            if(test == 0) {
-               fprintf(stderr, "Exiting program.\n\n");
-               exit(EXIT_FAILURE);
-            }
-         }
-
-         if(argv[4] != NULL)
-         {
-            fprintf(stderr, "Received redundant parameters for %s, exiting program.\n\n", SHAPE);
-            exit(EXIT_FAILURE);
-         }
-         break;
-
-
-
-      case(SIMPLEX):
-         if( (argv[2] == NULL) || (argv[3] == NULL) )
-         {
-            fprintf(stderr, "Not enough input parameters for %s, exiting program.\n\n", SHAPE);
-            exit(EXIT_FAILURE);
-         }
-         else
-         {
-            deg = atoi(argv[2]);
-            test = 1;
-            if ( !is_pos_int(2, argv[2]) ) {
-               fprintf(stderr, "Degree of precision should be integer >= 1.\n");
-               test = 0;
-            }
-            if ( !is_pos_int(3, argv[3]) || (atoi(argv[3]) < 2) ) {
-               fprintf(stderr, "Dimension for %s should be integer >= 2.\n", SHAPE);
-               test = 0;
-            }
-            if(test == 0) {
-               fprintf(stderr, "Exiting program.\n\n");
-               exit(EXIT_FAILURE);
-            }
-         }
-
-         if(argv[4] != NULL)
-         {
-            fprintf(stderr, "Received redundant parameters for %s, exiting program.\n\n", SHAPE);
-               exit(EXIT_FAILURE);
-         }
-         break;
-
-
-
-      case(CUBESIMPLEX):
-         if( (argv[2] == NULL) || (argv[3] == NULL) || (argv[4] == NULL) )
-         {
-            fprintf(stderr, "Not enough input parameters for %s, exiting program.\n\n", SHAPE);
-            exit(EXIT_FAILURE);
-         }
-         else
-         {
-            deg = atoi(argv[2]);
-            test = 1;
-            if ( !is_pos_int(2, argv[2]) ) {
-               fprintf(stderr, "Degree of precision should be integer >= 1.\n");
-               test = 0;
-            }
-            if ( !is_pos_int(3, argv[3]) ) {
-               fprintf(stderr, "First dimension for %s should be integer >= 1.\n", SHAPE);
-               test = 0;
-            }
-            if ( !is_pos_int(4, argv[4]) || (atoi(argv[4]) < 2) ) {
-               fprintf(stderr, "Second dimension for %s should be integer >= 2.\n", SHAPE);
-               test = 0;
-            }
-            if(test == 0) {
-               fprintf(stderr, "Exiting program.\n\n");
-               exit(EXIT_FAILURE);
-            }
-         }
-         if(argv[5] != NULL)
-         {
-            fprintf(stderr, "Received redundant parameters for %s, exiting program.\n\n", SHAPE);
-               exit(EXIT_FAILURE);
-         }
-         break;
-
-
-      case(SIMPLEXSIMPLEX):
-         if( (argv[2] == NULL) || (argv[3] == NULL) || (argv[4] == NULL) )
-         {
-            fprintf(stderr, "Not enough input parameters for %s, exiting program.\n\n", SHAPE);
-            exit(EXIT_FAILURE);
-         }
-         else
-         {
-            deg = atoi(argv[2]);
-            test = 1;
-            if ( !is_pos_int(2, argv[2])) {
-               fprintf(stderr, "Degree of precision should be integer >= 1.\n");
-               test = 0;
-            }
-            if ( !is_pos_int(3, argv[3]) || (atoi(argv[3]) < 2) ) {
-               fprintf(stderr, "First dimension for %s should be integer >= 2.\n", SHAPE);
-               test = 0;
-            }
-            if ( !is_pos_int(4, argv[4]) || (atoi(argv[4]) < 2) ) {
-               fprintf(stderr, "Second dimension for %s should be integer >= 2.\n", SHAPE);
-               test = 0;
-            }
-            if(test == 0)
-            {
-               fprintf(stderr, "Exiting program.\n\n");
-               exit(EXIT_FAILURE);
-            }
-         }
-         if(argv[5] != NULL)
-         {
-            fprintf(stderr, "Received redundant parameters for %s, exiting program.\n\n", SHAPE);
-            exit(EXIT_FAILURE);
-         }
-         break;
+   case(CUBE):
+      if(!checkCubeParams(argv)) {
+         fprintf(stderr, "Invalid input, exiting program.\n\n");
+         exit(EXIT_FAILURE);
+      }
+      break;
+   case(SIMPLEX):
+      if(!checkSimplexParams(argv)) {
+         fprintf(stderr, "Invalid input, exiting program.\n\n");
+         exit(EXIT_FAILURE);
+      }
+      break;
+   case(CUBESIMPLEX):
+      if(!checkCubeSimplexParams(argv)) {
+         fprintf(stderr, "Invalid input, exiting program.\n\n");
+         exit(EXIT_FAILURE);
+      }
+      break;
+   case(SIMPLEXSIMPLEX):
+      if(!checkSimplexSimplexParams(argv)) {
+         printf("Invalid input, exiting program.\n\n");
+         exit(EXIT_FAILURE);
+      }
+      break;
    }
-
+   int deg = atoi(argv[2]);
    int counter = 0;
+   int dims[3]; dims[0] = 0; dims[1] = 0; dims[2] = 0;
    int i = 3;
    //convert inputs to dimension arguments
    while( (argv[i] != NULL) && (counter < 3) )
@@ -232,6 +90,7 @@ void QuadDriver(int argc, char **argv)
       ++counter;
    }
 
+
 #ifdef QUAD_DEBUG_ON
    printf("DEBUG MODE ON\n\n");
 #else
@@ -240,7 +99,6 @@ void QuadDriver(int argc, char **argv)
 #ifdef _OPENMP
    printf("OPENMP enanbled with %i threads\n\n", omp_get_max_threads());
 #endif
-
 
    double time_start_wall = get_cur_time();
    switch(D)
@@ -261,18 +119,185 @@ void QuadDriver(int argc, char **argv)
          ComputeSimplexSimplex(deg, dims[0], dims[1]);
          break;
    }
-   extern double LSQ_TIME;
-   printf("wall clock time for least squares routine in LeastSquaresNewton = %le\n", LSQ_TIME);
-   extern double JACOBIAN_TIME;
-   printf("wall clock time for GetJacobian routine = %le\n", JACOBIAN_TIME);
-   extern double FUNCTION_TIME;
-   printf("wall clock time for GetFunction routine = %le\n", FUNCTION_TIME);
-   extern double PREDICTOR_TIME;
-   printf("wall clock time for predictor routine = %le\n", PREDICTOR_TIME);
-
    double time_end_wall = get_cur_time();
-   printf("total wall clock time = %le\n", time_end_wall - time_start_wall);
+   double total_time = time_end_wall - time_start_wall;
+   int dim = dims[0]+dims[1]+dims[2];
+   TimesToScreen(D, deg, dim, total_time);
+   TimesToFile(D, deg, dim, total_time);
 
+}
+
+static void TimesToScreen(DOMAIN_TYPE D, int deg, int dim, double total_time)
+{
+   extern double LSQ_TIME;
+   extern double JACOBIAN_TIME;
+   extern double FUNCTION_TIME;
+   extern double PREDICTOR_TIME;
+   extern double CONSTR_TIME;
+   printf("wall clock time for least squares routine in LeastSquaresNewton = %le\n", LSQ_TIME);
+   printf("wall clock time for GetJacobian routine = %le\n", JACOBIAN_TIME);
+   printf("wall clock time for GetFunction routine = %le\n", FUNCTION_TIME);
+   printf("wall clock time for predictor routine = %le\n", PREDICTOR_TIME);
+   printf("wall clock time for constraints routines = %le\n", CONSTR_TIME);
+   printf("total wall clock time = %le\n", total_time);
+}
+
+static void TimesToFile(DOMAIN_TYPE D, int deg, int dim, double total_time)
+{
+   FILE *file;
+   char str[80];
+   const char *shape = get_domain_string(D);
+   sprintf(str, "../results/times_%s_dim%i_deg%i.txt", shape, dim, deg);
+   file = fopen(str, "w");
+
+   extern double LSQ_TIME;
+   extern double JACOBIAN_TIME;
+   extern double FUNCTION_TIME;
+   extern double PREDICTOR_TIME;
+   extern double CONSTR_TIME;
+   fprintf(file, "wall clock time for least squares routine in LeastSquaresNewton = %le\n", LSQ_TIME);
+   fprintf(file, "wall clock time for GetJacobian routine = %le\n", JACOBIAN_TIME);
+   fprintf(file, "wall clock time for GetFunction routine = %le\n", FUNCTION_TIME);
+   fprintf(file, "wall clock time for predictor routine = %le\n", PREDICTOR_TIME);
+   fprintf(file, "wall clock time for constraints routines = %le\n", CONSTR_TIME);
+   fprintf(file, "total wall clock time = %le\n", total_time);
+
+   fclose(file);
+}
+
+static bool checkIntervalParams(char **argv)
+{
+   if(argv[2] == NULL) {
+      fprintf(stderr, "Not enough input parameters for INTERVAL.\n");
+      return false;
+   }
+   else {
+      if( !is_pos_int(2, argv[2]) ) {
+         fprintf(stderr, "Degree of precision should be integer >= 1.\n");
+         return false;
+      }
+   }
+   if(argv[3] != NULL) {
+      fprintf(stderr, "Received redundant parameters for INTERVAL.\n");
+      return false;
+   }
+
+   return true;
+}
+
+
+static bool checkCubeParams(char **argv)
+{
+   if( (argv[2] == NULL) || (argv[3] == NULL) ) {
+      fprintf(stderr, "Not enough input parameters for CUBE.\n");
+      return false;
+   }
+   else {
+      int test = 1;
+      if( !is_pos_int(2, argv[2]) ) {
+         fprintf(stderr, "Degree of precision should be integer >= 1.\n");
+         test = 0;
+      }
+      if( !is_pos_int(3, argv[3]) || (atoi(argv[3]) < 2 ) ) {
+         fprintf(stderr, "Dimension for CUBE should be integer >= 2.\n");
+         test = 0;
+      }
+      if(test == 0) return false;
+   }
+   if(argv[4] != NULL) {
+      fprintf(stderr, "Received redundant parameters for CUBE.\n");
+      return false;
+   }
+
+   return true;
+}
+
+static bool checkSimplexParams(char **argv)
+{
+   if( (argv[2] == NULL) || (argv[3] == NULL) ) {
+      fprintf(stderr, "Not enough input parameters for SIMPLEX.\n");
+      return false;
+   }
+   else {
+      int test = 1;
+      if ( !is_pos_int(2, argv[2]) ) {
+         fprintf(stderr, "Degree of precision should be integer >= 1.\n");
+         test = 0;
+      }
+      if ( !is_pos_int(3, argv[3]) || (atoi(argv[3]) < 2) ) {
+         fprintf(stderr, "Dimension for SIMPLEX should be integer >= 2.\n");
+         test = 0;
+      }
+      if(test == 0) return false;
+   }
+   if(argv[4] != NULL) {
+      fprintf(stderr, "Received redundant parameters for SIMPLEX.\n");
+      return false;
+   }
+
+   return true;
+}
+
+static bool checkCubeSimplexParams(char **argv)
+{
+   if( (argv[2] == NULL) || (argv[3] == NULL) || (argv[4] == NULL) )
+   {
+      fprintf(stderr, "Not enough input parameters for CUBESIMPLEX.\n");
+      return false;
+   }
+   else
+   {
+      int test = 1;
+      if ( !is_pos_int(2, argv[2]) ) {
+         fprintf(stderr, "Degree of precision should be integer >= 1.\n");
+         test = 0;
+      }
+      if ( !is_pos_int(3, argv[3]) ) {
+         fprintf(stderr, "First dimension for CUBESIMPLEX should be integer >= 1.\n");
+         test = 0;
+      }
+      if ( !is_pos_int(4, argv[4]) || (atoi(argv[4]) < 2) ) {
+         fprintf(stderr, "Second dimension for CUBESIMPLEX should be integer >= 2.\n");
+         test = 0;
+      }
+      if(test == 0) return false;
+   }
+   if(argv[5] != NULL) {
+      fprintf(stderr, "Received redundant parameters for CUBESIMPLEX.\n");
+      return false;
+   }
+
+   return true;
+}
+
+static bool checkSimplexSimplexParams(char **argv)
+{
+   if( (argv[2] == NULL) || (argv[3] == NULL) || (argv[4] == NULL) ) {
+      fprintf(stderr, "Not enough input parameters for SIMPLEXSIMPLEX, exiting program.\n");
+      return false;
+   }
+   else {
+      int test = 1;
+      if ( !is_pos_int(2, argv[2])) {
+         fprintf(stderr, "Degree of precision should be integer >= 1.\n");
+         test = 0;
+      }
+      if ( !is_pos_int(3, argv[3]) || (atoi(argv[3]) < 2) ) {
+         fprintf(stderr, "First dimension for SIMPLEXSIMPLEX should be integer >= 2.\n");
+         test = 0;
+      }
+      if ( !is_pos_int(4, argv[4]) || (atoi(argv[4]) < 2) ) {
+         fprintf(stderr, "Second dimension for SIMPLEXSIMPLEX should be integer >= 2.\n");
+         test = 0;
+      }
+      if(test == 0) return false;
+   }
+   if(argv[5] != NULL) {
+      fprintf(stderr, "Received redundant parameters for SIMPLEXSIMPLEX.\n");
+      return false;
+   }
+
+   return true;
 }
 
 
