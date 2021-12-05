@@ -64,6 +64,7 @@ bool LeastSquaresNewton(LibraryType libType, const bool_enum CONSTR_OPT, const I
    ConstrVectData cVectData = ConstrVectDataInit();
 
    int (*leastsquares_ptr)(CMatrix A, Vector RHS_TO_X);
+   int (*getFunc_ptr)(quadrature *q, Vector f);
 #ifdef _OPENMP
    if(libType == LAPACK)      leastsquares_ptr = DGELS_LAPACK;
    else if(libType == PLASMA) leastsquares_ptr = DGELS_PLASMA;
@@ -76,7 +77,7 @@ bool LeastSquaresNewton(LibraryType libType, const bool_enum CONSTR_OPT, const I
 
    // return if input is a satisfactory quadrature
    {
-      GetFunction(basis, q_prev, RHS);
+      GetFunction(q_prev, RHS);
       double eNorm = V_ScaledTwoNorm(RHS);
       if( (eNorm < q_tol) && (QuadInConstraint(q_prev) == true) ) {
          SOL_FLAG = SOL_FOUND;
@@ -105,7 +106,7 @@ bool LeastSquaresNewton(LibraryType libType, const bool_enum CONSTR_OPT, const I
       }
 
       GetJacobian(basis, q_prev, JACOBIAN);
-      GetFunction(basis, q_prev, RHS);
+      GetFunction(q_prev, RHS);
       for(int i = 0; i < SMALL_DIM; ++i)        LEAST_SQ_SOL.id[i] = RHS.id[i];
       for(int i = SMALL_DIM; i < LEAD_DIM; ++i) LEAST_SQ_SOL.id[i] = 0.0;
 
@@ -117,7 +118,7 @@ bool LeastSquaresNewton(LibraryType libType, const bool_enum CONSTR_OPT, const I
          q_next->z.id[i] = q_prev->z.id[i] - LEAST_SQ_SOL.id[i];
 
       errorNormPrev = errorNorm;
-      GetFunction(basis, q_next, RHS);
+      GetFunction(q_next, RHS);
       errorNorm = V_ScaledTwoNorm(RHS);
       int check_values = CheckForFail(INFO, errorNorm, errorNormPrev, LEAST_SQ_SOL);
       if(check_values != GQ_SUCCESS) {
@@ -148,7 +149,7 @@ bool LeastSquaresNewton(LibraryType libType, const bool_enum CONSTR_OPT, const I
          }
       }
 
-      GetFunction(basis, q_next, RHS);
+      GetFunction(q_next, RHS);
       errorNormUpdate = V_ScaledTwoNorm(RHS);
 
       quadrature_assign(q_next, q_prev);

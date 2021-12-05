@@ -205,8 +205,7 @@ RMatrix PredictorLapack(quadrature *q, INT_8 *basis_indices, int *arrayIndex)
    const int n_cur     = q->num_nodes;
    const int nrows     = num_funcs;
    const int ncols     = (dim+1) * n_cur;
-
-//   if(ncols < nrows) return NULL;
+   assert(nrows <= ncols);
 
    CMatrix J = CMatrix_init(nrows, ncols);
    GetJacobian(basis_indices, q, J);
@@ -287,12 +286,10 @@ RMatrix PredictorPlasma(quadrature *q, INT_8 *basis_indices, int *arrayIndex)
    const int n_cur     = q->num_nodes;
    const int nrows     = num_funcs;
    const int ncols     = (dim+1) * n_cur;
-
-//   if(ncols < nrows) return NULL;
    int INFO;
+   assert(nrows <= ncols);
 
-   plasma_init(omp_get_max_threads());
-
+   plasma_init();
 
    CMatrix J = CMatrix_init(nrows, ncols);
    GetJacobian(basis_indices, q, J);

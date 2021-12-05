@@ -7,7 +7,10 @@
 extern "C" {
 #endif
 
-void GetFunction(const INT_8 *basisIndices, quadrature *q, Vector f);
+#ifdef _OPENMP
+void GetFunctionOmp(const INT_8 *basisIndices, quadrature *q, Vector f);
+#endif
+void GetFunction(quadrature *q, Vector f);
 
 #ifdef __cplusplus
 }

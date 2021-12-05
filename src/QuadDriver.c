@@ -185,7 +185,6 @@ static bool checkIntervalParams(char **argv)
    return true;
 }
 
-
 static bool checkCubeParams(char **argv)
 {
    if( (argv[2] == NULL) || (argv[3] == NULL) ) {
@@ -300,47 +299,33 @@ static bool checkSimplexSimplexParams(char **argv)
    return true;
 }
 
-
 static int is_int(const char *number)
 {
    int i;
    int neg = 0;
 
    //checking for negative numbers
-   if (number[0] == '-')
-   {
+   if (number[0] == '-') {
       i = 1;
       neg = 1;
 
-      for (i = 1; number[i] != 0; ++i)
-      {
-         if ( (number[i] > '9') || (number[i] < '0') )
-            if ( !isdigit(number[i]) )
-               return 0;
-      }
+      for(i = 1; number[i] != 0; ++i)
+         if(!isdigit(number[i]))
+            return 0;
    }
-   else
-   {
-      for (i = 0; number[i] != 0; ++i)
-      {
-         if ( (number[i] > '9') || (number[i] < '0') )
-            if ( !isdigit(number[i]) )
-               return 0;
-      }
+   else {
+      for(i = 0; number[i] != 0; ++i)
+         if(!isdigit(number[i]))
+            return 0;
    }
-
-   if(neg == 1)
-      return -1;
+   if(neg == 1) return -1;
 
    return 1;
 }
 
-
 static int is_pos_int(int index, char *number)
 {
-   if( (is_int(number) != 1) && (is_int(number) != -1) )
-      return 0;
-   else if( (is_int(number) == -1) || (atoi(number) == 0) )
+   if( (is_int(number) != 1) || (atoi(number) == 0) )
       return 0;
    return 1;
 }

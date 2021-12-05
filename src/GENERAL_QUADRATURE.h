@@ -1,10 +1,10 @@
 #ifndef GENERAL_QUADRATURE_H
 #define GENERAL_QUADRATURE_H
 
+// equip ourselves with fundamental types
 #include "Matrix.h"
 #include "Vector.h"
 #include "glist.h"
-
 #include <stdbool.h>
 #include <stdint.h>
 #include <math.h>
@@ -42,7 +42,7 @@ extern "C" {
 #define QUAD_HUGE 10.0
 #define INT_8 int_fast8_t
 #define CLOSE_TO_ZERO POW_DOUBLE(10, -18)
-#define QUAD_TOL  POW_DOUBLE(10.0, -15)
+#define QUAD_TOL  POW_DOUBLE(10.0, -14)
 #define BOUND_TOL POW_DOUBLE(10.0, -12)
 #define BOUND_CORRECTION POW_DOUBLE(10.0, -14)
 #define POW_DOUBLE(x,y) pow(x,y)
@@ -70,6 +70,13 @@ typedef int GQ_BOOL;
 char *get_domain_string(DOMAIN_TYPE D);
 bool string_to_domain(const char *shape, DOMAIN_TYPE *D);
 int IntPower(int x, int power);
+double DoubleIntPower(double x, int power);
+int factorial(int n);
+int binomial(int k, int n);
+long double expIntegral1D(long double c);
+double expNDimCube(int dim, double c[], double x[]);
+double expIntegralNDimCube(int dim, double c[]);
+double expIntegralNDimSimplex(int dim);
 #ifdef _OPENMP
 GQ_BOOL OMP_CONDITION(int deg, int dim);
 #endif
@@ -173,6 +180,8 @@ struct quadrature
    double *x;
    Vector z;
    constraints *constr;
+   struct Basis *basis;
+   struct Basis **basisOmp;
 
    int isFullyInitialized;
    SetFuncs setFuncs; // Function that sets up all domain functions to point to appropriate domain

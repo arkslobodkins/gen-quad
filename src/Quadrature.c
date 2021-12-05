@@ -5,6 +5,7 @@
 
 #include "Quadrature.h"
 
+#include "Basis.h"
 #include "BasisIndices.h"
 #include "BasisFunctions.h"
 #include "BasisIntegrals.h"
@@ -14,6 +15,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <string.h>
+#include <omp.h>
 
 
 static inline int GetNumDims(DOMAIN_TYPE D);
@@ -107,6 +109,8 @@ quadrature *quadrature_init_basic(int n, int dim, int *dims, int deg, DOMAIN_TYP
    q->constr_realloc   = NULL;
    q->get_constr       = NULL;
    q->constr_free      = NULL;
+   q->basis            = NULL;
+   q->basisOmp         = NULL;
    q->free_ptr = &quadrature_free_basic;
 
    q->isFullyInitialized = GQ_FALSE;
@@ -122,8 +126,8 @@ quadrature *quadrature_init_full(int n, int dim, int *dims, int deg, DOMAIN_TYPE
    q->setFuncs(q);
    q->constr = q->constr_init(q->dims);
    q->get_constr(q->constr);
-   q->isFullyInitialized = GQ_TRUE;
    q->free_ptr = &quadrature_free_full;
+   q->isFullyInitialized = GQ_TRUE;
 
    return q;
 }
@@ -322,6 +326,7 @@ static void quadrature_free_full(quadrature *q)
    if(q->dims != NULL) { free(q->dims); q->dims = NULL; }
    if(q->isFullyInitialized) q->constr_free(q->constr);
    if(q->dims != NULL) { free(q->dims); q->dims = NULL; }
+   if(q->basis != NULL) { BasisFree(q->basis); q->basis = NULL;}
    free(q); q = NULL;
 }
 
@@ -332,19 +337,16 @@ bool QuadOnTheBoundary(const quadrature *q, int elem)
       PRINT_ERR("constraints have not been initialized", __LINE__, __FILE__);
       return false;
    }
-   int dim = q->dim;
-   int node_index = elem*dim;
+   int node_loc = elem*q->dim;
    Vector b = q->constr->b;
    RMatrix A = q->constr->M;
-   int rows = A.rows;
-   int cols = A.cols;
-   double tol = pow(10, -12);
+   double tol = POW_DOUBLE(10.0, -12);
 
-   for(int i = 0; i < rows; ++i)
+   for(int i = 0; i < A.rows; ++i)
    {
       double b_elem = 0.0;
-      for(int d = 0; d < cols; ++d)
-         b_elem += A.rid[i][d] * q->x[node_index+d];
+      for(int d = 0; d < A.cols; ++d)
+         b_elem += A.rid[i][d] * q->x[node_loc+d];
 
       if( fabs(b_elem - b.id[i]) <= tol )
          return true;
@@ -353,6 +355,12 @@ bool QuadOnTheBoundary(const quadrature *q, int elem)
    return false;
 }
 
+void QuadBasisOmp(quadrature *q)
+{
+   q->basisOmp = (Basis **)malloc(sizeof(Basis*)*omp_get_max_threads());
+   for(int i = 0; i < omp_get_max_threads(); ++i)
+      q->basisOmp[i] = BasisInit(q->basis->params, q->basis->interface);
+}
 
 bool QuadInDomain(const quadrature *q)
 {
@@ -493,7 +501,6 @@ double QuadTestIntegral(const quadrature *q)
    return res;
 }
 
-
 double QuadTestIntegralMonomial(const quadrature *q)
 {
    if(q->constr == NULL) {
@@ -535,6 +542,47 @@ double QuadTestIntegralMonomial(const quadrature *q)
    Vector_free(orth_basis);
    Vector_free(res_arr);
    free(basis_id);
+   return res;
+}
+
+
+double QuadTestIntegralExpCube(const quadrature *q)
+{
+   int k = q->num_nodes;
+   int dim = q->dim;
+   double *x = q->x;
+   double *w = q->w;
+
+   double c[dim];
+   double IQuad = 0.0;
+   for(int i = 0; i < dim; ++i) c[i] = 1.L;
+
+   double IExact = expIntegralNDimCube(dim, c);
+   for(int i = 0; i < k; ++i)
+      IQuad += expNDimCube(dim, c, &x[dim*i]) * w[i];
+
+   double res = IQuad > IExact ? IQuad - IExact : IExact - IQuad;
+
+   return res;
+}
+
+double QuadTestIntegralExpSimplex(const quadrature *q)
+{
+   int k = q->num_nodes;
+   int dim = q->dim;
+   double *x = q->x;
+   double *w = q->w;
+
+   double c[dim];
+   double IQuad = 0.0;
+   for(int i = 0; i < dim; ++i) c[i] = 1.0;
+
+   double IExact = expIntegralNDimSimplex(dim);
+   for(int i = 0; i < k; ++i)
+      IQuad += expNDimCube(dim, c, &x[dim*i]) * w[i];
+
+   double res = IQuad > IExact ? IQuad - IExact : IExact - IQuad;
+
    return res;
 }
 
@@ -590,6 +638,14 @@ static void SetCubeFuncs(quadrature *q)
    q->constr_realloc   = &constraints_cube_realloc;
    q->get_constr       = &get_constraints_cube;
    q->constr_free      = &constraints_cube_free;
+
+   CubeParams cubeParams;
+   cubeParams.deg = q->deg;
+   cubeParams.dim = q->dim;
+   CubeParams *params = &cubeParams;
+   BasisInterface interface = SetCubeBasisInterface();
+   Basis *cube = BasisInit((void *)params, &interface);
+   q->basis = cube;
 }
 
 
@@ -603,6 +659,14 @@ static void SetSimplexFuncs(quadrature *q)
    q->constr_realloc   = &constraints_simplex_realloc;
    q->get_constr       = &get_constraints_simplex;
    q->constr_free      = &constraints_simplex_free;
+
+   SimplexParams simplexParams;
+   simplexParams.deg = q->deg;
+   simplexParams.dim = q->dim;
+   SimplexParams *params = &simplexParams;
+   BasisInterface interface = SetSimplexBasisInterface();
+   Basis *simplex = BasisInit((void *)params, &interface);
+   q->basis = simplex;
 }
 
 
@@ -616,6 +680,15 @@ static void SetCubeSimplexFuncs(quadrature *q)
    q->constr_realloc   = &constraints_cubesimplex_realloc;
    q->get_constr       = &get_constraints_cubesimplex;
    q->constr_free      = &constraints_cubesimplex_free;
+
+   CubeSimplexParams csParams;
+   csParams.deg = q->deg;
+   csParams.dims[0] = q->dims[0];
+   csParams.dims[1] = q->dims[1];
+   CubeSimplexParams *params = &csParams;
+   BasisInterface interface = SetCubeSimplexBasisInterface();
+   Basis *cubesimplex = BasisInit((void *)params, &interface);
+   q->basis = cubesimplex;
 }
 
 
@@ -629,6 +702,15 @@ static void SetSimplexSimplexFuncs(quadrature *q)
    q->constr_realloc   = &constraints_simplexsimplex_realloc;
    q->get_constr       = &get_constraints_simplexsimplex;
    q->constr_free      = &constraints_simplexsimplex_free;
+
+   SimplexSimplexParams ssParams;
+   ssParams.deg = q->deg;
+   ssParams.dims[0] = q->dims[0];
+   ssParams.dims[1] = q->dims[1];
+   SimplexSimplexParams *params = &ssParams;
+   BasisInterface interface = SetSimplexSimplexBasisInterface();
+   Basis *simplexsimplex = BasisInit((void *)params, &interface);
+   q->basis = simplexsimplex;
 }
 
 

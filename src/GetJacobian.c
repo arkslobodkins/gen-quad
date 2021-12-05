@@ -49,6 +49,7 @@ void GetJacobian(const INT_8 *basisIndices, quadrature *q, CMatrix JACOBIAN)
       INT_8 *basisIndCopy   = (INT_8 *)malloc(dim*q->num_funcs*sizeof(INT_8));
       memcpy(basisIndCopy, basisIndices, dim*q->num_funcs*sizeof(INT_8));
 
+
       #ifdef _OPENMP
       #pragma omp for schedule(static)
       #endif

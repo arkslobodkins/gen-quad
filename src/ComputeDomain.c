@@ -102,6 +102,8 @@ void ComputeCube(int deg, int dim)
 
    double res = QuadTestIntegralMonomial(q_new);
    printf("Monomial residual = %.16e\n\n", res);
+   res = QuadTestIntegralExpCube(q_new);
+   printf("Exponential residual = %.16e\n\n", res);
 
    HistoryToFile(q_new, dim-1, hist_cube);
    QuadratureToFile(q_new);
@@ -132,7 +134,7 @@ void ComputeSimplex(int deg, int dim)
    assert(deg > 0);
    assert(dim > 1);
 
-   orthogonal_simplex_basis_test(deg, dim);
+//   orthogonal_simplex_basis_test(deg, dim);
 
    MAX_DIM = dim;
    history **hist_simplex = (history **)malloc((dim-1)*sizeof(history *));
@@ -148,6 +150,11 @@ void ComputeSimplex(int deg, int dim)
    quadrature *q_gauss = quadrature_init_basic(n2, 1,  d_gauss, 2*n2-1, INTERVAL);
    Jacobi(q_gauss->num_nodes, p1, p2, q_gauss->x, q_gauss->w);
    quadrature *q_new = ComputeSimplexNext(deg, 1, dim, q_gauss, 0, hist_simplex);
+
+   double res = QuadTestIntegral(q_new);
+   printf("Monomial residual = %.16e\n\n", res);
+   res = QuadTestIntegralExpSimplex(q_new);
+   printf("Exponential residual = %.16e\n\n", res);
 
    HistoryToFile(q_new, dim-1, hist_simplex);
    QuadratureToFile(q_new);

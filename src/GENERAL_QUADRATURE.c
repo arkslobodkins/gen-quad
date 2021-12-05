@@ -1,5 +1,6 @@
 #include "GENERAL_QUADRATURE.h"
 #include <strings.h>
+#include <assert.h>
 
 char *get_domain_string(DOMAIN_TYPE D)
 {
@@ -39,6 +40,64 @@ int IntPower(int x, int power)
       result *= x;
 
    return result;
+}
+
+double DoubleIntPower(double x, int power)
+{
+   double result = 1.0;
+   for(int i = 0; i < power; ++i)
+      result *= x;
+
+   return result;
+}
+
+int factorial(int n)
+{
+    if (n == 0) return 1;
+    return n * factorial(n - 1);
+}
+
+int binomial(int k, int n)
+{
+   return factorial(n)/(factorial(k)*factorial(n-k));
+}
+
+long double expIntegral1D(long double c)
+{
+   return 1.0L/c * (expl(c)-1.0L);
+}
+
+double expNDimCube(int dim, double c[], double x[])
+{
+   double expVal = 1.0;
+   for(int i = 0; i < dim; ++i)
+      expVal *= expl(c[i]*x[i]);
+
+   return expVal;
+}
+
+double expIntegralNDimCube(int dim, double c[])
+{
+   double expI = 1.0;
+   for(int i = 0; i < dim; ++i)
+      expI *= expIntegral1D(c[i]);
+
+   return expI;
+}
+
+double expIntegralNDimSimplex(int dim)
+{
+   assert(dim >= 2);
+
+   double expI = 0.0;
+   double sign = 1.0;
+   for(int i = dim; i >= 0; --i) {
+      expI += (double)binomial(i, dim)*expl(i)*sign;
+      sign *= -1.0;
+   }
+   expI /= factorial(dim);
+
+   return expI;
 }
 
 #ifdef _OPENMP

@@ -1,5 +1,5 @@
 gen-quad is a package that computes efficient quadrature rules of moderate and high  
-accuracy for various polyhedral domains. Dimensions of interest lie in the range 2-6,  
+accuracy for various polytopes. Dimensions of interest lie in the range 2-6,  
 but one can go to higher dimensions. Theoretically, the algorithm can compute quadrature  
 rules of arbitrarily high degree and dimension. In practice, it is limited to available  
 memory resources and adequate runtime.  
@@ -15,11 +15,14 @@ All domains (except INTERVAL) are computed using a node elimination algorithm in
 with recursive procedures. The node elimination is an iterative technique, which accepts initial  
 quadrature rule as a guess and eliminates as many nodes as possible, thereby obtaining more   
 efficient quadrature rule. Due to high computational complexity of the algorithm, runtime increases   
-rapidly with the increase in degree of accuracy and dimension. Parallel implementation is a work in progress.  
+rapidly with the increase in degree of accuracy and dimension. To address that, it has been parallelized 
+using OpenMP. 
   
   
 Use instructions:  
-Requires at least C99 or C++98 or more recent, as well as BLAS and LAPACK libraries.  
+Requires at least C99 or C++98 or more recent, as well as BLAS and LAPACK libraries. It also
+requires availability of LAPACKE interface to support initialization PLASMA routines. PLASMA 
+library has been compiled and statically linked, therefore it does not need to be installed.  
 Has been tested with gcc and g++ on multiple Linux platforms.  
 Makefile contains instructions for enabling/disabling debugging mode.  
   

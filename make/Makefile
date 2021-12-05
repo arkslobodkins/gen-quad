@@ -1,5 +1,5 @@
-CC = gcc
-VERSION = -std=c99
+CC = g++
+VERSION = -std=c++98
 
 #uncomment "-DQUAD_DEBUG_OFF"   to disable debug mode
 #uncomment "-NDEBUG"            to disable assert statements

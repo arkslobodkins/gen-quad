@@ -82,7 +82,7 @@ int DGELS_PLASMA(CMatrix A, Vector RHS_TO_X)
    int LDA = A.rows;
    int LEAD_DIM = MAX(A.rows, A.cols);
 
-   plasma_init(omp_get_max_threads());
+   plasma_init();
    plasma_desc_t T;
    int INFO = plasma_dgels(PlasmaNoTrans,
                            A.rows, A.cols, NRHS,
