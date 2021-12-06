@@ -23,6 +23,10 @@ void quadrature_get_elem(const quadrature *q, int i, Vector v);
 void vector_to_quadrature(const Vector v, quadrature quad);
 void quadrature_free(quadrature *quad);
 
+#ifdef _OPENMP
+void QuadAllocBasisOmp(quadrature *q, int num_threads);
+void QuadFreeBasisOmp(quadrature *q, int num_threads);
+#endif
 bool QuadInDomain(const quadrature *q);
 bool QuadInDomainElem(const quadrature *q, int elem);
 bool QuadPosWeights(const quadrature *q);
@@ -32,8 +36,7 @@ bool QuadInConstraintElem(const quadrature *quad, int elem);
 bool QuadOnTheBoundary(const quadrature *q, int elem);
 bool QuadEqnOnTheBoundary(const quadrature *q, int elem, int eqn);
 
-double QuadTestIntegral(const quadrature *q);
-double QuadTestIntegralMonomial(const quadrature *q);
+double QuadTestIntegral(const quadrature *q, BASIS_TYPE btype);
 double QuadTestIntegralExp(const quadrature *q);
 
 #ifdef __cplusplus

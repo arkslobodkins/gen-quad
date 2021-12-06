@@ -15,6 +15,7 @@
 #include "get_time.h"
 #include "LINALG.h"
 #include "Basis.h"
+#include <omp.h>
 
 #include <stdlib.h>
 #include <string.h>
@@ -66,11 +67,12 @@ bool LeastSquaresNewton(const bool_enum CONSTR_OPT, quadrature *q_orig, int *its
    void (*getFunc_ptr)(quadrature *q, Vector f);
    void (*getJacobian_ptr)(quadrature *q, CMatrix JACOBIAN);
 #ifdef _OPENMP
-   AllocBasisOmpData(q_prev->basis);
-   AllocBasisOmpData(q_next->basis);
+   QuadAllocBasisOmp(q_next, omp_get_max_threads());
+   QuadAllocBasisOmp(q_prev, omp_get_max_threads());
    AllocVectorOmpData(&RHS);
    getFunc_ptr      = &GetFunctionOmp;
    getJacobian_ptr  = &GetJacobianOmp;
+   int deg = q_orig->deg;
    if(OMP_CONDITION(deg, dim)) leastsquares_ptr = DGELS_PLASMA;
    else                        leastsquares_ptr = DGELS_LAPACK;
 #else
@@ -176,8 +178,8 @@ bool LeastSquaresNewton(const bool_enum CONSTR_OPT, quadrature *q_orig, int *its
 
 FREERETURN:
 #ifdef _OPENMP
-   FreeBasisOmpData(q_prev->basis);
-   FreeBasisOmpData(q_next->basis);
+   QuadFreeBasisOmp(q_next, omp_get_max_threads());
+   QuadFreeBasisOmp(q_prev, omp_get_max_threads());
    FreeVectorOmpData(RHS);
 #endif
    CMatrix_free(JACOBIAN);

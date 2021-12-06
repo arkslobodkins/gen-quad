@@ -20,7 +20,7 @@ double FUNCTION_TIME = 0.0;
 #ifdef _OPENMP
 void GetFunctionOmp(quadrature *q, Vector f)
 {
-   assert(f.len = q->num_funcs);
+   assert(f.len = q->basis->numFuncs);
    double time_start = get_cur_time();
 
    int dim   = q->dim;
@@ -34,17 +34,18 @@ void GetFunctionOmp(quadrature *q, Vector f)
    int dims[num_dims];
    memcpy(dims, q->dims, num_dims*sizeof(int));
 
-   Basis *basis = q->basis;
-   BasisIntegrals(basis, basis->basis_integrals);
+   Basis **basis = q->basisOmp;
+   BasisIntegrals(basis[0], basis[0]->integrals);
    for(int i = 0; i < len; ++i)
-      f.id[i] = -1.0 * basis->basis_integrals.id[i];
+      f.id[i] = -1.0 * basis[0]->integrals.id[i];
 
    int omp_condition = OMP_CONDITION(deg, dim);
    #pragma omp parallel if(omp_condition) default(shared) num_threads(omp_get_max_threads())
    {
       double *fLoc = f.ompId[omp_get_thread_num()];
       memset(fLoc, 0, SIZE_DOUBLE(len));
-      Vector basisFuncsLoc = basis->basisOmpData.basis_funcs_omp[omp_get_thread_num()];
+      Basis *basisLoc = basis[omp_get_thread_num()];
+      Vector basisFuncsLoc = basisLoc->functions;
 
       #pragma omp for schedule(static)
       for(int j = 0; j < nodes; ++j)
@@ -53,7 +54,7 @@ void GetFunctionOmp(quadrature *q, Vector f)
          for(int i = 0; i < dim; ++i)
             curNode[i] = x[dim*j+i];
 
-         BasisFuncs(basis, curNode, basisFuncsLoc);
+         BasisFuncs(basisLoc, curNode, basisFuncsLoc);
          for(int i = 0; i < len; ++i)
             fLoc[i] += basisFuncsLoc.id[i] * w[j];
       }
@@ -76,23 +77,23 @@ void GetFunction(quadrature *q, Vector f)
    int nodes = q->num_nodes;
    const double *w = q->w;
    const double *x = q->x;
-   Vector basis_funcs = q->basis->basis_funcs;
-   Vector basis_integrals = q->basis->basis_integrals;
+   Vector functions = q->basis->functions;
+   Vector integrals = q->basis->integrals;
 
    int num_dims = q->num_dims;
    int dims[num_dims];
    memcpy(dims, q->dims, num_dims*sizeof(int));
 
-   BasisIntegrals(q->basis, basis_integrals);
-   for(int i = 0; i < basis_integrals.len; ++i)
-      f.id[i] = -1.0 * basis_integrals.id[i];
+   BasisIntegrals(q->basis, integrals);
+   for(int i = 0; i < integrals.len; ++i)
+      f.id[i] = -1.0 * integrals.id[i];
 
    for(int j = 0; j < nodes; ++j)
    {
       const double *curNode = &x[dim*j];
-      BasisFuncs(q->basis, curNode, basis_funcs);
-      for(int i = 0; i < basis_funcs.len; ++i)
-         f.id[i] += basis_funcs.id[i] * w[j];
+      BasisFuncs(q->basis, curNode, functions);
+      for(int i = 0; i < functions.len; ++i)
+         f.id[i] += functions.id[i] * w[j];
    }
    FUNCTION_TIME += get_cur_time() - time_start;
 }

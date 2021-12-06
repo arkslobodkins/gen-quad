@@ -101,7 +101,7 @@ void ComputeCube(int deg, int dim)
       hist_save_end(q_new, hist_cube[d-2]);
    }
 
-   double res = QuadTestIntegralMonomial(q_new);
+   double res = QuadTestIntegral(q_new, monomial);
    printf("Monomial basis residual = %.16e\n", res);
    res = QuadTestIntegralExp(q_new);
    printf("Exponential residual = %.16e\n\n", res);
@@ -146,7 +146,7 @@ void ComputeSimplex(int deg, int dim)
    Jacobi(q_gauss->num_nodes, p1, p2, q_gauss->x, q_gauss->w);
    quadrature *q_new = ComputeSimplexNext(deg, 1, dim, q_gauss, 0, hist_simplex);
 
-   double res = QuadTestIntegralMonomial(q_new);
+   double res = QuadTestIntegral(q_new, monomial);
    printf("Monomial basis residual = %.16e\n", res);
    res = QuadTestIntegralExp(q_new);
    printf("Exponential residual = %.16e\n\n", res);
@@ -281,7 +281,7 @@ void ComputeCubeSimplex(int deg, int dim1, int dim2)
       }
    }
 
-   double res = QuadTestIntegralMonomial(q_new_cs);
+   double res = QuadTestIntegral(q_new_cs, monomial);
    printf("Monomial basis residual = %.16e\n", res);
    res = QuadTestIntegralExp(q_new_cs);
    printf("Exponential residual = %.16e\n\n", res);
@@ -357,7 +357,7 @@ void ComputeSimplexSimplex(int deg, int dim1, int dim2)
    NodeElimination(q_init_ss, q_new_ss, hist_ss[hist_dims-1]);
    hist_save_end(q_new_ss, hist_ss[hist_dims-1]);
 
-   double res = QuadTestIntegralMonomial(q_new_ss);
+   double res = QuadTestIntegral(q_new_ss, monomial);
    printf("Monomial basis residual = %.16e\n", res);
    res = QuadTestIntegralExp(q_new_ss);
    printf("Exponential residual = %.16e\n\n", res);
@@ -456,7 +456,7 @@ static void hist_save_start(quadrature *q, history *hist)
 static void hist_save_end(quadrature *q, history *hist)
 {
    hist->nodes_final = q->num_nodes;
-   hist->res = QuadTestIntegral(q);
+   hist->res = QuadTestIntegral(q, orthogonal);
 }
 
 

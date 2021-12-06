@@ -36,20 +36,21 @@ void GetJacobianOmp(quadrature *q, CMatrix JACOBIAN)
    memcpy(dims, q->dims, num_dims*sizeof(int));
 
    int omp_condition = OMP_CONDITION(deg, dim);
-   Basis *basis = q->basis;
+   Basis **basis = q->basisOmp;
 
    #pragma omp parallel default(shared) if(omp_condition) num_threads(omp_get_max_threads())
    {
-      Vector basisFuncsLoc = basis->basisOmpData.basis_funcs_omp[omp_get_thread_num()];
-      Vector basisDerLoc   = basis->basisOmpData.basis_der_omp[omp_get_thread_num()];
+      Basis *basisLoc = basis[omp_get_thread_num()];
+      Vector basisFuncsLoc = basisLoc->functions;
+      Vector basisDerLoc   = basisLoc->derivatives;
       #pragma omp for schedule(static)
       for(int j = 0; j < cols; ++j) {
          double curNode[dim];
          for(int i = 0; i < dim; ++i)
             curNode[i] = x[dim*j+i];
 
-         BasisFuncs(basis, curNode, basisFuncsLoc);
-         BasisDer(basis, curNode, basisDerLoc);
+         BasisFuncs(basisLoc, curNode, basisFuncsLoc);
+         BasisDer(basisLoc, curNode, basisDerLoc);
          for(int i = 0; i < rows; ++i) {
             JACOBIAN.cid[j][i] = basisFuncsLoc.id[i];
             for(int d = 0; d < dim; ++d)
@@ -73,18 +74,18 @@ void GetJacobian(quadrature *q, CMatrix JACOBIAN)
    const double *x = q->x;
 
    Basis *basis       = q->basis;
-   Vector basis_funcs = basis->basis_funcs;
-   Vector basis_der   = basis->basis_der;
+   Vector functions = basis->functions;
+   Vector derivatives   = basis->derivatives;
    for(int j = 0; j < cols; ++j)
    {
       const double *curNode = &x[dim*j];
-      BasisFuncs(basis, curNode, basis_funcs);
-      BasisDer(basis, curNode, basis_der);
+      BasisFuncs(basis, curNode, functions);
+      BasisDer(basis, curNode, derivatives);
 
       for(int i = 0; i < rows; ++i) {
-         JACOBIAN.cid[j][i] = basis_funcs.id[i];
+         JACOBIAN.cid[j][i] = functions.id[i];
          for(int d = 0; d < dim; ++d)
-            JACOBIAN.cid[j*dim+cols+d][i] = basis_der.id[d*rows+i] * w[j];
+            JACOBIAN.cid[j*dim+cols+d][i] = derivatives.id[d*rows+i] * w[j];
       }
    }
 

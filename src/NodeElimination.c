@@ -60,6 +60,7 @@ void NodeElimination(const quadrature *q_initial, quadrature *q_final, history *
 
    RMatrix(*Predictor_Ptr)(quadrature *, int *);
 #ifdef _OPENMP
+   int deg = q_initial->deg;
    int omp_condition = OMP_CONDITION(deg, dim);
    if(omp_condition) Predictor_Ptr = &PredictorPlasma;
    else              Predictor_Ptr = &PredictorLapack;
@@ -73,8 +74,8 @@ void NodeElimination(const quadrature *q_initial, quadrature *q_final, history *
    // test accuracy of the initial quadrature
    // if residual is too large, attempt to find quadrature using Newton's method.
    // if Newton's method finds a solution, proceed to Node elimination, otherwise return.
-   double res = QuadTestIntegral(q_initial);
-   PrintDouble(res, "initial basis residual in NodeElimination");
+   double res = QuadTestIntegral(q_initial, orthogonal);
+   PrintDouble(res, "initial orthogonal basis residual in NodeElimination");
    if(fabs(res) > tol)
    {
       bool SOL_FLAG = LeastSquaresNewton(ON, q_temp, 0);
@@ -169,8 +170,8 @@ FREERETURN:
    // save nodes and weights
    q_final->num_nodes = n_cur;
    quadrature_assign(q_new, q_final);
-   res = QuadTestIntegral(q_final);
-   PrintDouble(res, "Final basis residual in NodeElimination"); printf("\n");
+   res = QuadTestIntegral(q_final, orthogonal);
+   PrintDouble(res, "Final orthogonal basis residual in NodeElimination"); printf("\n");
 
    FreeMemory(q_temp, q_new);
 }// end NodeElimination

@@ -1,10 +1,8 @@
 #ifndef GENERAL_QUADRATURE_H
 #define GENERAL_QUADRATURE_H
 
-// equip ourselves with fundamental types
 #include "Matrix.h"
 #include "Vector.h"
-#include "glist.h"
 #include <stdbool.h>
 #include <stdint.h>
 #include <math.h>
@@ -48,7 +46,7 @@ typedef int GQ_BOOL;
 #define SIZE_DOUBLE(x) ((x)*sizeof(double))
 
 typedef enum { ON, OFF } bool_enum;
-typedef enum { orthogonal, monomial } basis_type;
+typedef enum { orthogonal, monomial } BASIS_TYPE;
 typedef enum { INTERVAL, CUBE, SIMPLEX, CUBESIMPLEX, SIMPLEXSIMPLEX } DOMAIN_TYPE;
 typedef enum { NODE, WEIGHT, NONE } NODE_OR_WEIGHT;
 
@@ -136,6 +134,7 @@ struct quadrature
    Vector z;
    constraints *constr;
    struct Basis *basis;
+   struct Basis **basisOmp;
 
    int isFullyInitialized;
    SetFuncs setFuncs;

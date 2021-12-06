@@ -94,6 +94,7 @@ quadrature *quadrature_init_basic(int n, int dim, int *dims, int deg, DOMAIN_TYP
    q->get_constr       = NULL;
    q->constr_free      = NULL;
    q->basis            = NULL;
+   q->basisOmp         = NULL;
    q->expIntegralExact = NULL;
    q->free_ptr = &quadrature_free_basic;
    q->isFullyInitialized = GQ_FALSE;
@@ -311,6 +312,26 @@ static void quadrature_free_full(quadrature *q)
 }
 
 
+void QuadAllocBasisOmp(quadrature *q, int num_threads)
+{
+   if(q->isFullyInitialized == GQ_FALSE) {
+      PRINT_ERR(STR_QUAD_NOT_FULL_INIT, __LINE__, __FILE__);
+      return;
+   }
+   q->basisOmp = (Basis **)malloc(num_threads*sizeof(Basis *));
+   for(int i = 0; i < num_threads; ++i)
+      q->basisOmp[i] = BasisInit(q->basis->params, q->basis->interface);
+}
+
+
+void QuadFreeBasisOmp(quadrature *q, int num_threads)
+{
+   for(int i = 0; i < num_threads; ++i)
+      BasisFree(q->basisOmp[i]);
+   free(q->basisOmp); q->basisOmp = NULL;
+}
+
+
 bool QuadOnTheBoundary(const quadrature *q, int elem)
 {
    if(q->isFullyInitialized == GQ_FALSE) {
@@ -425,7 +446,7 @@ bool QuadInConstraintElem(const quadrature *q, int elem)
 }
 
 
-double QuadTestIntegral(const quadrature *q)
+double QuadTestIntegral(const quadrature *q, BASIS_TYPE btype)
 {
    if(q->isFullyInitialized == GQ_FALSE) {
       PRINT_ERR(STR_QUAD_NOT_FULL_INIT, __LINE__, __FILE__);
@@ -439,18 +460,27 @@ double QuadTestIntegral(const quadrature *q)
 
    Vector IQuad   = Vector_init(numFuncs);
    Vector res_arr = Vector_init(numFuncs);
-   Vector basis_integrals = q->basis->basis_integrals;
-   BasisIntegrals(q->basis, basis_integrals);
-   Vector basis_funcs = q->basis->basis_funcs;
+   Vector integrals = q->basis->integrals;
+   BasisFuncsPtr basisPtr;
+   switch(btype)
+   {
+      case orthogonal:
+         BasisIntegrals(q->basis, integrals);
+         basisPtr = &BasisFuncs;
+      case monomial:
+         BasisIntegralsMonomial(q->basis, integrals);
+         basisPtr = &BasisMonomial;
+   }
+   Vector functions = q->basis->functions;
 
    for(int i = 0; i < k; ++i)
    {
-      BasisFuncs(q->basis, &x[dim*i], basis_funcs);
+      basisPtr(q->basis, &x[dim*i], functions);
       for(int j = 0; j < numFuncs; ++j)
-         IQuad.id[j] += basis_funcs.id[j] * w[i];
+         IQuad.id[j] += functions.id[j] * w[i];
    }
 
-   for(int j = 0; j < numFuncs; ++j) res_arr.id[j] = fabs(IQuad.id[j]-basis_integrals.id[j]);
+   for(int j = 0; j < numFuncs; ++j) res_arr.id[j] = fabs(IQuad.id[j]-integrals.id[j]);
    double res = V_ScaledTwoNorm(res_arr);
 
    Vector_free(IQuad);
@@ -458,38 +488,6 @@ double QuadTestIntegral(const quadrature *q)
    return res;
 }
 
-
-double QuadTestIntegralMonomial(const quadrature *q)
-{
-   if(q->isFullyInitialized == GQ_FALSE) {
-      PRINT_ERR(STR_QUAD_NOT_FULL_INIT, __LINE__, __FILE__);
-      return NAN;
-   }
-   int k = q->num_nodes;
-   int dim = q->dim;
-   double *x = q->x;
-   double *w = q->w;
-   int numFuncs = q->basis->numFuncs;
-
-   Vector IQuad   = Vector_init(numFuncs);
-   Vector res_arr = Vector_init(numFuncs);
-   Vector basis_integrals = q->basis->basis_integrals;
-   BasisIntegralsMonomial(q->basis, basis_integrals);
-   Vector basis_funcs = q->basis->basis_funcs;
-
-   for(int i = 0; i < k; ++i)
-   {
-      BasisMonomial(q->basis, &x[dim*i], basis_funcs);
-      for(int j = 0; j < numFuncs; ++j)
-         IQuad.id[j] += basis_funcs.id[j] * w[i];
-   }
-   for(int j = 0; j < numFuncs; ++j) res_arr.id[j] = fabs(IQuad.id[j]-basis_integrals.id[j]);
-   double res = V_ScaledTwoNorm(res_arr);
-
-   Vector_free(IQuad);
-   Vector_free(res_arr);
-   return res;
-}
 
 
 double QuadTestIntegralExp(const quadrature *q)

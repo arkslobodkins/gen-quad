@@ -20,12 +20,6 @@ typedef struct SimplexSimplexBasis SimplexSimplexBasis;
 typedef struct MixedPolytopeBasis MixedPolytopeBasis;
 typedef struct MixedParams MixedParams;
 
-typedef struct
-{
-   INT_8 **basis_indices_omp;
-   Vector *basis_funcs_omp;
-   Vector *basis_der_omp;
-} BasisOmpData;
 
 struct Basis
 {
@@ -35,11 +29,10 @@ struct Basis
    int deg;
    int dim;
    int numFuncs;
-   INT_8 *basis_indices;
-   Vector basis_funcs;
-   Vector basis_der;
-   Vector basis_integrals;
-   BasisOmpData basisOmpData;
+   INT_8 *indices;
+   Vector functions;
+   Vector derivatives;
+   Vector integrals;
 };
 
 typedef Basis*(*BasisInitPtr)(void *);
@@ -100,12 +93,8 @@ void BasisFuncs(Basis *basis, const double *x, Vector v);
 void BasisDer(Basis *basis, const double *x, Vector v);
 void BasisIntegrals(Basis *basis, Vector v);
 void BasisIntegralsMonomial(Basis *basis, Vector v);
-void BasisFree(Basis *basis);
-#ifdef _OPENMP
-void AllocBasisOmpData(Basis *basis);
-void FreeBasisOmpData(Basis *basis);
-#endif
 void BasisMonomial(Basis *basis, const double *x, Vector phi);
+void BasisFree(Basis *basis);
 
 struct CubeBasis
 {
@@ -115,11 +104,10 @@ struct CubeBasis
    int deg;
    int dim;
    int numFuncs;
-   INT_8 *basis_indices;
-   Vector basis_funcs;
-   Vector basis_der;
-   Vector basis_integrals;
-   BasisOmpData basisOmpData;
+   INT_8 *indices;
+   Vector functions;
+   Vector derivatives;
+   Vector integrals;
 };
 
 typedef struct
@@ -138,11 +126,10 @@ struct SimplexBasis
    int deg;
    int dim;
    int numFuncs;
-   INT_8 *basis_indices;
-   Vector basis_funcs;
-   Vector basis_der;
-   Vector basis_integrals;
-   BasisOmpData basisOmpData;
+   INT_8 *indices;
+   Vector functions;
+   Vector derivatives;
+   Vector integrals;
 };
 
 typedef struct
@@ -154,6 +141,7 @@ typedef struct
    Vector phi_forw2;
 } AddDataCubeSimplex;
 
+
 struct CubeSimplexBasis
 {
    const BasisInterface *interface;
@@ -162,11 +150,10 @@ struct CubeSimplexBasis
    int deg;
    int dim;
    int numFuncs;
-   INT_8 *basis_indices;
-   Vector basis_funcs;
-   Vector basis_der;
-   Vector basis_integrals;
-   BasisOmpData basisOmpData;
+   INT_8 *indices;
+   Vector functions;
+   Vector derivatives;
+   Vector integrals;
 };
 
 typedef struct
@@ -178,6 +165,7 @@ typedef struct
    Vector phi_forw2;
 } AddDataSimplexSimplex;
 
+
 struct SimplexSimplexBasis
 {
    const BasisInterface *interface;
@@ -186,11 +174,10 @@ struct SimplexSimplexBasis
    int deg;
    int dim;
    int numFuncs;
-   INT_8 *basis_indices;
-   Vector basis_funcs;
-   Vector basis_der;
-   Vector basis_integrals;
-   BasisOmpData basisOmpData;
+   INT_8 *indices;
+   Vector functions;
+   Vector derivatives;
+   Vector integrals;
 };
 
 struct MixedPolytopeBasis
@@ -201,13 +188,12 @@ struct MixedPolytopeBasis
    int deg;
    int dim;
    int numFuncs;
-   INT_8 *basis_indices;
-   Vector basis_funcs;
-   Vector basis_der;
-   Vector basis_integrals;
+   INT_8 *indices;
+   Vector functions;
+   Vector derivatives;
+   Vector integrals;
 };
 
-void ComputeBasisIndices(Basis *basis);
 
 CubeBasis* CubeBasisInit(CubeParams *params);
 void ComputeCubeBasisFuncs(CubeBasis *basis, const double *x, Vector v);
