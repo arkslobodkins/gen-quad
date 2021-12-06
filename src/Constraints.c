@@ -37,11 +37,6 @@ constraints *constraints_interval_init(int dims[1])
    return constr;
 }
 
-void constraints_interval_realloc(constraints *constr, int dims[1])
-{
-   return; // nothing to be reallocated, only defined to stay consistent with other domains
-}
-
 void get_constraints_interval(constraints *constr)
 {
    memset(constr->M.id, 0, SIZE_DOUBLE(constr->M.len));
@@ -89,19 +84,6 @@ constraints *constraints_cube_init(int dims[1])
    constr->b_FULL = Vector_init(n_rows+1);
 
    return constr;
-}
-
-void constraints_cube_realloc(constraints *constr, int dims[1])
-{
-   assert(dims[0] > 1);
-
-   int dim = dims[0];
-   int n_rows = TWO * dim;
-   int n_cols = dim;
-   RMatrix_realloc(n_rows, n_cols, &constr->M);
-   Vector_realloc(n_rows, &constr->b);
-   RMatrix_realloc(n_rows+1, n_cols+1, &constr->M_FULL);
-   Vector_realloc(n_rows+1, &constr->b_FULL);
 }
 
 void get_constraints_cube(constraints *constr)
@@ -161,19 +143,6 @@ constraints *constraints_simplex_init(int dims[1])
    return constr;
 }
 
-void constraints_simplex_realloc(constraints *constr, int dims[1])
-{
-   assert(dims[0] > 1);
-
-   int dim = dims[0];
-   int n_rows = dim + ONE;
-   int n_cols = dim;
-   RMatrix_realloc(n_rows, n_cols, &constr->M);
-   Vector_realloc(n_rows, &constr->b);
-   RMatrix_realloc(n_rows+1, n_cols+1, &constr->M_FULL);
-   Vector_realloc(n_rows+1, &constr->b_FULL);
-}
-
 void get_constraints_simplex(constraints *constr)
 {
    int n_rows = constr->M.rows;
@@ -228,19 +197,6 @@ constraints *constraints_cubesimplex_init(int dims[2])
    constr->b_FULL = Vector_init(n_rows+1);
 
    return constr;
-}
-
-void constraints_cubesimplex_realloc(constraints *constr, int dims[2])
-{
-   assert( (dims[0] > 0) && (dims[1] > 1) );
-
-   int dim = dims[0]+dims[1];
-   int n_rows = (TWO * dims[0]) + (dims[1] + ONE);
-   int n_cols = dim;
-   RMatrix_realloc(n_rows, n_cols, &constr->M);
-   Vector_realloc(n_rows, &constr->b);
-   RMatrix_realloc(n_rows+1, n_cols+1, &constr->M_FULL);
-   Vector_realloc(n_rows+1, &constr->b_FULL);
 }
 
 void get_constraints_cubesimplex(constraints *constr)
@@ -316,19 +272,6 @@ constraints *constraints_simplexsimplex_init(int dims[2])
    constr->b_FULL = Vector_init(n_rows+1);
 
    return constr;
-}
-
-void constraints_simplexsimplex_realloc(constraints *constr, int dims[2])
-{
-   assert( (dims[0] > 1) && (dims[1] > 1) );
-
-   int dim = dims[0] + dims[1];
-   int n_rows = (dims[0] + ONE) + (dims[1] + ONE);
-   int n_cols = dim;
-   RMatrix_realloc(n_rows, n_cols, &constr->M);
-   Vector_realloc(n_rows, &constr->b);
-   RMatrix_realloc(n_rows+1, n_cols+1, &constr->M_FULL);
-   Vector_realloc(n_rows+1, &constr->b_FULL);
 }
 
 void get_constraints_simplexsimplex(constraints *constr)

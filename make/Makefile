@@ -4,7 +4,7 @@ VERSION = -std=c++98
 #uncomment "-DQUAD_DEBUG_OFF"   to disable debug mode
 #uncomment "-NDEBUG"            to disable assert statements
 #comment out -fopenmp           to disable OpenMP parallelism
-CFLAGS=-g  -Wall -fopenmp           \
+CFLAGS=-g  -Wall #-fopenmp           \
       #-DQUAD_DEBUG_OFF             \
       #-DNDEBUG
 
@@ -15,10 +15,10 @@ RANLIB = ranlib
 VPATH= ../src:../src/Gauss_Lib
 
 all : quad results
-quad: Main.o BasisIntegrals.o LeastSquaresNewton.o  GeneralGaussTensor.o GENERAL_QUADRATURE.o          \
-      GetJacobian.o GetFunction.o NodeElimination.o BasisFunctions.o BasisIndices.o Output.o           \
-      AddDimension.o ComputeDomain.o QuadDriver.o Constraints.o ConstrainedOptimization.o Vector.o     \
-	Matrix.o glist.o Print.o Quadrature.o LINALG.o Basis.o get_time.o libgaussq.a libplasma.a libcoreblas.a
+quad: Main.o LeastSquaresNewton.o  GeneralGaussTensor.o GENERAL_QUADRATURE.o GetJacobian.o  \
+	GetFunction.o NodeElimination.o Output.o AddDimension.o ComputeDomain.o QuadDriver.o     \
+	Constraints.o ConstrainedOptimization.o Vector.o Matrix.o glist.o Print.o Quadrature.o   \
+	LINALG.o Basis.o get_time.o libgaussq.a libplasma.a libcoreblas.a
 	$(CC) $(VERSION) $(CFLAGS) -o $@ $^ $(LIBSBLAS) $(MATH)
 
 OBJS =  GaussCore.o Jacobi.o

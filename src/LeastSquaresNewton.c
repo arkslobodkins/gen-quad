@@ -14,6 +14,7 @@
 #include "Conditional_Debug.h"
 #include "get_time.h"
 #include "LINALG.h"
+#include "Basis.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -30,20 +31,18 @@ static int CheckForFail(int INFO, double errorNorm, double errorNormPrev, Vector
 double CONSTR_TIME = 0.0;
 double LSQ_TIME = 0.0;
 #define MAX_ELIM_WEIGHTS 10
-bool LeastSquaresNewton(LibraryType libType, const bool_enum CONSTR_OPT, const INT_8 *basis, quadrature *q_orig, int *its)
+bool LeastSquaresNewton(const bool_enum CONSTR_OPT, quadrature *q_orig, int *its)
 {
    assert(q_orig->num_nodes >= 1);
 
    int k               = q_orig->num_nodes;
-   int deg             = q_orig->deg;
-   int numFuncs        = q_orig->num_funcs;
+   int numFuncs        = q_orig->basis->numFuncs;
    int dim             = q_orig->dim;
-   int *dims           = q_orig->dims;
    bool SOL_FLAG       = SOL_NOT_FOUND;
 
    int itsLoc   = 0;
    int maxiter  = 25;
-   double q_tol = QUAD_TOL; // 10^(-15);
+   double q_tol = QUAD_TOL; // 10^(-14);
 
    // initialize LAPACK
    int nrows  = numFuncs;
@@ -54,7 +53,7 @@ bool LeastSquaresNewton(LibraryType libType, const bool_enum CONSTR_OPT, const I
    CMatrix JACOBIAN = CMatrix_init(nrows, ncols);
    Vector LEAST_SQ_SOL = Vector_init(LEAD_DIM);
    Vector RHS          = Vector_init(nrows);
-   double *WORK        = (double *)malloc(LWORK*size_double);
+   double *WORK        = (double *)malloc(LWORK*sizeof(double));
 
    quadrature *q_prev = quadrature_make_full_copy(q_orig);
    quadrature *q_next = quadrature_make_full_copy(q_orig);
@@ -64,21 +63,26 @@ bool LeastSquaresNewton(LibraryType libType, const bool_enum CONSTR_OPT, const I
    ConstrVectData cVectData = ConstrVectDataInit();
 
    int (*leastsquares_ptr)(CMatrix A, Vector RHS_TO_X);
-   int (*getFunc_ptr)(quadrature *q, Vector f);
+   void (*getFunc_ptr)(quadrature *q, Vector f);
+   void (*getJacobian_ptr)(quadrature *q, CMatrix JACOBIAN);
 #ifdef _OPENMP
-   if(libType == LAPACK)      leastsquares_ptr = DGELS_LAPACK;
-   else if(libType == PLASMA) leastsquares_ptr = DGELS_PLASMA;
+   AllocBasisOmpData(q_prev->basis);
+   AllocBasisOmpData(q_next->basis);
+   AllocVectorOmpData(&RHS);
+   getFunc_ptr      = &GetFunctionOmp;
+   getJacobian_ptr  = &GetJacobianOmp;
+   if(OMP_CONDITION(deg, dim)) leastsquares_ptr = DGELS_PLASMA;
+   else                        leastsquares_ptr = DGELS_LAPACK;
 #else
-   static int msg_count = 0;
-   if(libType == PLASMA  && msg_count++ < 1)
-      PRINT_WARN("Cannot use PLASMA because OpenMP not enabled, using LAPACK instead.", __LINE__, __FILE__);
-   leastsquares_ptr = DGELS_LAPACK;
+   leastsquares_ptr = &DGELS_LAPACK;
+   getFunc_ptr      = &GetFunction;
+   getJacobian_ptr  = &GetJacobian;
 #endif
 
    // return if input is a satisfactory quadrature
    {
-      GetFunction(q_prev, RHS);
-      double eNorm = V_ScaledTwoNorm(RHS);
+      getFunc_ptr(q_prev, RHS);
+      double eNorm = V_InfNorm(RHS);
       if( (eNorm < q_tol) && (QuadInConstraint(q_prev) == true) ) {
          SOL_FLAG = SOL_FOUND;
          *its = 0;
@@ -105,8 +109,8 @@ bool LeastSquaresNewton(LibraryType libType, const bool_enum CONSTR_OPT, const I
          quadrature_remove_element(cVectData.boundaryNodeId, q_prev);
       }
 
-      GetJacobian(basis, q_prev, JACOBIAN);
-      GetFunction(q_prev, RHS);
+      getJacobian_ptr(q_prev, JACOBIAN);
+      getFunc_ptr(q_prev, RHS);
       for(int i = 0; i < SMALL_DIM; ++i)        LEAST_SQ_SOL.id[i] = RHS.id[i];
       for(int i = SMALL_DIM; i < LEAD_DIM; ++i) LEAST_SQ_SOL.id[i] = 0.0;
 
@@ -118,8 +122,8 @@ bool LeastSquaresNewton(LibraryType libType, const bool_enum CONSTR_OPT, const I
          q_next->z.id[i] = q_prev->z.id[i] - LEAST_SQ_SOL.id[i];
 
       errorNormPrev = errorNorm;
-      GetFunction(q_next, RHS);
-      errorNorm = V_ScaledTwoNorm(RHS);
+      getFunc_ptr(q_next, RHS);
+      errorNorm = V_InfNorm(RHS);
       int check_values = CheckForFail(INFO, errorNorm, errorNormPrev, LEAST_SQ_SOL);
       if(check_values != GQ_SUCCESS) {
          SOL_FLAG = SOL_NOT_FOUND;
@@ -149,8 +153,8 @@ bool LeastSquaresNewton(LibraryType libType, const bool_enum CONSTR_OPT, const I
          }
       }
 
-      GetFunction(q_next, RHS);
-      errorNormUpdate = V_ScaledTwoNorm(RHS);
+      getFunc_ptr(q_next, RHS);
+      errorNormUpdate = V_InfNorm(RHS);
 
       quadrature_assign(q_next, q_prev);
       ++itsLoc;
@@ -163,7 +167,7 @@ bool LeastSquaresNewton(LibraryType libType, const bool_enum CONSTR_OPT, const I
          && (errorNormUpdate <= q_tol)
          && QuadInConstraint(q_next) )
    {
-      quadrature_realloc(q_next->num_nodes, dim, dims, deg, q_orig);
+      quadrature_realloc_array(q_next->num_nodes, q_orig);
       quadrature_assign(q_next, q_orig);
       SOL_FLAG = SOL_FOUND;
    }
@@ -171,6 +175,11 @@ bool LeastSquaresNewton(LibraryType libType, const bool_enum CONSTR_OPT, const I
 
 
 FREERETURN:
+#ifdef _OPENMP
+   FreeBasisOmpData(q_prev->basis);
+   FreeBasisOmpData(q_next->basis);
+   FreeVectorOmpData(RHS);
+#endif
    CMatrix_free(JACOBIAN);
    Vector_free(LEAST_SQ_SOL);
    free(WORK);

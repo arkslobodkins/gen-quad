@@ -1,12 +1,22 @@
 #include "Basis.h"
-#include "BasisFunctions.h"
-#include "BasisIndices.h"
+#include "Quadrature.h"
+#include "Gauss_Lib/Jacobi.h"
+#include "GeneralGaussTensor.h"
+#include "AddDimension.h"
 
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <omp.h>
 
+static void BasisIndices(int deg, int dim, INT_8 *f);
+static int BasisSize(int deg, int dim);
+static void LegendrePoly(int order, double x, double *p, double *dp);
+static void JacobiPoly(int order, double x, double alpha, double beta, double *p);
+static void IntegralsCubePolyhedralMonomial(MixedPolytopeBasis *basis, Vector v);
+static void IntegralsSimplexPolyhedralMonomialOne(MixedPolytopeBasis *basis, Vector v);
+static void IntegralsSimplexPolyhedralMonomialTwo(MixedPolytopeBasis *basis, Vector v);
 
 Basis* BasisInit(void *params, BasisInterface *interface)
 {
@@ -24,20 +34,30 @@ Basis* BasisInit(void *params, BasisInterface *interface)
    return basis;
 }
 
+
 void BasisFuncs(Basis *basis, const double *x, Vector v)
 {
    basis->interface->computeFuncs(basis, x, v);
 }
 
-void BasisDer(Basis *basis, const double *x)
+
+void BasisDer(Basis *basis, const double *x, Vector v)
 {
-   basis->interface->computeDer(basis, x);
+   basis->interface->computeDer(basis, x, v);
 }
 
-void Integrals(Basis *basis)
+
+void BasisIntegrals(Basis *basis, Vector v)
 {
-   basis->interface->computeIntegrals(basis);
+   basis->interface->computeIntegrals(basis, v);
 }
+
+
+void BasisIntegralsMonomial(Basis *basis, Vector v)
+{
+   basis->interface->computeIntegralsMonomial(basis, v);
+}
+
 
 void BasisFree(Basis *basis)
 {
@@ -55,6 +75,151 @@ void BasisFree(Basis *basis)
 }
 
 
+#ifdef _OPENMP
+void AllocBasisOmpData(Basis *basis)
+{
+   int max_threads = omp_get_max_threads();
+   BasisOmpData *basisOmpData = &basis->basisOmpData;
+   basisOmpData->basis_indices_omp = (INT_8 **)malloc(max_threads*sizeof(INT_8 *));
+   basisOmpData->basis_funcs_omp   = (Vector *)malloc(max_threads*sizeof(Vector));
+   basisOmpData->basis_der_omp     = (Vector *)malloc(max_threads*sizeof(Vector));
+
+   for(int i = 0; i < max_threads; ++i)
+   {
+      basisOmpData->basis_indices_omp[i] = (INT_8 *)malloc(basis->numFuncs*sizeof(INT_8));
+      basisOmpData->basis_funcs_omp[i]   = Vector_init(basis->basis_funcs.len);
+      basisOmpData->basis_der_omp[i]     = Vector_init(basis->basis_der.len);
+   }
+
+   INT_8 **basis_indices_omp = basisOmpData->basis_indices_omp;
+   INT_8 *basis_indices      = basis->basis_indices;
+   for(int i = 0; i < max_threads; ++i)
+      memcpy(basis_indices_omp[i], basis_indices, basis->numFuncs*sizeof(INT_8));
+}
+
+
+void FreeBasisOmpData(Basis *basis)
+{
+   int max_threads = omp_get_max_threads();
+   BasisOmpData basisOmpData = basis->basisOmpData;
+   for(int i = 0; i < max_threads; ++i)
+   {
+      free(basisOmpData.basis_indices_omp[i]);
+      Vector_free(basisOmpData.basis_funcs_omp[i]);
+      Vector_free(basisOmpData.basis_der_omp[i]);
+   }
+   free(basisOmpData.basis_indices_omp);
+   free(basisOmpData.basis_funcs_omp);
+   free(basisOmpData.basis_der_omp);
+}
+#endif
+
+
+void BasisMonomial(Basis *basis, const double *x, Vector phi)
+{
+   int numFuncs    = basis->numFuncs;
+   int dim         = basis->dim;
+   INT_8 *basis_id = basis->basis_indices;
+
+   for(int k = 0; k < numFuncs; ++k) phi.id[k] = 1.0;
+   for(int k = 0; k < numFuncs; ++k) {
+      for(int d = 0; d < dim; ++d) {
+         INT_8 basis_power = basis_id[k*dim+d];
+         double product = DoubleIntPower(x[d], basis_power);
+         phi.id[k] *= product;
+      }
+   }
+}
+
+
+void ComputeBasisIndices(Basis *basis)
+{
+   int dim = basis->dim;
+   int deg = basis->deg;
+   INT_8* f = basis->basis_indices;
+
+   if(dim == 1) {
+      for(int i = 0; i <= deg; ++i) f[i] = i;
+      return;
+   }
+
+   int counter;
+   // compute basis indices using nested recursion if dimension >= 2
+   for(int j = 2; counter = 0, j <= dim; ++j)
+   {
+      for(int i = 0; i <= deg; ++i)
+      {
+         int size = BasisSize(deg-i, j-1);
+         int dimxsize = dim*size;
+         INT_8 recursiveF[size*(j-1)];
+         BasisIndices(deg-i, j-1, recursiveF);
+         if(j == dim)
+         {
+            for(int k = 0; k < size; ++k)
+            {
+               int kxdim = k*dim;
+               int kxdim_minus1 = k*(dim-1);
+               for(int d = 0; d < dim-1; ++d)
+                  f[counter+kxdim+d] = recursiveF[kxdim_minus1+d];
+               f[counter+kxdim+j-1] = i;
+            }
+            counter += dimxsize;
+         }
+      }
+   }
+}
+
+
+static void BasisIndices(int deg, int dim, INT_8 *f)
+{
+   if(dim == 1) {
+      for(int i = 0; i <= deg; ++i) f[i] = i;
+      return;
+   }
+
+   int counter;
+   // compute basis indices using nested recursion if dimension >= 2
+   for(int j = 2; counter = 0, j <= dim; ++j)
+   {
+      for(int i = 0; i <= deg; ++i)
+      {
+         int size = BasisSize(deg-i, j-1);
+         int dimxsize = dim*size;
+         INT_8 recursiveF[size*(j-1)];
+         BasisIndices(deg-i, j-1, recursiveF);
+         if(j == dim)
+         {
+            for(int k = 0; k < size; ++k)
+            {
+               int kxdim = k*dim;
+               int kxdim_minus1 = k*(dim-1);
+               for(int d = 0; d < dim-1; ++d)
+                  f[counter+kxdim+d] = recursiveF[kxdim_minus1+d];
+               f[counter+kxdim+j-1] = i;
+            }
+            counter += dimxsize;
+         }
+      }
+   }
+}
+
+
+static int BasisSize(int deg, int dim)
+{
+   assert(dim >= 0 && deg >= 0);
+
+   unsigned int first = deg + 1;
+   unsigned int last = deg + dim;
+   unsigned int product = 1;
+
+   unsigned int i = first, counter = 1;
+   for(; i <= last; ++i, ++counter)
+      product = product * i/counter;
+
+   return product;
+}
+
+
 /////////////////////////////////////////////////////////////////////////////
 BasisInterface SetCubeBasisInterface()
 {
@@ -63,9 +228,11 @@ BasisInterface SetCubeBasisInterface()
    cubeInterface.computeFuncs     = (BasisFuncsPtr)&ComputeCubeBasisFuncs;
    cubeInterface.computeDer       = (BasisDerPtr)&ComputeCubeBasisDer;
    cubeInterface.computeIntegrals = (BasisIntegralsPtr)&CubeBasisIntegrals;
+   cubeInterface.computeIntegralsMonomial = (BasisIntegralsMonomialPtr)&CubeBasisIntegralsMonomial;
    cubeInterface.basisFree        = (BasisFreePtr)&CubeBasisFree;
    return cubeInterface;
 }
+
 
 CubeBasis* CubeBasisInit(CubeParams *cubeParams)
 {
@@ -83,6 +250,7 @@ CubeBasis* CubeBasisInit(CubeParams *cubeParams)
    basis->addData     = NULL;
    return basis;
 }
+
 
 void ComputeCubeBasisFuncs(CubeBasis *basis, const double *x, Vector v)
 {
@@ -104,14 +272,15 @@ void ComputeCubeBasisFuncs(CubeBasis *basis, const double *x, Vector v)
          phi[k] *= legendre[basisId[k*dim+d] + d*(deg+1)];
 }
 
-void ComputeCubeBasisDer(CubeBasis *basis, const double *x)
+
+void ComputeCubeBasisDer(CubeBasis *basis, const double *x, Vector v)
 {
    int deg          = basis->deg;
    int dim          = basis->dim;
    int numFuncs     = basis->numFuncs;
    int degPlus1     = deg+1;
    INT_8 *basisId   = basis->basis_indices;
-   double *phiPrime = basis->basis_der.id;
+   double *phiPrime = v.id;
 
    double legendre[degPlus1*dim];
    double dxlegendre[degPlus1*dim];
@@ -143,18 +312,38 @@ void ComputeCubeBasisDer(CubeBasis *basis, const double *x)
    }
 }
 
-void CubeBasisIntegrals(CubeBasis *basis)
+
+void CubeBasisIntegrals(CubeBasis *basis, Vector v)
 {
    int len = basis->basis_integrals.len;
-   double *integrals = basis->basis_integrals.id;
+   double *integrals = v.id;
    memset(integrals, 0, SIZE_DOUBLE(len));
    integrals[0] = 1.0;
 }
+
+
+void CubeBasisIntegralsMonomial(CubeBasis *basis, Vector v)
+{
+   int i, d;
+   int dim = basis->dim;
+   int numFuncs = basis->numFuncs;
+   INT_8 *basisIndices = basis->basis_indices;
+   Vector integrals = v;
+
+   for(i = 0; i < numFuncs; ++i) {
+      double val = 1.0;
+      for(d = 0; d < dim; ++d)
+         val = val/(basisIndices[i*dim+d] + 1);
+      integrals.id[i] = val;
+   }
+}
+
 
 void CubeBasisFree(CubeBasis *basis)
 {
    free(basis->params);
 }
+
 
 
 /////////////////////////////////////////////////////////////////////////////
@@ -165,9 +354,11 @@ BasisInterface SetSimplexBasisInterface()
    simplexInterface.computeFuncs     = (BasisFuncsPtr)&SimplexBasisFuncs;
    simplexInterface.computeDer       = (BasisDerPtr)&SimplexBasisDer;
    simplexInterface.computeIntegrals = (BasisIntegralsPtr)&SimplexBasisIntegrals;
+   simplexInterface.computeIntegralsMonomial = (BasisIntegralsMonomialPtr)&SimplexBasisIntegralsMonomial;
    simplexInterface.basisFree        = (BasisFreePtr)&SimplexBasisFree;
    return simplexInterface;
 }
+
 
 SimplexBasis* SimplexBasisInit(SimplexParams *simplexParams)
 {
@@ -192,6 +383,7 @@ SimplexBasis* SimplexBasisInit(SimplexParams *simplexParams)
    addData->phi_forw2  = Vector_init(numFuncs);
    return basis;
 }
+
 
 void SimplexBasisFuncs(SimplexBasis *basis, const double *x, Vector v)
 {
@@ -249,7 +441,8 @@ void SimplexBasisFuncs(SimplexBasis *basis, const double *x, Vector v)
    }
 }
 
-void SimplexBasisDer(SimplexBasis *basis, const double *x)
+
+void SimplexBasisDer(SimplexBasis *basis, const double *x, Vector v)
 {
    int dim = basis->params->dim;
    int numFuncs = basis->numFuncs;
@@ -260,7 +453,7 @@ void SimplexBasisDer(SimplexBasis *basis, const double *x)
    double x_forw1[dim];
    double x_forw2[dim];
 
-   double *basisDer = basis->basis_der.id;
+   double *basisDer = v.id;
    Vector phi_backw2 = basis->addData->phi_backw2;
    Vector phi_backw1 = basis->addData->phi_backw1;
    Vector phi_forw1 = basis->addData->phi_forw1;
@@ -290,11 +483,12 @@ void SimplexBasisDer(SimplexBasis *basis, const double *x)
    }
 }
 
-void SimplexBasisIntegrals(SimplexBasis *basis)
+
+void SimplexBasisIntegrals(SimplexBasis *basis, Vector v)
 {
    int dim = basis->dim;
    int len = basis->basis_integrals.len;
-   double *integrals = basis->basis_integrals.id;
+   double *integrals = v.id;
 
    memset(integrals, 0, SIZE_DOUBLE(len));
    integrals[0] = 1;
@@ -302,6 +496,29 @@ void SimplexBasisIntegrals(SimplexBasis *basis)
       integrals[0] /= i;
 
 }
+
+
+void SimplexBasisIntegralsMonomial(SimplexBasis *basis, Vector v)
+{
+   int numFuncs = basis->numFuncs;
+   int dim = basis->dim;
+   INT_8 *basisIndices = basis->basis_indices;
+   Vector basis_integrals = basis->basis_integrals;
+   double val, power;
+
+   for(int i = 0; i < numFuncs; ++i)
+   {
+      val = 1.0;
+      for(int d = 0; d < dim; ++d) {
+         power = 0;
+         for(int r = 0; r < dim-d; ++r)
+            power += (double)basisIndices[i*dim+dim-r-1];
+         val /= (power+dim-d);
+      }
+      basis_integrals.id[i] = val;
+   }
+}
+
 
 void SimplexBasisFree(SimplexBasis *basis)
 {
@@ -322,9 +539,11 @@ BasisInterface SetCubeSimplexBasisInterface()
    csInterface.computeFuncs     = (BasisFuncsPtr)&CubeSimplexBasisFuncs;
    csInterface.computeDer       = (BasisDerPtr)&CubeSimplexBasisDer;
    csInterface.computeIntegrals = (BasisIntegralsPtr)&CubeSimplexBasisIntegrals;
+   csInterface.computeIntegralsMonomial = (BasisIntegralsMonomialPtr)&CubeSimplexBasisIntegralsMonomial;
    csInterface.basisFree        = (BasisFreePtr)&CubeSimplexBasisFree;
    return csInterface;
 }
+
 
 CubeSimplexBasis* CubeSimplexBasisInit(CubeSimplexParams *csParams)
 {
@@ -356,6 +575,7 @@ CubeSimplexBasis* CubeSimplexBasisInit(CubeSimplexParams *csParams)
    return basis;
 }
 
+
 void CubeSimplexBasisFuncs(CubeSimplexBasis *basis, const double *x, Vector v)
 {
    int deg        = basis->deg;
@@ -382,7 +602,8 @@ void CubeSimplexBasisFuncs(CubeSimplexBasis *basis, const double *x, Vector v)
       phi[k] *= basis->addData->basis_polytopic.id[k];
 }
 
-void CubeSimplexBasisDer(CubeSimplexBasis *basis, const double *x)
+
+void CubeSimplexBasisDer(CubeSimplexBasis *basis, const double *x, Vector v)
 {
    int deg          = basis->deg;
    int dim          = basis->dim;
@@ -390,7 +611,7 @@ void CubeSimplexBasisDer(CubeSimplexBasis *basis, const double *x)
    int dim2         = basis->params->dims[1];
    int numFuncs     = basis->numFuncs;
    int degPlus1     = deg+1;
-   double *phiPrime = basis->basis_der.id;
+   double *phiPrime = v.id;
    INT_8 *basisId = basis->basis_indices;
 
    double legendre[degPlus1*dim1];
@@ -455,17 +676,37 @@ void CubeSimplexBasisDer(CubeSimplexBasis *basis, const double *x)
    }
 }
 
-void CubeSimplexBasisIntegrals(CubeSimplexBasis *basis)
+
+void CubeSimplexBasisIntegrals(CubeSimplexBasis *basis, Vector v)
 {
    int dim2 = basis->params->dims[1];
    int len = basis->basis_integrals.len;
-   double *integrals = basis->basis_integrals.id;
+   double *integrals = v.id;
 
    memset(integrals, 0, SIZE_DOUBLE(len));
    integrals[0] = 1;
    for(int i = 1; i <= dim2; ++i)
       integrals[0] /= i;
 }
+
+
+void CubeSimplexBasisIntegralsMonomial(CubeSimplexBasis *basis, Vector v)
+{
+  int numFuncs = basis->numFuncs;
+  Vector integralsCube = Vector_init(numFuncs);
+  Vector integralsSimplex = Vector_init(numFuncs);
+  Vector integrals = v;
+
+  IntegralsCubePolyhedralMonomial((MixedPolytopeBasis *)basis, integralsCube);
+  IntegralsSimplexPolyhedralMonomialTwo((MixedPolytopeBasis *)basis, integralsSimplex);
+
+  for(int i = 0; i < numFuncs; ++i)
+     integrals.id[i] = integralsCube.id[i]*integralsSimplex.id[i];
+
+  Vector_free(integralsCube);
+  Vector_free(integralsSimplex);
+}
+
 
 void CubeSimplexBasisFree(CubeSimplexBasis *basis)
 {
@@ -487,9 +728,11 @@ BasisInterface SetSimplexSimplexBasisInterface()
    ssInterface.computeFuncs     = (BasisFuncsPtr)&SimplexSimplexBasisFuncs;
    ssInterface.computeDer       = (BasisDerPtr)&SimplexSimplexBasisDer;
    ssInterface.computeIntegrals = (BasisIntegralsPtr)&SimplexSimplexBasisIntegrals;
+   ssInterface.computeIntegralsMonomial = (BasisIntegralsMonomialPtr)&SimplexSimplexBasisIntegralsMonomial;
    ssInterface.basisFree        = (BasisFreePtr)&SimplexSimplexBasisFree;
    return ssInterface;
 }
+
 
 SimplexSimplexBasis* SimplexSimplexBasisInit(SimplexSimplexParams *ssParams)
 {
@@ -521,6 +764,7 @@ SimplexSimplexBasis* SimplexSimplexBasisInit(SimplexSimplexParams *ssParams)
    return basis;
 }
 
+
 void SimplexSimplexBasisFuncs(SimplexSimplexBasis *basis, const double *x, Vector v)
 {
    int numFuncs     = basis->numFuncs;
@@ -538,13 +782,14 @@ void SimplexSimplexBasisFuncs(SimplexSimplexBasis *basis, const double *x, Vecto
       phi[k] *= polytopic.id[k];
 }
 
-void SimplexSimplexBasisDer(SimplexSimplexBasis *basis, const double *x)
+
+void SimplexSimplexBasisDer(SimplexSimplexBasis *basis, const double *x, Vector v)
 {
    int dim1          = basis->params->dims[0];
    int dim2          = basis->params->dims[1];
    int dim           = basis->dim;
    int numFuncs      = basis->numFuncs;
-   Vector phiPrime   = basis->basis_der;
+   Vector phiPrime   = v;
 
    double h = POW_DOUBLE(10, -5)*5.0;
    Vector phi_backw2 = basis->addData->phi_backw2;
@@ -616,12 +861,13 @@ void SimplexSimplexBasisDer(SimplexSimplexBasis *basis, const double *x)
    }
 }
 
-void SimplexSimplexBasisIntegrals(SimplexSimplexBasis *basis)
+
+void SimplexSimplexBasisIntegrals(SimplexSimplexBasis *basis, Vector v)
 {
    int dim1 = basis->params->dims[0];
    int dim2 = basis->params->dims[1];
    int len  = basis->basis_integrals.len;
-   double *integrals = basis->basis_integrals.id;
+   double *integrals = v.id;
 
    memset(integrals, 0, SIZE_DOUBLE(len));
    integrals[0] = 1;
@@ -631,6 +877,25 @@ void SimplexSimplexBasisIntegrals(SimplexSimplexBasis *basis)
    for(int i = 1; i <= dim2; ++i)
       integrals[0] /= i;
 }
+
+
+void SimplexSimplexBasisIntegralsMonomial(SimplexSimplexBasis *basis, Vector v)
+{
+  int numFuncs = basis->numFuncs;
+  Vector integralsS1 = Vector_init(numFuncs);
+  Vector integralsS2 = Vector_init(numFuncs);
+  Vector integrals = v;
+
+  IntegralsSimplexPolyhedralMonomialOne((MixedPolytopeBasis *)basis, integralsS1);
+  IntegralsSimplexPolyhedralMonomialTwo((MixedPolytopeBasis *)basis, integralsS2);
+
+  for(int i = 0; i < numFuncs; ++i)
+     integrals.id[i] = integralsS1.id[i]*integralsS2.id[i];
+
+  Vector_free(integralsS1);
+  Vector_free(integralsS2);
+}
+
 
 void SimplexSimplexBasisFree(SimplexSimplexBasis *basis)
 {
@@ -643,106 +908,122 @@ void SimplexSimplexBasisFree(SimplexSimplexBasis *basis)
    free(basis->addData);
 }
 
-void ComputeBasisIndices(Basis *basis)
+
+static void LegendrePoly(int order, double x, double *p, double *dp)
 {
-   int dim = basis->dim;
-   int deg = basis->deg;
-   INT_8* f = basis->basis_indices;
+   int k;
+   double fac1 = 0.0, fac2 = 0.0;
 
-   if(dim == 1) {
-      for(int i = 0; i <= deg; ++i) f[i] = i;
-      return;
-   }
+   p[0] = 1.0;
+   dp[0] = 0.0;
+   p[1] = x;
+   dp[1] = 1.0;
 
-   int counter;
-   // compute basis indices using nested recursion if dimension >= 2
-   for(int j = 2; counter = 0, j <= dim; ++j)
+   for( k = 1; k < order-1; ++k)
    {
-      for(int i = 0; i <= deg; ++i)
-      {
-         int size = BasisSize(deg-i, j-1);
-         int dimxsize = dim*size;
-         INT_8 recursiveF[size*(j-1)];
-         BasisIndices(deg-i, j-1, recursiveF);
-         if(j == dim)
-         {
-            for(int k = 0; k < size; ++k)
-            {
-               int kxdim = k*dim;
-               int kxdim_minus1 = k*(dim-1);
-               for(int d = 0; d < dim-1; ++d)
-                  f[counter+kxdim+d] = recursiveF[kxdim_minus1+d];
-               f[counter+kxdim+j-1] = i;
-            }
-            counter += dimxsize;
-         }
-      }
+      fac1 = (2.0*k+1.0)/(k+1.0);
+      fac2 = k/(k+1.0);
+      p[k+1] = fac1*x*p[k] - fac2*p[k-1];
+      dp[k+1] = fac1*(p[k] + x*dp[k]) - fac2*dp[k-1];
    }
 }
 
-void TestBasis()
+
+#define ADD(x, y) (x)+(y)
+#define SUB(x, y) (x)-(y)
+static void JacobiPoly(int order, double x, double alpha, double beta, double *p)
 {
-//   CubeParams cubeParams = {3,3};
-//   double x[3];
-//   x[0] = 0.2; x[1] = 0.3; x[2] = 0.4;
-//   CubeParams *params = &cubeParams;
-//   BasisInterface interface = SetCubeBasisInterface();
-//   Basis *cube = BasisInit((void *)params, &interface);
-//   ComputeBasisIndices(cube);
-//   BasisFuncs(cube, x);
-//   BasisDer(cube, x);
-//
-//   Basis *cube2 = BasisInit((void *)params, &interface);
-//   ComputeBasisIndices(cube2);
-//   BasisFuncs(cube2, x);
-//   CubeBasisFuncs(&cubeParams.dim, cubeParams.deg, cube2->basis_indices, x, cube2->basis_funcs.id);
-//   CubeBasisFuncsDer(&cubeParams.dim, cubeParams.deg, cube2->basis_indices, x, cube2->basis_der.id);
-//   Vector vc = Vector_init(cube2->basis_funcs.len);
-//   VectorAddScale(1.0, cube->basis_funcs, -1.0, cube2->basis_funcs, vc);
-////   VPrint(vc);
-//
-////   VPrint(cube2->basis_der);
-////   VPrint(cube->basis_der);
-//   BasisFree(cube);
-//
-//   CubeSimplexParams csParams;
-//   csParams.deg = 3; csParams.dims[0] = 1; csParams.dims[1] = 2;
-//   CubeSimplexParams *paramsPtr = &csParams;
-//   double y[3];
-//   y[0] = 0.2; y[1] = 0.05; y[2] = 0.5;
-//   BasisInterface csinterface = SetCubeSimplexBasisInterface();
-//   Basis *cs = BasisInit((void *)paramsPtr, &csinterface);
-//   ComputeBasisIndices(cs);
-//   BasisDer(cs, y);
-//
-//   Basis *cs2 = BasisInit((void *)paramsPtr, &csinterface);
-//   ComputeBasisIndices(cs2);
-//   BasisPrimeCubeSimplex(csParams.dims, csParams.deg, cs2->basis_indices, y, cs2->basis_der.id);
-//   Vector v3 = Vector_init(cs2->basis_funcs.len*(cs2->dim));
-//   VectorAddScale(1.0, cs->basis_der, -1.0, cs2->basis_der, v3);
-//   VPrint(v3);
+   double fac1, fac2, fac3;
+   fac1 = fac2 = fac3 = 0.0;
 
-////
-//   SimplexParams simplexParams;
-//   simplexParams.deg = 3; simplexParams.dim = 3;
-//   SimplexParams *simplexParamsPtr = &simplexParams;
-//   double z[3];
-//   z[0] = 0.2; z[1] = 0.05; z[2] = 0.5;
-//   BasisInterface simplexInterface = SetSimplexBasisInterface();
-//   Basis *simplex = BasisInit((void *)simplexParamsPtr, &simplexInterface);
-//   ComputeBasisIndices(simplex);
-//   BasisFuncs(simplex, z, simplex->basis_funcs);
-//
-//   Basis *simplex2 = BasisInit((void *)simplexParamsPtr, &simplexInterface);
-//   ComputeBasisIndices(simplex2);
-//   BasisSimplex(&simplexParams.dim, simplexParams.deg, simplex2->basis_indices, z, simplex2->basis_funcs.id);
-//   Vector v4 = Vector_init(simplex2->basis_funcs.len);
-//   VectorAddScale(1.0, simplex->basis_funcs, -1.0, simplex2->basis_funcs, v4);
-//   VPrint(v4);
+   // compute some constants to be used inside a for loop to avoid redundant computations,
+   // whereas some are computed repeatedly inide the loop(tuned)
+   double a_plus_b               = ADD(alpha, beta);
+   double a_plus_b_minus_1       = SUB(a_plus_b, 1.0);
+   double a_plus_b_minus_2       = SUB(a_plus_b, 2.0);
 
-//   BasisFree(cs);
-//   BasisFree(cs2);
+   p[0] = 1.0;
+   if(order > 1)
+      p[1] = 0.5*(x-1.0) * (alpha+beta+2.0) + alpha+1.0;
+
+   for (int k = 1; k < order-1; ++k)
+   {
+      double two_n_plus_a_plus_b = ADD(2.0*(k+1.0), a_plus_b);
+      fac1 = (2.0*(k+1)+a_plus_b_minus_1) * (
+          (2.0*(k+1.0)+alpha+beta) * (2.0*(k+1.0)+alpha+beta-2.0) * x + (alpha*alpha-beta*beta)
+          );
+      fac2 = -2.0 * (k+1.0+alpha-1.0) * (k+1.0+beta-1.0) * two_n_plus_a_plus_b;
+      fac3 = 1.0 / (2*(k+1.0)*(k+1.0+a_plus_b) * (2*(k+1.0)+a_plus_b_minus_2));
+      p[k+1] = fac3 * (fac1*p[k] + fac2*p[k-1]);
+   }
 }
+#undef ADD
+#undef SUB
+
+
+static void IntegralsCubePolyhedralMonomial(MixedPolytopeBasis *basis, Vector v)
+{
+   int numFuncs = basis->numFuncs;
+   int dimCube = basis->params->dims[0];
+   int dim = basis->dim;
+   Vector integrals = v;
+   INT_8* basis_indices = basis->basis_indices;
+
+   for(int i = 0; i < numFuncs; ++i)
+   {
+      double val = 1.0;
+      for(int d = 0; d < dimCube; ++d)
+         val = val/(basis_indices[i*dim+d] + 1);
+      integrals.id[i] = val;
+   }
+}
+
+
+static void IntegralsSimplexPolyhedralMonomialOne(MixedPolytopeBasis *basis, Vector v)
+{
+   int numFuncs = basis->numFuncs;
+   int dimSimplex = basis->params->dims[0];
+   int dim = basis->dim;
+   double val, power;
+   INT_8* basis_indices = basis->basis_indices;
+   Vector integrals = v;
+
+   for(int i = 0; i < numFuncs; ++i)
+   {
+      val = 1.0;
+      for(int d = 0; d < dimSimplex; ++d) {
+         power = 0;
+         for(int r = 0; r < dimSimplex-d; ++r)
+            power += (double)basis_indices[dim*i+dimSimplex-r-1];
+         val /= (power+dimSimplex-d);
+      }
+      integrals.id[i] = val;
+   }
+}
+
+
+static void IntegralsSimplexPolyhedralMonomialTwo(MixedPolytopeBasis *basis, Vector v)
+{
+   int numFuncs = basis->numFuncs;
+   int dimSimplex = basis->params->dims[1];
+   int dim = basis->dim;
+   double val, power;
+   INT_8* basis_indices = basis->basis_indices;
+   Vector integrals = v;
+
+   for(int i = 0; i < numFuncs; ++i)
+   {
+      val = 1.0;
+      for(int d = 0; d < dimSimplex; ++d) {
+         power = 0;
+         for(int r = 0; r < dimSimplex-d; ++r)
+            power += (double)basis_indices[dim*(i+1)-r-1];
+         val /= (power+dimSimplex-d);
+      }
+      integrals.id[i] = val;
+   }
+}
+
 
 void SimplexFuncsPolytopicOne(MixedPolytopeBasis *basis, const double *x, Vector v)
 {
@@ -797,6 +1078,7 @@ void SimplexFuncsPolytopicOne(MixedPolytopeBasis *basis, const double *x, Vector
    }
 }
 
+
 void SimplexFuncsPolytopicTwo(MixedPolytopeBasis *basis, const double *x, Vector v)
 {
    int i, j, k, d;
@@ -849,6 +1131,81 @@ void SimplexFuncsPolytopicTwo(MixedPolytopeBasis *basis, const double *x, Vector
       }
       phi[k] *= phiTemp*legendre[*index];
    }
+}
+
+
+void orthogonal_cube_basis_test(int deg, int dim)
+{
+   int numFuncs = BasisSize(deg, dim);
+   int n = ceil( (deg+1)/2.0 )+1; // make n large enough to get exact quadrature
+   int dims_1D[1] = {1};
+   quadrature *quad_1D = quadrature_init_basic(n, 1, dims_1D, deg, INTERVAL);
+   Jacobi(quad_1D->num_nodes, 0.0, 0.0, quad_1D->x, quad_1D->w);
+
+   int N = POW_INT(n, dim);
+   quadrature *quad_C = quadrature_init_full(N, dim, &dim, deg, CUBE);
+   GeneralizedNodesTensor(quad_1D, quad_C);
+   GeneralizedWeightsTensor(quad_1D, quad_C);
+   Vector basis_funcs = quad_C->basis->basis_funcs;
+
+   double *quad_integrals = (double *)calloc(numFuncs, sizeof(double));
+   Basis *basis = quad_C->basis;
+   BasisIntegrals(basis, basis->basis_integrals);
+
+   for(int i = 0; i < N; ++i) {
+      BasisFuncs(basis, &quad_C->x[dim*i], basis_funcs);
+      for(int j = 0; j < numFuncs; ++j)
+         quad_integrals[j] += basis_funcs.id[j]*quad_C->w[i];
+   }
+
+   double max_res = fabs(quad_integrals[0] - basis->basis_integrals.id[0]);
+   for(int j = 1; j < numFuncs; ++j) {
+      double res = fabs(quad_integrals[j]-basis->basis_integrals.id[j]);
+      max_res = MAX(max_res, res);
+   }
+   printf("\nTesting orthogonality of cube basis functions. Maximum error of basis functions = %.16e\n\n", max_res);
+
+   free(quad_integrals);
+   quadrature_free(quad_1D);
+   quadrature_free(quad_C);
+}
+
+
+void orthogonal_simplex_basis_test(int deg, int dim)
+{
+   int numFuncs = BasisSize(deg, dim);
+   int n = ceil( (deg+dim)/2.0 )+2; // make n large enough to get exact quadrature
+   int dims_1D[1] = {1};
+   quadrature *quad_1D = quadrature_init_basic(n, 1, dims_1D, deg, INTERVAL);
+   Jacobi(quad_1D->num_nodes, 0.0, 0.0, quad_1D->x, quad_1D->w);
+
+   int N = POW_INT(n, dim);
+   quadrature *quad_S = quadrature_init_full(N, dim, &dim, deg, SIMPLEX);
+   GeneralizedNodesTensor(quad_1D, quad_S);
+   GeneralizedWeightsTensor(quad_1D, quad_S);
+   GeneralDuffy(quad_S);
+   Vector basis_funcs = quad_S->basis->basis_funcs;
+
+   double *quad_integrals = (double *)calloc(numFuncs, sizeof(double));
+   Basis *basis = quad_S->basis;
+   BasisIntegrals(basis, basis->basis_integrals);
+
+   for(int i = 0; i < N; ++i) {
+      BasisFuncs(basis, &quad_S->x[dim*i], basis_funcs);
+      for(int j = 0; j < numFuncs; ++j)
+         quad_integrals[j] += basis_funcs.id[j]*quad_S->w[i];
+   }
+
+   double max_res = fabs(quad_integrals[0] - basis->basis_integrals.id[0]);
+   for(int j = 1; j < numFuncs; ++j) {
+      double res = fabs(quad_integrals[j]-basis->basis_integrals.id[j]);
+      max_res = MAX(max_res, res);
+   }
+   printf("\nTesting orthogonality of simplex basis functions. Maximum error of basis functions = %.16e\n\n", max_res);
+
+   free(quad_integrals);
+   quadrature_free(quad_1D);
+   quadrature_free(quad_S);
 }
 
 

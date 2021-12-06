@@ -4,19 +4,13 @@
  */
 
 #include "Quadrature.h"
-
 #include "Basis.h"
-#include "BasisIndices.h"
-#include "BasisFunctions.h"
-#include "BasisIntegrals.h"
 #include "Constraints.h"
 #include "Print.h"
 
 #include <stdlib.h>
 #include <assert.h>
 #include <string.h>
-#include <omp.h>
-
 
 static inline int GetNumDims(DOMAIN_TYPE D);
 static inline bool QuadPosWeightsElem(const quadrature *q, int elem);
@@ -32,7 +26,6 @@ static void quadrature_free_full(quadrature *q);
 
 quadrature *quadrature_init_basic(int n, int dim, int *dims, int deg, DOMAIN_TYPE D)
 {
-
    // ensure DOMAIN is initialized with valid parameters
    switch(D)
    {
@@ -61,7 +54,7 @@ quadrature *quadrature_init_basic(int n, int dim, int *dims, int deg, DOMAIN_TYP
          return NULL;
    }
 
-   quadrature *q = (quadrature *)malloc(size_quadrature);
+   quadrature *q = (quadrature *)malloc(sizeof(quadrature));
    memset(q, 0, sizeof(quadrature));
 
    q->num_nodes = n;
@@ -71,14 +64,13 @@ quadrature *quadrature_init_basic(int n, int dim, int *dims, int deg, DOMAIN_TYP
    q->x = &q->z.id[n];
 
    int num_dims = GetNumDims(D);
-   q->dims      = (int *)malloc(num_dims*size_int);
+   q->dims      = (int *)malloc(num_dims*sizeof(int));
    for(int i = 0; i < num_dims; ++i)
       q->dims[i] = dims[i];
    q->num_dims  = num_dims;
    q->dim       = dim;
    q->deg       = deg;
-   q->num_funcs = BasisSize(deg, dim);
-
+   q->D = D;
    switch(D)
    {
       case INTERVAL:
@@ -97,22 +89,13 @@ quadrature *quadrature_init_basic(int n, int dim, int *dims, int deg, DOMAIN_TYP
          q->setFuncs = SetSimplexSimplexFuncs;
          break;
    }
-
-   q->D = D;
-   q->evalBasisMonomial = &BasisMonomial;
-
    q->constr           = NULL;
-   q->evalBasis        = NULL;
-   q->evalBasisDer     = NULL;
-   q->basisIntegrals   = NULL;
    q->constr_init      = NULL;
-   q->constr_realloc   = NULL;
    q->get_constr       = NULL;
    q->constr_free      = NULL;
    q->basis            = NULL;
-   q->basisOmp         = NULL;
+   q->expIntegralExact = NULL;
    q->free_ptr = &quadrature_free_basic;
-
    q->isFullyInitialized = GQ_FALSE;
 
    return q;
@@ -128,16 +111,16 @@ quadrature *quadrature_init_full(int n, int dim, int *dims, int deg, DOMAIN_TYPE
    q->get_constr(q->constr);
    q->free_ptr = &quadrature_free_full;
    q->isFullyInitialized = GQ_TRUE;
-
    return q;
 }
 
 
-// Routine that reallocates quadrature q and reinitializes its parameters,
-// except for parameters corresponding to the number of dimensions
-// (i.e. size of array dims remains unchanged) and DOMAIN_TYPE of q.
-void quadrature_realloc(int n, int dim, int *dims, int deg, quadrature *q)
+void quadrature_reinit_simple(int n, int dim, int *dims, int deg, quadrature *q)
 {
+   if(q->isFullyInitialized == GQ_TRUE) {
+      PRINT_ERR(STR_QUAD_NOT_FULL_INIT, __LINE__, __FILE__);
+      return ;
+   }
    q->num_nodes = n;
 
    Vector_realloc(n*(dim+1), &q->z);
@@ -146,22 +129,25 @@ void quadrature_realloc(int n, int dim, int *dims, int deg, quadrature *q)
 
    q->dim = dim;
    q->deg = deg;
-   q->num_funcs = BasisSize(deg, dim);
    for(int i = 0; i < q->num_dims; ++i)
       q->dims[i] = dims[i];
+}
 
-   if(q->isFullyInitialized == GQ_TRUE) {
-      q->constr_realloc(q->constr, dims);
-      q->get_constr(q->constr);
-   }
 
+void quadrature_realloc_array(int n, quadrature *q)
+{
+   q->num_nodes = n;
+   int dim = q->dim;
+   Vector_realloc(n*(dim+1), &q->z);
+   q->w = &q->z.id[0];
+   q->x = &q->z.id[n];
 }
 
 
 // Routine that reallocates q to a quadrature with n nodes.
 // First n nodes are copied to the new quadrature.
 // Before the routine is called, q should contain at least n nodes or more.
-void quadrature_reinit(int n, quadrature *q)
+void quadrature_shrink_array(int n, quadrature *q)
 {
    assert(q->num_nodes >= n);
    q->num_nodes = n;
@@ -189,10 +175,9 @@ void quadrature_reinit(int n, quadrature *q)
 quadrature *quadrature_make_full_copy(const quadrature *q)
 {
    if(q->isFullyInitialized == GQ_FALSE) {
-      PRINT_ERR("supplied quadrature object was not fully initialized", __LINE__, __FILE__);
+      PRINT_ERR(STR_QUAD_NOT_FULL_INIT, __LINE__, __FILE__);
       return NULL;
    }
-
    int k         = q->num_nodes;
    int dim       = q->dim;
    int deg       = q->deg;
@@ -222,7 +207,6 @@ quadrature *quadrature_without_element(quadrature *q, int i)
          q_without->x[count*dim+d] = q->x[j*dim+d];
       ++count;
    }
-
    return q_without;
 }
 
@@ -244,8 +228,8 @@ void quadrature_remove_element(int index, quadrature *q)
 {
    assert(index <= q->num_nodes-1);
 
-   int k     = q->num_nodes;
-   int dim   = q->dim;
+   int k = q->num_nodes;
+   int dim = q->dim;
    double *w = q->w;
    double *x = q->x;
 
@@ -256,17 +240,15 @@ void quadrature_remove_element(int index, quadrature *q)
       for(int d = 0; d < dim; ++d)
          x[i*dim+d] = x[(i+1)*dim+d];
 
-   quadrature_reinit(k-1, q);
+   quadrature_shrink_array(k-1, q);
 }
 
 
 void quadrature_to_vector(const quadrature q, Vector v)
 {
    assert( (q.num_nodes * (q.dim+1)) == v.len );
-
    int k = q.num_nodes;
    int dim = q.dim;
-
    memcpy( &v.id[0], q.w, SIZE_DOUBLE(k) );
    memcpy( &v.id[k], q.x, SIZE_DOUBLE(k*dim) );
 }
@@ -284,13 +266,12 @@ void quadrature_get_elem(const quadrature *q, int i, Vector v)
 void vector_to_quadrature(const Vector v, quadrature q)
 {
    assert( (q.num_nodes * (q.dim+1)) == v.len );
-
    int k = q.num_nodes;
    int dim = q.dim;
-
    memcpy( q.w, v.id, SIZE_DOUBLE(k) );
    memcpy( q.x, &v.id[k], SIZE_DOUBLE(k*dim) );
 }
+
 
 void quadrature_free(quadrature *q)
 {
@@ -302,7 +283,7 @@ static void quadrature_free_basic(quadrature *q)
 {
    if(q->isFullyInitialized == GQ_TRUE)
    {
-      PRINT_ERR("full destructor should be called", __LINE__, __FILE__);
+      PRINT_ERR("full destructor was not called", __LINE__, __FILE__);
       return;
    }
    if(q == NULL) return;
@@ -315,9 +296,8 @@ static void quadrature_free_basic(quadrature *q)
 
 static void quadrature_free_full(quadrature *q)
 {
-   if(q->isFullyInitialized == GQ_FALSE)
-   {
-      PRINT_ERR("basic destructor should be called", __LINE__, __FILE__);
+   if(q->isFullyInitialized == GQ_FALSE) {
+      PRINT_ERR("basic destructor was not called", __LINE__, __FILE__);
       return;
    }
    if(q == NULL) return;
@@ -334,7 +314,7 @@ static void quadrature_free_full(quadrature *q)
 bool QuadOnTheBoundary(const quadrature *q, int elem)
 {
    if(q->isFullyInitialized == GQ_FALSE) {
-      PRINT_ERR("constraints have not been initialized", __LINE__, __FILE__);
+      PRINT_ERR(STR_QUAD_NOT_FULL_INIT, __LINE__, __FILE__);
       return false;
    }
    int node_loc = elem*q->dim;
@@ -351,21 +331,14 @@ bool QuadOnTheBoundary(const quadrature *q, int elem)
       if( fabs(b_elem - b.id[i]) <= tol )
          return true;
    }
-
    return false;
 }
 
-void QuadBasisOmp(quadrature *q)
-{
-   q->basisOmp = (Basis **)malloc(sizeof(Basis*)*omp_get_max_threads());
-   for(int i = 0; i < omp_get_max_threads(); ++i)
-      q->basisOmp[i] = BasisInit(q->basis->params, q->basis->interface);
-}
 
 bool QuadInDomain(const quadrature *q)
 {
    if(q->isFullyInitialized == GQ_FALSE) {
-      PRINT_ERR("constraints have not been initialized", __LINE__, __FILE__);
+      PRINT_ERR(STR_QUAD_NOT_FULL_INIT, __LINE__, __FILE__);
       return false;
    }
 
@@ -375,7 +348,7 @@ bool QuadInDomain(const quadrature *q)
 
    for(int i = 0; i < q->num_nodes; ++i)
    {
-      double lhs[M.rows]; memset(lhs, 0, M.rows*size_double);
+      double lhs[M.rows]; memset(lhs, 0, M.rows*sizeof(double));
       const double *X_ixdim = &q->x[i*dim];
 
       for(int r = 0; r < M.rows; ++r)
@@ -386,15 +359,14 @@ bool QuadInDomain(const quadrature *q)
          if(lhs[r] > b.id[r])
             return false;
    }
-
    return true;
 }
 
 
 bool QuadInDomainElem(const quadrature *q, int elem)
 {
-   if(q->constr == NULL) {
-      PRINT_ERR("constraints have not been initialized", __LINE__, __FILE__);
+   if(q->isFullyInitialized == GQ_FALSE) {
+      PRINT_ERR(STR_QUAD_NOT_FULL_INIT, __LINE__, __FILE__);
       return false;
    }
 
@@ -402,9 +374,7 @@ bool QuadInDomainElem(const quadrature *q, int elem)
    RMatrix M = q->constr->M;
    Vector b = q->constr->b;
    const double *X_ixdim = &q->x[elem*dim];
-
-
-   double lhs[M.rows]; memset(lhs, 0, M.rows*size_double);
+   double lhs[M.rows]; memset(lhs, 0, M.rows*sizeof(double));
 
    for(int r = 0; r < M.rows; ++r)
       for(int c = 0; c < M.cols; ++c)
@@ -437,160 +407,116 @@ static inline bool QuadPosWeightsElem(const quadrature *q, int elem)
 
 bool QuadInConstraint(const quadrature *q)
 {
-   if(q->constr == NULL) {
-      PRINT_ERR("constraints have not been initialized", __LINE__, __FILE__);
+   if(q->isFullyInitialized == GQ_FALSE) {
+      PRINT_ERR(STR_QUAD_NOT_FULL_INIT, __LINE__, __FILE__);
       return false;
    }
-
    return QuadInDomain(q) & QuadPosWeights(q);
 }
 
 
 bool QuadInConstraintElem(const quadrature *q, int elem)
 {
-   if(q->constr == NULL) {
-      PRINT_ERR("constraints have not been initialized", __LINE__, __FILE__);
+   if(q->isFullyInitialized == GQ_FALSE) {
+      PRINT_ERR(STR_QUAD_NOT_FULL_INIT, __LINE__, __FILE__);
       return false;
    }
-
    return QuadInDomainElem(q, elem) & QuadPosWeightsElem(q, elem);
 }
 
 
 double QuadTestIntegral(const quadrature *q)
 {
-   if(q->constr == NULL) {
-      PRINT_ERR("constraints have not been initialized", __LINE__, __FILE__);
-      return false;
+   if(q->isFullyInitialized == GQ_FALSE) {
+      PRINT_ERR(STR_QUAD_NOT_FULL_INIT, __LINE__, __FILE__);
+      return NAN;
    }
-
    int k = q->num_nodes;
    int dim = q->dim;
-   int *dims = q->dims;
-   int deg = q->deg;
    double *x = q->x;
    double *w = q->w;
+   int numFuncs = q->basis->numFuncs;
 
-   int num_funcs = q->num_funcs;
-   INT_8 *basis_id = (INT_8 *)malloc(num_funcs*dim *sizeof(INT_8));
-   BasisIndices(deg, dim, basis_id);
+   Vector IQuad   = Vector_init(numFuncs);
+   Vector res_arr = Vector_init(numFuncs);
+   Vector basis_integrals = q->basis->basis_integrals;
+   BasisIntegrals(q->basis, basis_integrals);
+   Vector basis_funcs = q->basis->basis_funcs;
 
-   Vector orth_basis = Vector_init(num_funcs);
-   Vector IQuad      = Vector_init(num_funcs);
-   Vector IExact     = Vector_init(num_funcs);
-   Vector res_arr    = Vector_init(num_funcs);
-
-   q->basisIntegrals(dims, deg, IExact.id);
-
-   // approximate integrals of basis functions
    for(int i = 0; i < k; ++i)
    {
-      q->evalBasis(dims, deg, basis_id, &x[dim*i], orth_basis.id);
-      for(int j = 0; j < num_funcs; ++j)
-         IQuad.id[j] += orth_basis.id[j] * w[i];
+      BasisFuncs(q->basis, &x[dim*i], basis_funcs);
+      for(int j = 0; j < numFuncs; ++j)
+         IQuad.id[j] += basis_funcs.id[j] * w[i];
    }
 
-   for(int j = 0; j < num_funcs; ++j) res_arr.id[j] = fabs(IQuad.id[j]-IExact.id[j]);
+   for(int j = 0; j < numFuncs; ++j) res_arr.id[j] = fabs(IQuad.id[j]-basis_integrals.id[j]);
    double res = V_ScaledTwoNorm(res_arr);
 
-   Vector_free(IExact);
    Vector_free(IQuad);
-   Vector_free(orth_basis);
    Vector_free(res_arr);
-   free(basis_id);
    return res;
 }
+
 
 double QuadTestIntegralMonomial(const quadrature *q)
 {
-   if(q->constr == NULL) {
-      PRINT_ERR("constraints have not been initialized", __LINE__, __FILE__);
-      return false;
+   if(q->isFullyInitialized == GQ_FALSE) {
+      PRINT_ERR(STR_QUAD_NOT_FULL_INIT, __LINE__, __FILE__);
+      return NAN;
    }
-
    int k = q->num_nodes;
    int dim = q->dim;
-   int *dims = q->dims;
-   int deg = q->deg;
    double *x = q->x;
    double *w = q->w;
+   int numFuncs = q->basis->numFuncs;
 
-   int num_funcs = q->num_funcs;
-   INT_8 *basis_id = (INT_8 *)malloc(num_funcs*dim *sizeof(INT_8));
-   BasisIndices(deg, dim, basis_id);
+   Vector IQuad   = Vector_init(numFuncs);
+   Vector res_arr = Vector_init(numFuncs);
+   Vector basis_integrals = q->basis->basis_integrals;
+   BasisIntegralsMonomial(q->basis, basis_integrals);
+   Vector basis_funcs = q->basis->basis_funcs;
 
-   Vector orth_basis = Vector_init(num_funcs);
-   Vector IQuad      = Vector_init(num_funcs);
-   Vector IExact     = Vector_init(num_funcs);
-   Vector res_arr    = Vector_init(num_funcs);
-
-   q->basisIntegralsMonomial(dims, deg, IExact.id);
-
-   // approximate integrals of basis functions
    for(int i = 0; i < k; ++i)
    {
-      q->evalBasisMonomial(dim, deg, basis_id, &x[dim*i], orth_basis.id);
-      for(int j = 0; j < num_funcs; ++j)
-         IQuad.id[j] += orth_basis.id[j] * w[i];
+      BasisMonomial(q->basis, &x[dim*i], basis_funcs);
+      for(int j = 0; j < numFuncs; ++j)
+         IQuad.id[j] += basis_funcs.id[j] * w[i];
    }
-
-   for(int j = 0; j < num_funcs; ++j) res_arr.id[j] = fabs(IQuad.id[j]-IExact.id[j]);
+   for(int j = 0; j < numFuncs; ++j) res_arr.id[j] = fabs(IQuad.id[j]-basis_integrals.id[j]);
    double res = V_ScaledTwoNorm(res_arr);
 
-   Vector_free(IExact);
    Vector_free(IQuad);
-   Vector_free(orth_basis);
    Vector_free(res_arr);
-   free(basis_id);
    return res;
 }
 
 
-double QuadTestIntegralExpCube(const quadrature *q)
+double QuadTestIntegralExp(const quadrature *q)
 {
+   if(q->isFullyInitialized == GQ_FALSE) {
+      PRINT_ERR(STR_QUAD_NOT_FULL_INIT, __LINE__, __FILE__);
+      return NAN;
+   }
    int k = q->num_nodes;
    int dim = q->dim;
    double *x = q->x;
    double *w = q->w;
-
-   double c[dim];
    double IQuad = 0.0;
-   for(int i = 0; i < dim; ++i) c[i] = 1.L;
 
-   double IExact = expIntegralNDimCube(dim, c);
+   double IExact = q->expIntegralExact(q);
    for(int i = 0; i < k; ++i)
-      IQuad += expNDimCube(dim, c, &x[dim*i]) * w[i];
+      IQuad += expNDim(dim, &x[dim*i]) * w[i];
 
    double res = IQuad > IExact ? IQuad - IExact : IExact - IQuad;
-
-   return res;
-}
-
-double QuadTestIntegralExpSimplex(const quadrature *q)
-{
-   int k = q->num_nodes;
-   int dim = q->dim;
-   double *x = q->x;
-   double *w = q->w;
-
-   double c[dim];
-   double IQuad = 0.0;
-   for(int i = 0; i < dim; ++i) c[i] = 1.0;
-
-   double IExact = expIntegralNDimSimplex(dim);
-   for(int i = 0; i < k; ++i)
-      IQuad += expNDimCube(dim, c, &x[dim*i]) * w[i];
-
-   double res = IQuad > IExact ? IQuad - IExact : IExact - IQuad;
-
    return res;
 }
 
 
 bool QuadEqnOnTheBoundary(const quadrature *q, int elem, int eqn)
 {
-   if(q->constr == NULL || q->isFullyInitialized == GQ_FALSE) {
-      PRINT_ERR("constraints have not been initialized", __LINE__, __FILE__);
+   if(q->isFullyInitialized == GQ_FALSE) {
+      PRINT_ERR(STR_QUAD_NOT_FULL_INIT, __LINE__, __FILE__);
       return false;
    }
    int dim = q->dim;
@@ -610,34 +536,44 @@ bool QuadEqnOnTheBoundary(const quadrature *q, int elem, int eqn)
 }
 
 
+static double ExpIntegralExactCube(const quadrature *q)
+{
+   return expIntegralNDimCube(q->dim);
+}
+
+static double ExpIntegralExactSimplex(const quadrature *q)
+{
+   return expIntegralNDimSimplex(q->dim);
+}
+
+static double ExpIntegralExactCubeSimplex(const quadrature *q)
+{
+   return expIntegralNDimCube(q->dims[0])*expIntegralNDimSimplex(q->dims[1]);
+}
+
+static double ExpIntegralExactSimplexSimplex(const quadrature *q)
+{
+   return expIntegralNDimSimplex(q->dims[0])*expIntegralNDimSimplex(q->dims[1]);
+}
+
+
 /*****************************************************************
 \* Implementation of polymorphic behaviour for quadrature object \*
 *****************************************************************/
 
 static void SetIntervalFuncs(quadrature *q)
 {
-   q->evalBasis        = &CubeBasisFuncs;
-   q->evalBasisDer     = &CubeBasisFuncsDer;
-   q->basisIntegrals   = &BasisIntegralsCube;
-
    q->constr_init      = &constraints_interval_init;
-   q->constr_realloc   = &constraints_interval_realloc;
    q->get_constr       = &get_constraints_interval;
    q->constr_free      = &constraints_interval_free;
 }
 
-
 static void SetCubeFuncs(quadrature *q)
 {
-   q->evalBasis        = &CubeBasisFuncs;
-   q->evalBasisDer     = &CubeBasisFuncsDer;
-   q->basisIntegrals   = &BasisIntegralsCube;
-   q->basisIntegralsMonomial = &IntegralsCubeMonomial; // Will add to other polygons as well
-
    q->constr_init      = &constraints_cube_init;
-   q->constr_realloc   = &constraints_cube_realloc;
    q->get_constr       = &get_constraints_cube;
    q->constr_free      = &constraints_cube_free;
+   q->expIntegralExact = &ExpIntegralExactCube;
 
    CubeParams cubeParams;
    cubeParams.deg = q->deg;
@@ -651,14 +587,10 @@ static void SetCubeFuncs(quadrature *q)
 
 static void SetSimplexFuncs(quadrature *q)
 {
-   q->evalBasis        = &BasisSimplex;
-   q->evalBasisDer     = &BasisPrimeSimplex;
-   q->basisIntegrals   = &BasisIntegralsSimplex;
-
    q->constr_init      = &constraints_simplex_init;
-   q->constr_realloc   = &constraints_simplex_realloc;
    q->get_constr       = &get_constraints_simplex;
    q->constr_free      = &constraints_simplex_free;
+   q->expIntegralExact = &ExpIntegralExactSimplex;
 
    SimplexParams simplexParams;
    simplexParams.deg = q->deg;
@@ -672,14 +604,10 @@ static void SetSimplexFuncs(quadrature *q)
 
 static void SetCubeSimplexFuncs(quadrature *q)
 {
-   q->evalBasis        = &BasisCubeSimplex;
-   q->evalBasisDer     = &BasisPrimeCubeSimplex;
-   q->basisIntegrals   = &BasisIntegralsCubeSimplex;
-
    q->constr_init      = &constraints_cubesimplex_init;
-   q->constr_realloc   = &constraints_cubesimplex_realloc;
    q->get_constr       = &get_constraints_cubesimplex;
    q->constr_free      = &constraints_cubesimplex_free;
+   q->expIntegralExact = &ExpIntegralExactCubeSimplex;
 
    CubeSimplexParams csParams;
    csParams.deg = q->deg;
@@ -694,14 +622,10 @@ static void SetCubeSimplexFuncs(quadrature *q)
 
 static void SetSimplexSimplexFuncs(quadrature *q)
 {
-   q->evalBasis        = &BasisSimplexSimplex;
-   q->evalBasisDer     = &BasisPrimeSimplexSimplex;
-   q->basisIntegrals   = &BasisIntegralsSimplexSimplex;
-
    q->constr_init      = &constraints_simplexsimplex_init;
-   q->constr_realloc   = &constraints_simplexsimplex_realloc;
    q->get_constr       = &get_constraints_simplexsimplex;
    q->constr_free      = &constraints_simplexsimplex_free;
+   q->expIntegralExact = &ExpIntegralExactSimplexSimplex;
 
    SimplexSimplexParams ssParams;
    ssParams.deg = q->deg;
@@ -726,5 +650,4 @@ static inline int GetNumDims(DOMAIN_TYPE D)
       default:                 return -1;
    }
 }
-
 

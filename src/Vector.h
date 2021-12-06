@@ -10,6 +10,7 @@ extern "C" {
 typedef struct
 {
    double *id;
+   double **ompId;
    int len;
 } Vector;
 
@@ -23,6 +24,10 @@ Vector Vector_init(int n);
 void Vector_realloc(int n, Vector *V);
 void Vector_Assign(Vector v1, Vector v2);
 void Vector_free(Vector V);
+#ifndef _OPENMP
+void AllocVectorOmpData(Vector *v);
+void FreeVectorOmpData(Vector v);
+#endif
 
 void VPrint(Vector V);
 double VDot(Vector a, Vector b);

@@ -10,7 +10,7 @@ extern "C" {
 #define PASSED true
 #define FAILED false
 
-void NodeElimination(const quadrature *quad_initial, quadrature *quad_final, glist *history);
+void NodeElimination(const quadrature *quad_initial, quadrature *quad_final, history *hist);
 
 #ifdef __cplusplus
 }

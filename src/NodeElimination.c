@@ -9,7 +9,6 @@
 #include "LeastSquaresNewton.h"
 #include "ConstrainedOptimization.h"
 #include "Quadrature.h"
-#include "BasisIndices.h"
 #include "LINALG.h"
 #include "Print.h"
 #include "Conditional_Debug.h"
@@ -24,10 +23,10 @@
 #include "../plasma-17.1/include/plasma.h"
 
 extern int MAX_DIM;
-static void FreeMemory(INT_8 *basis_indices, quadrature *q_temp, quadrature *q_new);
-RMatrix PredictorLapack(quadrature *q, INT_8 *basis_indices, int *arrayIndex);
+static void FreeMemory(quadrature *q_temp, quadrature *q_new);
+RMatrix PredictorLapack(quadrature *q, int *arrayIndex);
 #ifdef _OPENMP
-RMatrix PredictorPlasma(quadrature *q, INT_8 *basis_indices, int *arrayIndex);
+RMatrix PredictorPlasma(quadrature *q, int *arrayIndex);
 #endif
 static void ExtractFromPredictor(RMatrix Z, int arrayIndex, quadrature *q);
 static void ConstrainQTemp(quadrature *q_new, int arrayIndex, quadrature *q_temp);
@@ -43,42 +42,30 @@ ATTR_UNUSED static bool TestQR(const CMatrix Q);
  * until no more nodes can be eliminated.
  ***************************************************************************************************/
 double PREDICTOR_TIME = 0.0;
-void NodeElimination(const quadrature *q_initial, quadrature *q_final, glist *history)
+void NodeElimination(const quadrature *q_initial, quadrature *q_final, history *hist)
 {
    if(q_initial->isFullyInitialized != GQ_TRUE) {
-      PRINT_ERR("Functions and constraints for q_initial are not set", __LINE__, __FILE__);
+      PRINT_ERR(STR_QUAD_NOT_FULL_INIT, __LINE__, __FILE__);
       return;
    }
    if(q_final->isFullyInitialized != GQ_TRUE) {
-      PRINT_ERR("Functions and constraints for q_final are not set",  __LINE__, __FILE__);
+      PRINT_ERR(STR_QUAD_NOT_FULL_INIT, __LINE__, __FILE__);
       return;
    }
 
    int n_initial       = q_initial->num_nodes;
-   int num_funcs       = q_initial->num_funcs;
-   int deg             = q_initial->deg;
+   int numFuncs        = q_initial->basis->numFuncs;
    int dim             = q_initial->dim;
-   int *dims           = q_initial->dims;
    double tol = QUAD_TOL; // 10^(-15);
 
-   LibraryType libType;
-   RMatrix(*Predictor_Ptr)(quadrature *, INT_8 *, int *);
+   RMatrix(*Predictor_Ptr)(quadrature *, int *);
 #ifdef _OPENMP
    int omp_condition = OMP_CONDITION(deg, dim);
-   if(omp_condition) {
-      libType = PLASMA;
-      Predictor_Ptr = &PredictorPlasma;
-   } else {
-      libType = LAPACK;
-      Predictor_Ptr = &PredictorLapack;
-   }
+   if(omp_condition) Predictor_Ptr = &PredictorPlasma;
+   else              Predictor_Ptr = &PredictorLapack;
 #else
-   libType = LAPACK;
    Predictor_Ptr = &PredictorLapack;
 #endif
-
-   INT_8 *basis_indices = (INT_8 *)malloc( (num_funcs*dim)*sizeof(INT_8) );
-   BasisIndices(deg, dim, basis_indices);
 
    quadrature *q_temp = quadrature_make_full_copy(q_initial);
    quadrature *q_new  = quadrature_make_full_copy(q_initial);
@@ -87,32 +74,32 @@ void NodeElimination(const quadrature *q_initial, quadrature *q_final, glist *hi
    // if residual is too large, attempt to find quadrature using Newton's method.
    // if Newton's method finds a solution, proceed to Node elimination, otherwise return.
    double res = QuadTestIntegral(q_initial);
-   PrintDouble(res, "initial residual in NodeElimination");
+   PrintDouble(res, "initial basis residual in NodeElimination");
    if(fabs(res) > tol)
    {
-      bool SOL_FLAG = LeastSquaresNewton(libType, ON, basis_indices, q_temp, 0);
+      bool SOL_FLAG = LeastSquaresNewton(ON, q_temp, 0);
       if(SOL_FLAG == SOL_FOUND) {
          n_initial = q_temp->num_nodes;
-         quadrature_realloc(n_initial, dim, dims, deg, q_new);
+         quadrature_realloc_array(n_initial, q_new);
          quadrature_assign(q_temp, q_new);
       }
       else if(SOL_FLAG == SOL_NOT_FOUND) {
          Print("Initial quadrature did not converge. The initial guess should be more accurate.\n");
-         FreeMemory(basis_indices, q_temp, q_new);
+         FreeMemory(q_temp, q_new);
          return;
       }
    }
 
    // run Node Elimination Algorithm. Theoretical optimum is reached when
-   // (dim+1)*k = num_funcs, at which point elimination is pursued no further.
+   // (dim+1)*k = numFuncs, at which point elimination is pursued no further.
    int n_prev                   = -1;
    int n_cur                    = n_initial;
    bool_enum CONSTR_FLAG        = OFF;
    bool SOL_FLAG                = SOL_NOT_FOUND;
-   int n_opt                    = ceil(1.0*num_funcs/(dim+1));
+   int n_opt                    = ceil(1.0*numFuncs/(dim+1));
    double efficiency            = (double)n_opt/n_initial;
    PrintElimInfo( dim, n_cur , n_opt, efficiency);
-   while( ((dim+1)*n_cur > num_funcs)  && (n_cur >= 1) )
+   while( ((dim+1)*n_cur > numFuncs)  && (n_cur >= 1) )
    {
       if(n_cur <= 1) goto FREERETURN;
       if(dim == MAX_DIM)
@@ -121,12 +108,12 @@ void NodeElimination(const quadrature *q_initial, quadrature *q_final, glist *hi
       else CONSTR_FLAG = OFF;
       n_prev = n_cur;
 
-      quadrature_reinit(n_cur-1, q_temp);
-      quadrature_reinit(n_cur, q_new);
+      quadrature_shrink_array(n_cur-1, q_temp);
+      quadrature_shrink_array(n_cur, q_new);
 
       int *arrayIndex = (int *)malloc(SIZE_INT(n_cur));
       double start_time = get_cur_time();
-      RMatrix Z = Predictor_Ptr(q_new, basis_indices, arrayIndex);
+      RMatrix Z = Predictor_Ptr(q_new, arrayIndex);
       PREDICTOR_TIME += get_cur_time() - start_time;
       for(int i = 0; i < n_cur; ++i)
       {
@@ -142,24 +129,23 @@ void NodeElimination(const quadrature *q_initial, quadrature *q_final, glist *hi
 
          int its = 0;
          ConstrainQTemp(q_new, arrayIndex[i], q_temp);
-         SOL_FLAG = LeastSquaresNewton(libType, CONSTR_FLAG, basis_indices, q_temp, &its);
+         SOL_FLAG = LeastSquaresNewton(CONSTR_FLAG, q_temp, &its);
          // store nodes and weights if Newton's method succeeded, update history
          if(SOL_FLAG == SOL_FOUND)
          {
             n_cur = q_temp->num_nodes;
             efficiency = (double)n_opt/n_cur;
-            quadrature_realloc(q_temp->num_nodes, dim, dims, deg, q_new);
+            quadrature_realloc_array(q_temp->num_nodes, q_new);
             quadrature_assign(q_temp, q_new);
 
-            hist_data *hist_d = (hist_data *)malloc(sizeof(hist_data));
-            hist_d->nodes_tot = n_cur;
-            hist_d->success_node = i;
-            hist_d->success_its = its;
-            glist_push(history, (void *)hist_d);
+            hist->hist_array[hist->total_elims].nodes_tot = n_cur;
+            hist->hist_array[hist->total_elims].success_node = i;
+            hist->hist_array[hist->total_elims].success_its = its;
+            ++hist->total_elims;
             break; // break i loop
          }
          else if(SOL_FLAG == SOL_NOT_FOUND)
-            quadrature_realloc(n_cur-1, dim, dims, deg, q_temp); // replace with a cheaper routine
+            quadrature_realloc_array(n_cur-1, q_temp); // replace with a cheaper routine
       }// end i loop
       RMatrix_free(Z);
       free(arrayIndex);
@@ -184,31 +170,30 @@ FREERETURN:
    q_final->num_nodes = n_cur;
    quadrature_assign(q_new, q_final);
    res = QuadTestIntegral(q_final);
-   PrintDouble(res, "Final residual in NodeElimination"); printf("\n");
+   PrintDouble(res, "Final basis residual in NodeElimination"); printf("\n");
 
-   FreeMemory(basis_indices, q_temp, q_new);
+   FreeMemory(q_temp, q_new);
 }// end NodeElimination
 
 
-static void FreeMemory(INT_8 *basis_indices, quadrature *q_temp, quadrature *q_new)
+static void FreeMemory(quadrature *q_temp, quadrature *q_new)
 {
-   free(basis_indices);
    quadrature_free(q_temp);
    quadrature_free(q_new);
 }
 
 // not an easy world we live in
-RMatrix PredictorLapack(quadrature *q, INT_8 *basis_indices, int *arrayIndex)
+RMatrix PredictorLapack(quadrature *q, int *arrayIndex)
 {
-   const int num_funcs = q->num_funcs;
+   const int numFuncs  = q->basis->numFuncs;
    const int dim       = q->dim;
    const int n_cur     = q->num_nodes;
-   const int nrows     = num_funcs;
+   const int nrows     = numFuncs;
    const int ncols     = (dim+1) * n_cur;
    assert(nrows <= ncols);
 
    CMatrix J = CMatrix_init(nrows, ncols);
-   GetJacobian(basis_indices, q, J);
+   GetJacobian(q, J);
    CMatrix J_TR = CMatrix_Transpose(J);
 
    // construct QR factorization of transpose of the jacobian
@@ -235,10 +220,10 @@ RMatrix PredictorLapack(quadrature *q, INT_8 *basis_indices, int *arrayIndex)
 
    // extract i*(dim+1)th rows of Q2 and compute their norm, where Q = [Q1, Q2]
    for(int i = 0; i < QWeight.rows; ++i) {
-      for(int j = 0; j < num_funcs; ++j)            C_ELEM_ID(Q2, i, j) = 0.0;
-      for(int j = num_funcs; j < QWeight.cols; ++j) C_ELEM_ID(Q2, i, j) = C_ELEM_ID(QWeight, i, j);
+      for(int j = 0; j < numFuncs; ++j)            C_ELEM_ID(Q2, i, j) = 0.0;
+      for(int j = numFuncs; j < QWeight.cols; ++j) C_ELEM_ID(Q2, i, j) = C_ELEM_ID(QWeight, i, j);
    }
-   double *ith_row = (double *)malloc(QWeight.cols*size_double);
+   double *ith_row = (double *)malloc(QWeight.cols*sizeof(double));
    for(int i = 0; i < QWeight.rows; ++i) {
       for(int j = 0; j < QWeight.cols; ++j)
          ith_row[j] = C_ELEM_ID(Q2, i, j);
@@ -279,12 +264,12 @@ RMatrix PredictorLapack(quadrature *q, INT_8 *basis_indices, int *arrayIndex)
 }
 
 #ifdef _OPENMP
-RMatrix PredictorPlasma(quadrature *q, INT_8 *basis_indices, int *arrayIndex)
+RMatrix PredictorPlasma(quadrature *q, int *arrayIndex)
 {
-   const int num_funcs = q->num_funcs;
+   const int numFuncs  = q->basis->numFuncs;
    const int dim       = q->dim;
    const int n_cur     = q->num_nodes;
-   const int nrows     = num_funcs;
+   const int nrows     = numFuncs;
    const int ncols     = (dim+1) * n_cur;
    int INFO;
    assert(nrows <= ncols);
@@ -292,7 +277,7 @@ RMatrix PredictorPlasma(quadrature *q, INT_8 *basis_indices, int *arrayIndex)
    plasma_init();
 
    CMatrix J = CMatrix_init(nrows, ncols);
-   GetJacobian(basis_indices, q, J);
+   GetJacobian(q, J);
    CMatrix J_TR = CMatrix_Transpose(J);
 
    plasma_desc_t T;
@@ -324,10 +309,10 @@ RMatrix PredictorPlasma(quadrature *q, INT_8 *basis_indices, int *arrayIndex)
 
    // extract i*(dim+1)th rows of Q2 and compute their norm, where Q = [Q1, Q2]
    for(int i = 0; i < QWeight.rows; ++i) {
-      for(int j = 0; j < num_funcs; ++j)            C_ELEM_ID(Q2, i, j) = 0.0;
-      for(int j = num_funcs; j < QWeight.cols; ++j) C_ELEM_ID(Q2, i, j) = C_ELEM_ID(QWeight, i, j);
+      for(int j = 0; j < numFuncs; ++j)            C_ELEM_ID(Q2, i, j) = 0.0;
+      for(int j = numFuncs; j < QWeight.cols; ++j) C_ELEM_ID(Q2, i, j) = C_ELEM_ID(QWeight, i, j);
    }
-   double *ith_row = (double *)malloc(QWeight.cols*size_double);
+   double *ith_row = (double *)malloc(QWeight.cols*sizeof(double));
    for(int i = 0; i < QWeight.rows; ++i) {
       for(int j = 0; j < QWeight.cols; ++j)
          ith_row[j] = C_ELEM_ID(Q2, i, j);

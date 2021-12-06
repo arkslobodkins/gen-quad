@@ -18,7 +18,7 @@ extern "C" {
 #define CONSTR_INV_INPUT -2
 #define CONSTR_UNEXPECTED -3
 
-bool LeastSquaresNewton(LibraryType LibraryType, const bool_enum CONSTR_OPT, const INT_8 *basis, quadrature *q_orig, int *its);
+bool LeastSquaresNewton(const bool_enum CONSTR_OPT, quadrature *q_orig, int *its);
 
 
 #ifdef __cplusplus

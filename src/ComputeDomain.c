@@ -6,8 +6,6 @@
 #include "ComputeDomain.h"
 
 #include "AddDimension.h"
-#include "BasisFunctions.h"
-#include "BasisIndices.h"
 #include "GeneralGaussTensor.h"
 #include "Gauss_Lib/Jacobi.h"
 #include "NodeElimination.h"
@@ -20,7 +18,7 @@
 
 int MAX_DIM;
 
-static history *hist_create();
+static history *hist_create(int n);
 static void hist_free(history *h_list);
 static void hist_save_start(quadrature *q, history *hist);
 static void hist_save_end(quadrature *q, history *hist);
@@ -57,11 +55,11 @@ void ComputeCube(int deg, int dim)
    assert(deg > 0);
    assert(dim > 1);
 
+   orthogonal_cube_basis_test(deg, dim);
+
    MAX_DIM = dim;
    int hist_dims = dim-1;
    history **hist_cube = (history **)malloc(hist_dims*sizeof(history *));
-   for(int i = 0; i < hist_dims; ++i)
-      hist_cube[i] = hist_create();
 
    quadrature *q_init = NULL;
    quadrature *q_new  = NULL;
@@ -88,21 +86,24 @@ void ComputeCube(int deg, int dim)
       else if(d > 2) { // set up initial guess for d-dim CUBE
          int n_nodes_next = q_new->num_nodes * q_gauss->num_nodes;
          int d_init[1] = {d};
-         quadrature_realloc(n_nodes_next, d, d_init, deg, q_init);
+         quadrature_free(q_init);
+         q_init = quadrature_init_full(n_nodes_next, d, d_init, deg, CUBE);
          AddLineFirst(q_gauss, q_new, q_init);
 
          int d_new[1] = {d};
-         quadrature_realloc(n_nodes_next, d, d_new, deg, q_new);
+         quadrature_free(q_new);
+         q_new = quadrature_init_full(n_nodes_next, d, d_new, deg, CUBE);
       }
 
+      hist_cube[d-2] = hist_create(q_new->num_nodes);
       hist_save_start(q_init, hist_cube[d-2]);
-      NodeElimination(q_init, q_new, hist_cube[d-2]->list);
+      NodeElimination(q_init, q_new, hist_cube[d-2]);
       hist_save_end(q_new, hist_cube[d-2]);
    }
 
    double res = QuadTestIntegralMonomial(q_new);
-   printf("Monomial residual = %.16e\n\n", res);
-   res = QuadTestIntegralExpCube(q_new);
+   printf("Monomial basis residual = %.16e\n", res);
+   res = QuadTestIntegralExp(q_new);
    printf("Exponential residual = %.16e\n\n", res);
 
    HistoryToFile(q_new, dim-1, hist_cube);
@@ -116,7 +117,6 @@ void ComputeCube(int deg, int dim)
       hist_free(hist_cube[i]);
    free(hist_cube);
 }// end ComputeCube
-
 
 
 // ComputeSimplex
@@ -134,15 +134,10 @@ void ComputeSimplex(int deg, int dim)
    assert(deg > 0);
    assert(dim > 1);
 
-//   orthogonal_simplex_basis_test(deg, dim);
+   orthogonal_simplex_basis_test(deg, dim);
 
    MAX_DIM = dim;
    history **hist_simplex = (history **)malloc((dim-1)*sizeof(history *));
-   for(int i = 0; i < dim-1; ++i)
-   {
-      hist_simplex[i] = hist_create();
-      hist_simplex[i]->dim = i+2;
-   }
 
    double p1 = 0.0, p2 = 0.0;
    int d_gauss[1] = {1};
@@ -151,9 +146,9 @@ void ComputeSimplex(int deg, int dim)
    Jacobi(q_gauss->num_nodes, p1, p2, q_gauss->x, q_gauss->w);
    quadrature *q_new = ComputeSimplexNext(deg, 1, dim, q_gauss, 0, hist_simplex);
 
-   double res = QuadTestIntegral(q_new);
-   printf("Monomial residual = %.16e\n\n", res);
-   res = QuadTestIntegralExpSimplex(q_new);
+   double res = QuadTestIntegralMonomial(q_new);
+   printf("Monomial basis residual = %.16e\n", res);
+   res = QuadTestIntegralExp(q_new);
    printf("Exponential residual = %.16e\n\n", res);
 
    HistoryToFile(q_new, dim-1, hist_simplex);
@@ -189,11 +184,6 @@ void ComputeCubeSimplex(int deg, int dim1, int dim2)
 
    quadrature *q_init_s = NULL, *q_new_s = NULL, *q_init_cs = NULL, *q_new_cs = NULL;
    history **hist_cs = (history **)malloc((dim-1)*sizeof(history *));
-   for(int i = 0; i < dim-1; ++i)
-   {
-      hist_cs[i]= hist_create();
-      hist_cs[i]->dim = i+2;
-   }
 
    // implement recursive scheme for computing the initial guess and run Node Elimination algorithm
    for(int d = 2; d <= dim; ++d)
@@ -240,17 +230,20 @@ void ComputeCubeSimplex(int deg, int dim1, int dim2)
 
             int n_nodes_next = q_new_s->num_nodes * q_gauss->num_nodes;
             int d_init[1] = {d};
-            quadrature_realloc(n_nodes_next, d, d_init, deg, q_init_s);
+            quadrature_free(q_init_s);
+            q_init_s = quadrature_init_full(n_nodes_next, d, d_init, deg, SIMPLEX);
             AddLineSimplex(q_gauss, q_new_s, q_init_s);
 
             int d_new[1] = {d};
-            quadrature_realloc(n_nodes_next, d, d_new, deg, q_new_s);
+            quadrature_free(q_new_s);
+            q_new_s = quadrature_init_full(n_nodes_next, d, d_new, deg, SIMPLEX);
 
             quadrature_free(q_gauss);
          }
 
+         hist_cs[d-2] = hist_create(q_new_s->num_nodes);
          hist_save_start(q_init_s, hist_cs[d-2]);
-         NodeElimination(q_init_s, q_new_s, hist_cs[d-2]->list);
+         NodeElimination(q_init_s, q_new_s, hist_cs[d-2]);
          hist_save_end(q_new_s, hist_cs[d-2]);
       }
       else if(dim_cube > 0) // set up initial guess for CUBESIMPLEX
@@ -272,20 +265,26 @@ void ComputeCubeSimplex(int deg, int dim1, int dim2)
          }
          else if(dim_cube > 1) {
             int n_nodes_next = q_new_cs->num_nodes * q_gauss->num_nodes;
-            quadrature_realloc(n_nodes_next, d, d_init, deg, q_init_cs);
+            quadrature_free(q_init_cs);
+            q_init_cs = quadrature_init_full(n_nodes_next, d, d_init, deg, CUBESIMPLEX);
             AddLineFirst(q_gauss, q_new_cs, q_init_cs);
 
-            quadrature_realloc(n_nodes_next, d, d_new, deg, q_new_cs);
+            quadrature_free(q_new_cs);
+            q_new_cs = quadrature_init_full(n_nodes_next, d, d_new, deg, CUBESIMPLEX);
          }
          quadrature_free(q_gauss);
 
+         hist_cs[d-2] = hist_create(q_new_cs->num_nodes);
          hist_save_start(q_init_cs, hist_cs[d-2]);
-         NodeElimination(q_init_cs, q_new_cs, hist_cs[d-2]->list);
+         NodeElimination(q_init_cs, q_new_cs, hist_cs[d-2]);
          hist_save_end(q_new_cs, hist_cs[d-2]);
       }
-
    }
 
+   double res = QuadTestIntegralMonomial(q_new_cs);
+   printf("Monomial basis residual = %.16e\n", res);
+   res = QuadTestIntegralExp(q_new_cs);
+   printf("Exponential residual = %.16e\n\n", res);
    HistoryToFile(q_new_cs, dim-1, hist_cs);
    QuadratureToFile(q_new_cs);
 
@@ -334,8 +333,6 @@ void ComputeSimplexSimplex(int deg, int dim1, int dim2)
 
    int hist_dims = dim_s1_max;
    history **hist_ss = (history **)malloc((hist_dims)*sizeof(history *));
-   for(int i = 0; i < hist_dims; ++i)
-      hist_ss[i]= hist_create();
 
    quadrature *q_new_s1 = NULL;
    quadrature *q_new_s2 = ComputeSimplexNext(deg, 1, dim_s2_max, q_gauss, 0, hist_ss);
@@ -355,10 +352,15 @@ void ComputeSimplexSimplex(int deg, int dim1, int dim2)
    quadrature_assign(q_init_ss, q_new_ss);
 
    // perform node elimination for SIMPLEXSIMPLEX
+   hist_ss[hist_dims-1]= hist_create(q_init_ss->num_nodes);
    hist_save_start(q_init_ss, hist_ss[hist_dims-1]);
-   NodeElimination(q_init_ss, q_new_ss, hist_ss[hist_dims-1]->list);
+   NodeElimination(q_init_ss, q_new_ss, hist_ss[hist_dims-1]);
    hist_save_end(q_new_ss, hist_ss[hist_dims-1]);
 
+   double res = QuadTestIntegralMonomial(q_new_ss);
+   printf("Monomial basis residual = %.16e\n", res);
+   res = QuadTestIntegralExp(q_new_ss);
+   printf("Exponential residual = %.16e\n\n", res);
    HistoryToFile(q_new_ss, hist_dims, hist_ss);
    QuadratureToFile(q_new_ss);
 
@@ -371,7 +373,6 @@ void ComputeSimplexSimplex(int deg, int dim1, int dim2)
       hist_free(hist_ss[i]);
    free(hist_ss);
 }// end ComputeSimplexSimplex
-
 
 
 static quadrature *ComputeSimplexNext(int deg, int dim_cur, int dim_next, const quadrature *q_cur, int hist_start, history **hist)
@@ -405,17 +406,20 @@ static quadrature *ComputeSimplexNext(int deg, int dim_cur, int dim_next, const 
       else if(d > dim_cur+1) {
          int n_nodes_next = q_new_next->num_nodes * q_gauss->num_nodes;
          int d_init[1] = {d};
-         quadrature_realloc(n_nodes_next, d, d_init, deg, q_init_next);
-         AddLineSimplex(q_gauss, q_new_next, q_init_next );
+         quadrature_free(q_init_next);
+         q_init_next = quadrature_init_full(n_nodes_next, d, d_init, deg, SIMPLEX);
+         AddLineSimplex(q_gauss, q_new_next, q_init_next);
 
          int d_new[1] = {d};
-         quadrature_realloc(n_nodes_next, d, d_new, deg, q_new_next);
+         quadrature_free(q_new_next);
+         q_new_next = quadrature_init_full(n_nodes_next, d, d_new, deg, SIMPLEX);
          quadrature_assign(q_init_next, q_new_next);
       }
       quadrature_free(q_gauss);
 
+      hist[hist_start+count] = hist_create(q_init_next->num_nodes);
       hist_save_start(q_init_next, hist[hist_start+count]);
-      NodeElimination(q_init_next, q_new_next, hist[hist_start+count]->list);
+      NodeElimination(q_init_next, q_new_next, hist[hist_start+count]);
       hist_save_end(q_new_next, hist[hist_start+count]);
       ++count;
    }
@@ -426,17 +430,18 @@ static quadrature *ComputeSimplexNext(int deg, int dim_cur, int dim_next, const 
 }
 
 
-static history *hist_create()
+static history *hist_create(int n)
 {
-   history *h_list = (history *)malloc(sizeof(history));
-   h_list->list = glist_create();
-   return h_list;
+   history *h = (history *)malloc(sizeof(history));
+   h->hist_array = (hist_data *)malloc(n*sizeof(hist_data));
+   h->total_elims = 0;
+   return h;
 }
 
-static void hist_free(history *h_list)
+static void hist_free(history *h)
 {
-   glist_free(h_list->list);
-   free(h_list);
+   free(h->hist_array);
+   free(h);
 }
 
 static void hist_save_start(quadrature *q, history *hist)
@@ -444,7 +449,7 @@ static void hist_save_start(quadrature *q, history *hist)
    hist->dim           = q->dim;
    hist->degree        = q->deg;
    hist->nodes_initial = q->num_nodes;
-   hist->num_funcs     = q->num_funcs;
+   hist->num_funcs     = q->basis->numFuncs;
    hist->D             = q->D;
 }
 

@@ -62,25 +62,25 @@ int binomial(int k, int n)
    return factorial(n)/(factorial(k)*factorial(n-k));
 }
 
+double expNDim(int dim, double x[])
+{
+   double expVal = 1.0;
+   for(int i = 0; i < dim; ++i)
+      expVal *= expl(x[i]);
+
+   return expVal;
+}
+
 long double expIntegral1D(long double c)
 {
    return 1.0L/c * (expl(c)-1.0L);
 }
 
-double expNDimCube(int dim, double c[], double x[])
-{
-   double expVal = 1.0;
-   for(int i = 0; i < dim; ++i)
-      expVal *= expl(c[i]*x[i]);
-
-   return expVal;
-}
-
-double expIntegralNDimCube(int dim, double c[])
+double expIntegralNDimCube(int dim)
 {
    double expI = 1.0;
    for(int i = 0; i < dim; ++i)
-      expI *= expIntegral1D(c[i]);
+      expI *= expIntegral1D(1.0);
 
    return expI;
 }
@@ -92,7 +92,7 @@ double expIntegralNDimSimplex(int dim)
    double expI = 0.0;
    double sign = 1.0;
    for(int i = dim; i >= 0; --i) {
-      expI += (double)binomial(i, dim)*expl(i)*sign;
+         expI += (double)binomial(i, dim)*expl(i)*sign;
       sign *= -1.0;
    }
    expI /= factorial(dim);

@@ -9,8 +9,6 @@
 #include <stdint.h>
 #include <math.h>
 
-
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -26,15 +24,9 @@ extern "C" {
 #define ATTR_UNUSED
 #endif
 
-#ifdef _OPENMP
-#define if_omp(omp_statement) #omp_statement
-#else
-#define if_omp(omp_statement)
-#endif
-
-
 #define GQ_TRUE 1
 #define GQ_FALSE 0
+typedef int GQ_BOOL;
 
 #define ONE 1
 #define TWO 2
@@ -52,20 +44,13 @@ extern "C" {
 #define is_greater_than_zero(x) ((x) > 0 ? true : false)
 #define SQUARE(x) ((x)*(x))
 #define SQRT(x) sqrt((double)(x))
-#define ij2(i, j, num_cols) ((i)*(num_cols)+j) // maps indices from 2-d layout to memory
-#define size_int sizeof(int)
-#define size_double sizeof(double)
 #define SIZE_INT(x) ((x)*sizeof(int))
 #define SIZE_DOUBLE(x) ((x)*sizeof(double))
-#define size_quadrature sizeof(quadrature)
 
-
-typedef enum { LAPACK, PLASMA } LibraryType;
 typedef enum { ON, OFF } bool_enum;
 typedef enum { orthogonal, monomial } basis_type;
 typedef enum { INTERVAL, CUBE, SIMPLEX, CUBESIMPLEX, SIMPLEXSIMPLEX } DOMAIN_TYPE;
 typedef enum { NODE, WEIGHT, NONE } NODE_OR_WEIGHT;
-typedef int GQ_BOOL;
 
 char *get_domain_string(DOMAIN_TYPE D);
 bool string_to_domain(const char *shape, DOMAIN_TYPE *D);
@@ -74,20 +59,12 @@ double DoubleIntPower(double x, int power);
 int factorial(int n);
 int binomial(int k, int n);
 long double expIntegral1D(long double c);
-double expNDimCube(int dim, double c[], double x[]);
-double expIntegralNDimCube(int dim, double c[]);
+double expNDim(int dim, double x[]);
+double expIntegralNDimCube(int dim);
 double expIntegralNDimSimplex(int dim);
 #ifdef _OPENMP
 GQ_BOOL OMP_CONDITION(int deg, int dim);
 #endif
-
-//typedef struct
-//{
-//   int tot_elims;
-//   int *nodes_tot;
-//   int *success_node;
-//   int *success_its;
-//} elim_history;
 
 typedef struct
 {
@@ -98,7 +75,7 @@ typedef struct
 
 typedef struct
 {
-   glist *list;
+   hist_data *hist_array;
    int dim;
    int degree;
    int nodes_initial;
@@ -106,6 +83,7 @@ typedef struct
    int num_funcs;
    double res;
    DOMAIN_TYPE D;
+   int total_elims;
 } history;
 
 typedef struct
@@ -116,7 +94,6 @@ typedef struct
    NODE_OR_WEIGHT N_OR_W;
 } ConstrNodeData;
 
-
 typedef struct
 {
    int            boundaryNodeId;
@@ -126,34 +103,14 @@ typedef struct
    NODE_OR_WEIGHT N_OR_W;
 } ConstrVectData;
 
-
 typedef struct quadrature quadrature;
-
-typedef void(*EvalBasis)(int *dims, int deg, const INT_8 *basis, const double *x, double *phi);
-typedef void(*EvalBasisMonomial)(int dim, int deg, const INT_8 *basis, const double *x, double *phi);
-typedef void(*EvalBasisDer)(int *dims, int deg, const INT_8 *basis, const double *x, double *phiPrime);
-typedef void(*BasisIntegrals)(int *dims, int deg, double *integrals);
-typedef void(*BasisIntegralsMonomial)(int *dims, int deg, double *integrals);
-
-typedef bool(*InDomainElem)(quadrature *quad, int elem);
-typedef bool(*InConstraint)(quadrature *q);
-typedef bool(*InConstraintElem)(quadrature *quad, int elem);
-typedef bool(*PosWeights)(quadrature *q);
-typedef bool(*PosWeightsElem)(quadrature *q, int elem);
-typedef bool(*OnTheBoundary)(quadrature *q, int elem);
-typedef bool(*EqnOnTheBoundary)(quadrature *q, int elem, int eqn);
-typedef double(*TestIntegral)(quadrature *q);
-typedef void(*SetFuncs)(quadrature *q);
-typedef void(*SetParams)(int dim, int num_dims, int *dims, int deg, quadrature *q);
-typedef void(*FreePtr)(quadrature *quad);
-
 typedef struct constraints constraints;
+typedef void(*SetFuncs)(quadrature *q);
+typedef double(*ExpIntegralExact)(const quadrature *q);
+typedef void(*FreePtr)(quadrature *quad);
 typedef constraints*(*constraints_init)(int *dims);
-typedef void (*constraints_realloc)(constraints *cons, int *dims);
 typedef void (*get_constraints)    (constraints *cons);
 typedef void (*constraints_free)   (constraints *cons);
-
-
 
 struct constraints
 {
@@ -165,7 +122,6 @@ struct constraints
    Vector b_FULL;
 };
 
-
 struct quadrature
 {
    DOMAIN_TYPE D;
@@ -173,7 +129,6 @@ struct quadrature
    int num_dims;
    int *dims;
    int deg;
-   int num_funcs;
 
    int num_nodes;
    double *w;
@@ -181,24 +136,16 @@ struct quadrature
    Vector z;
    constraints *constr;
    struct Basis *basis;
-   struct Basis **basisOmp;
 
    int isFullyInitialized;
-   SetFuncs setFuncs; // Function that sets up all domain functions to point to appropriate domain
-
-   EvalBasis           evalBasis;
-   EvalBasisMonomial   evalBasisMonomial;
-   EvalBasisDer        evalBasisDer;
-   BasisIntegrals      basisIntegrals;
-   BasisIntegralsMonomial basisIntegralsMonomial;
+   SetFuncs setFuncs;
+   ExpIntegralExact expIntegralExact;
    constraints_init    constr_init;
-   constraints_realloc constr_realloc;
    get_constraints     get_constr;
    constraints_free    constr_free;
 
    FreePtr free_ptr;
 };
-
 
 #define GQ_SUCCESS      0
 #define NULL_VAL       -1
@@ -229,6 +176,8 @@ struct quadrature
 #define STR_DIVERGE_ERR "DIVERGE_ERR"
 #define STR_LARGE_RES "LARGE_RES"
 #define STR_CONSTR_ERROR "CONSTR_ERROR"
+
+#define STR_QUAD_NOT_FULL_INIT "supplied quadrature object was not fully initialized"
 
 
 #ifdef __cplusplus

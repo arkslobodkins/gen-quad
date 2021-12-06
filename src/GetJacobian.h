@@ -7,7 +7,10 @@
 extern "C" {
 #endif
 
-void GetJacobian(const INT_8 *basisIndices, quadrature *q, CMatrix);
+#ifdef _OPENMP
+void GetJacobianOmp(quadrature *q, CMatrix);
+#endif
+void GetJacobian(quadrature *q, CMatrix);
 
 #ifdef __cplusplus
 }

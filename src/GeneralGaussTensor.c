@@ -138,11 +138,11 @@ void GeneralizedWeightsTensor(const quadrature *quad_1D, quadrature *quad_gen)
    for(int j = dim-3; j >= 0; --j)
    {
       int dims_temp2[1] = {dim-j-1};
-      quadrature_realloc(POW_INT(n, dim-j-1), dim-j-1, dims_temp2, deg, quad_temp2);
+      quadrature_reinit_simple(POW_INT(n, dim-j-1), dim-j-1, dims_temp2, deg, quad_temp2);
       w2 = quad_temp2->w;
 
       int dims_temp3[1] = {dim-j};
-      quadrature_realloc(POW_INT(n, dim-j), dim-j, dims_temp3, deg, quad_temp3);
+      quadrature_reinit_simple(POW_INT(n, dim-j), dim-j, dims_temp3, deg, quad_temp3);
       w3 = quad_temp3->w;
 
       for(int i = 0; i < POW_INT(n, dim-j-1); ++i)

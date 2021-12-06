@@ -10,6 +10,7 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 #include <omp.h>
 
 #include "get_time.h"
@@ -17,40 +18,33 @@ double FUNCTION_TIME = 0.0;
 
 // Computes an evaluates function f = F(X)*W - b for Newton's method.
 #ifdef _OPENMP
-void GetFunctionOmp(const INT_8 *basisIndices, quadrature *q, Vector f)
+void GetFunctionOmp(quadrature *q, Vector f)
 {
    assert(f.len = q->num_funcs);
    double time_start = get_cur_time();
 
    int dim   = q->dim;
    int deg   = q->deg;
-   int len   = q->num_funcs;
+   int len   = q->basis->numFuncs;
    int nodes = q->num_nodes;
    const double *w = q->w;
    const double *x = q->x;
 
    int num_dims = q->num_dims;
    int dims[num_dims];
-   memcpy(dims, q->dims, num_dims*size_int);
+   memcpy(dims, q->dims, num_dims*sizeof(int));
 
-   double *b = (double *)malloc(len*sizeof(double));
-   q->basisIntegrals(q->dims, deg, b);
+   Basis *basis = q->basis;
+   BasisIntegrals(basis, basis->basis_integrals);
    for(int i = 0; i < len; ++i)
-      f.id[i] = -1.0 * b[i];
-   free(b);
+      f.id[i] = -1.0 * basis->basis_integrals.id[i];
 
    int omp_condition = OMP_CONDITION(deg, dim);
-
-   // achieves speedup when dim >= 3 and quadrature degree is sufficiently high
-   // if dim == 3, degree should be  > 10 for speedup
-   // The higher the dimension, the lower becomes the degree requirement.
    #pragma omp parallel if(omp_condition) default(shared) num_threads(omp_get_max_threads())
    {
-      double *basisLoc   = (double *)malloc(SIZE_DOUBLE(len));
-      double *fLoc     = (double *)malloc(SIZE_DOUBLE(len));
+      double *fLoc = f.ompId[omp_get_thread_num()];
       memset(fLoc, 0, SIZE_DOUBLE(len));
-      INT_8 *basisIndCopy = (INT_8 *)malloc(dim*q->num_funcs*sizeof(INT_8));
-      memcpy(basisIndCopy, basisIndices, dim*q->num_funcs*sizeof(INT_8));
+      Vector basisFuncsLoc = basis->basisOmpData.basis_funcs_omp[omp_get_thread_num()];
 
       #pragma omp for schedule(static)
       for(int j = 0; j < nodes; ++j)
@@ -59,26 +53,23 @@ void GetFunctionOmp(const INT_8 *basisIndices, quadrature *q, Vector f)
          for(int i = 0; i < dim; ++i)
             curNode[i] = x[dim*j+i];
 
-         q->evalBasis(dims, deg, basisIndCopy, curNode, basisLoc);
+         BasisFuncs(basis, curNode, basisFuncsLoc);
          for(int i = 0; i < len; ++i)
-            fLoc[i] += basisLoc[i] * w[j];
+            fLoc[i] += basisFuncsLoc.id[i] * w[j];
       }
       #pragma omp critical(UpdateFunction)
       for(int i = 0; i < len; ++i)
          f.id[i] += fLoc[i];
-
-      free(basisIndCopy);
-      free(fLoc);
-      free(basisLoc);
    } // end omp parallel
 
    FUNCTION_TIME += get_cur_time() - time_start;
 }
 #endif
 
+// Computes an evaluates function f = F(X)*W - b for Newton's method.
 void GetFunction(quadrature *q, Vector f)
 {
-   assert(f.len = q->num_funcs);
+   assert(f.len = q->basis->numFuncs);
    double time_start = get_cur_time();
 
    int dim   = q->dim;
@@ -90,9 +81,9 @@ void GetFunction(quadrature *q, Vector f)
 
    int num_dims = q->num_dims;
    int dims[num_dims];
-   memcpy(dims, q->dims, num_dims*size_int);
+   memcpy(dims, q->dims, num_dims*sizeof(int));
 
-   Integrals(q->basis);
+   BasisIntegrals(q->basis, basis_integrals);
    for(int i = 0; i < basis_integrals.len; ++i)
       f.id[i] = -1.0 * basis_integrals.id[i];
 

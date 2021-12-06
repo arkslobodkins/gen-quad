@@ -11,6 +11,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
+#include <omp.h>
 
 static inline double max_double(double x, double y)
 {
@@ -22,14 +23,9 @@ Vector Vector_init(int n)
    Vector V = {0};
    V.len = n;
    V.id = (double *)calloc(n, sizeof(double));
+   V.ompId = NULL;
 
    return V;
-}
-
-void Vector_realloc(int n, Vector *V)
-{
-   V->id = (double *)realloc(V->id, n*sizeof(double));
-   V->len = n;
 }
 
 void Vector_Assign(Vector v1, Vector v2)
@@ -41,6 +37,30 @@ void Vector_Assign(Vector v1, Vector v2)
 void Vector_free(Vector V)
 {
    if(V.id != NULL) { free(V.id); V.id = NULL; }
+}
+
+#ifdef _OPENMP
+void AllocVectorOmpData(Vector *v)
+{
+   int max_threads = omp_get_max_threads();
+   v->ompId = (double **)malloc(max_threads*sizeof(double *));
+   for(int i = 0; i < max_threads; ++i)
+      v->ompId[i] = (double *)malloc(v->len*sizeof(double));
+}
+
+void FreeVectorOmpData(Vector v)
+{
+   if(v.ompId == NULL) return;
+   for(int i = 0; i < omp_get_max_threads(); ++i)
+      free(v.ompId[i]);
+   free(v.ompId); v.ompId = NULL;
+}
+#endif
+
+void Vector_realloc(int n, Vector *V)
+{
+   V->id = (double *)realloc(V->id, n*sizeof(double));
+   V->len = n;
 }
 
 void VPrint(Vector V)

@@ -20,6 +20,12 @@ typedef struct SimplexSimplexBasis SimplexSimplexBasis;
 typedef struct MixedPolytopeBasis MixedPolytopeBasis;
 typedef struct MixedParams MixedParams;
 
+typedef struct
+{
+   INT_8 **basis_indices_omp;
+   Vector *basis_funcs_omp;
+   Vector *basis_der_omp;
+} BasisOmpData;
 
 struct Basis
 {
@@ -33,13 +39,15 @@ struct Basis
    Vector basis_funcs;
    Vector basis_der;
    Vector basis_integrals;
+   BasisOmpData basisOmpData;
 };
 
 typedef Basis*(*BasisInitPtr)(void *);
 typedef void(*IndicesPtr)(int deg, int dim);
 typedef void(*BasisFuncsPtr)(Basis *basis, const double *x, Vector v);
-typedef void(*BasisDerPtr)(Basis *basis, const double *x);
-typedef void(*BasisIntegralsPtr)(Basis *basis);
+typedef void(*BasisDerPtr)(Basis *basis, const double *x, Vector v);
+typedef void(*BasisIntegralsPtr)(Basis *basis, Vector v);
+typedef void(*BasisIntegralsMonomialPtr)(Basis *basis, Vector v);
 typedef void(*BasisFreePtr)(Basis *basis);
 
 struct BasisInterface
@@ -48,6 +56,7 @@ struct BasisInterface
    BasisFuncsPtr computeFuncs;
    BasisDerPtr computeDer;
    BasisIntegralsPtr computeIntegrals;
+   BasisIntegralsMonomialPtr computeIntegralsMonomial;
    BasisFreePtr basisFree;
 };
 
@@ -88,9 +97,15 @@ BasisInterface SetSimplexSimplexBasisInterface();
 
 Basis* BasisInit(void *params, BasisInterface *interface);
 void BasisFuncs(Basis *basis, const double *x, Vector v);
-void BasisDer(Basis *basis, const double *x);
-void Integrals(Basis *basis);
+void BasisDer(Basis *basis, const double *x, Vector v);
+void BasisIntegrals(Basis *basis, Vector v);
+void BasisIntegralsMonomial(Basis *basis, Vector v);
 void BasisFree(Basis *basis);
+#ifdef _OPENMP
+void AllocBasisOmpData(Basis *basis);
+void FreeBasisOmpData(Basis *basis);
+#endif
+void BasisMonomial(Basis *basis, const double *x, Vector phi);
 
 struct CubeBasis
 {
@@ -104,6 +119,7 @@ struct CubeBasis
    Vector basis_funcs;
    Vector basis_der;
    Vector basis_integrals;
+   BasisOmpData basisOmpData;
 };
 
 typedef struct
@@ -126,6 +142,7 @@ struct SimplexBasis
    Vector basis_funcs;
    Vector basis_der;
    Vector basis_integrals;
+   BasisOmpData basisOmpData;
 };
 
 typedef struct
@@ -149,6 +166,7 @@ struct CubeSimplexBasis
    Vector basis_funcs;
    Vector basis_der;
    Vector basis_integrals;
+   BasisOmpData basisOmpData;
 };
 
 typedef struct
@@ -172,6 +190,7 @@ struct SimplexSimplexBasis
    Vector basis_funcs;
    Vector basis_der;
    Vector basis_integrals;
+   BasisOmpData basisOmpData;
 };
 
 struct MixedPolytopeBasis
@@ -190,34 +209,39 @@ struct MixedPolytopeBasis
 
 void ComputeBasisIndices(Basis *basis);
 
-CubeBasis* CubeBasisInit(CubeParams *cubeParams);
-void ComputeCubeBasisFuncs(CubeBasis *cubeBasis, const double *x, Vector v);
-void ComputeCubeBasisDer(CubeBasis *cubeBasis, const double *x);
-void CubeBasisIntegrals(CubeBasis *cubeBasis);
-void CubeBasisFree(CubeBasis *cubeBasis);
+CubeBasis* CubeBasisInit(CubeParams *params);
+void ComputeCubeBasisFuncs(CubeBasis *basis, const double *x, Vector v);
+void ComputeCubeBasisDer(CubeBasis *basis, const double *x, Vector v);
+void CubeBasisIntegrals(CubeBasis *basis, Vector v);
+void CubeBasisIntegralsMonomial(CubeBasis *basis, Vector v);
+void CubeBasisFree(CubeBasis *basis);
 
-SimplexBasis* SimplexBasisInit(SimplexParams *simplexParams);
-void SimplexBasisFuncs(SimplexBasis *simplexBasis, const double *x, Vector v);
-void SimplexBasisDer(SimplexBasis *simplexBasis, const double *x);
-void SimplexBasisIntegrals(SimplexBasis *simplexBasis);
-void SimplexBasisFree(SimplexBasis *simplexBasis);
+SimplexBasis* SimplexBasisInit(SimplexParams *params);
+void SimplexBasisFuncs(SimplexBasis *basis, const double *x, Vector v);
+void SimplexBasisDer(SimplexBasis *basis, const double *x, Vector v);
+void SimplexBasisIntegrals(SimplexBasis *basis, Vector v);
+void SimplexBasisIntegralsMonomial(SimplexBasis *basis, Vector v);
+void SimplexBasisFree(SimplexBasis *basis);
 
-CubeSimplexBasis* CubeSimplexBasisInit(CubeSimplexParams *csParams);
-void CubeSimplexBasisFuncs(CubeSimplexBasis *csBasis, const double *x, Vector v);
-void CubeSimplexBasisDer(CubeSimplexBasis *csBasis, const double *x);
-void CubeSimplexBasisIntegrals(CubeSimplexBasis *csBasis);
-void CubeSimplexBasisFree(CubeSimplexBasis *csBasis);
+CubeSimplexBasis* CubeSimplexBasisInit(CubeSimplexParams *params);
+void CubeSimplexBasisFuncs(CubeSimplexBasis *basis, const double *x, Vector v);
+void CubeSimplexBasisDer(CubeSimplexBasis *basis, const double *x, Vector v);
+void CubeSimplexBasisIntegrals(CubeSimplexBasis *basis, Vector v);
+void CubeSimplexBasisIntegralsMonomial(CubeSimplexBasis *basis, Vector v);
+void CubeSimplexBasisFree(CubeSimplexBasis *basis);
 
-SimplexSimplexBasis* SimplexSimplexBasisInit(SimplexSimplexParams *ssParams);
-void SimplexSimplexBasisFuncs(SimplexSimplexBasis *ssBasis, const double *x, Vector v);
-void SimplexSimplexBasisDer(SimplexSimplexBasis *ssBasis, const double *x);
-void SimplexSimplexBasisIntegrals(SimplexSimplexBasis *ssBasis);
-void SimplexSimplexBasisFree(SimplexSimplexBasis *ssBasis);
+SimplexSimplexBasis* SimplexSimplexBasisInit(SimplexSimplexParams *params);
+void SimplexSimplexBasisFuncs(SimplexSimplexBasis *basis, const double *x, Vector v);
+void SimplexSimplexBasisDer(SimplexSimplexBasis *basis, const double *x, Vector v);
+void SimplexSimplexBasisIntegrals(SimplexSimplexBasis *basis, Vector v);
+void SimplexSimplexBasisIntegralsMonomial(SimplexSimplexBasis *basis, Vector v);
+void SimplexSimplexBasisFree(SimplexSimplexBasis *basis);
 
-void SimplexFuncsPolytopicOne(MixedPolytopeBasis *mixedBasis, const double *x, Vector v);
-void SimplexFuncsPolytopicTwo(MixedPolytopeBasis *mixedBasis, const double *x, Vector v);
+void SimplexFuncsPolytopicOne(MixedPolytopeBasis *basis, const double *x, Vector v);
+void SimplexFuncsPolytopicTwo(MixedPolytopeBasis *basis, const double *x, Vector v);
 
-void TestBasis();
+void orthogonal_simplex_basis_test(int deg, int dim);
+void orthogonal_cube_basis_test(int deg, int dim);
 
 #ifdef __cplusplus
 }

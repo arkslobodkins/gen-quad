@@ -4,6 +4,8 @@
  */
 
 #include "GetJacobian.h"
+#include "Basis.h"
+#include <stdio.h>
 
 #include <stdlib.h>
 #include <string.h>
@@ -17,64 +19,74 @@ double JACOBIAN_TIME = 0.0;
 // a distinct polynomial of orthogonal basis, and each
 // column of X and entries in w correspond to ith node and weight
 // of the quadrature.
-void GetJacobian(const INT_8 *basisIndices, quadrature *q, CMatrix JACOBIAN)
+#ifdef _OPENMP
+void GetJacobianOmp(quadrature *q, CMatrix JACOBIAN)
 {
    double time_start = get_cur_time();
 
    int dim  = q->dim;
    int deg  = q->deg;
-   int rows = q->num_funcs;
+   int rows = q->basis->numFuncs;
    int cols = q->num_nodes;
    const double *w = q->w;
    const double *x = q->x;
 
    int num_dims = q->num_dims;
    int dims[num_dims];
-   memcpy(dims, q->dims, num_dims*size_int);
+   memcpy(dims, q->dims, num_dims*sizeof(int));
 
-   #ifdef _OPENMP
    int omp_condition = OMP_CONDITION(deg, dim);
-   #endif
+   Basis *basis = q->basis;
 
-   // achieves speedup when dim >= 3 and quadrature degree is sufficiently high
-   // if dim == 3, degree should be  > 10 for speedup
-   // The higher the dimension, the lower becomes the degree requirement.
-   // In the future number of threads will be selected as a function of problem size.
-   #ifdef _OPENMP
    #pragma omp parallel default(shared) if(omp_condition) num_threads(omp_get_max_threads())
-   #endif
    {
-      double *basisLoc      = (double *)malloc(SIZE_DOUBLE(rows));
-      double *basisPrimeLoc = (double *)malloc(SIZE_DOUBLE(rows*dim));
-      INT_8 *basisIndCopy   = (INT_8 *)malloc(dim*q->num_funcs*sizeof(INT_8));
-      memcpy(basisIndCopy, basisIndices, dim*q->num_funcs*sizeof(INT_8));
-
-
-      #ifdef _OPENMP
+      Vector basisFuncsLoc = basis->basisOmpData.basis_funcs_omp[omp_get_thread_num()];
+      Vector basisDerLoc   = basis->basisOmpData.basis_der_omp[omp_get_thread_num()];
       #pragma omp for schedule(static)
-      #endif
-      for(int j = 0; j < cols; ++j)
-      {
+      for(int j = 0; j < cols; ++j) {
          double curNode[dim];
          for(int i = 0; i < dim; ++i)
             curNode[i] = x[dim*j+i];
 
-         q->evalBasis(dims, deg, basisIndCopy, curNode, basisLoc);
-         q->evalBasisDer(dims, deg, basisIndCopy, curNode, basisPrimeLoc);
-
-         for(int i = 0; i < rows; ++i)
-         {
-            JACOBIAN.cid[j][i] = basisLoc[i];
-
-            int col_index = j*dim+cols;
+         BasisFuncs(basis, curNode, basisFuncsLoc);
+         BasisDer(basis, curNode, basisDerLoc);
+         for(int i = 0; i < rows; ++i) {
+            JACOBIAN.cid[j][i] = basisFuncsLoc.id[i];
             for(int d = 0; d < dim; ++d)
-               JACOBIAN.cid[col_index+d][i] = basisPrimeLoc[d*rows+i] * w[j];
+               JACOBIAN.cid[j*dim+cols+d][i] = basisDerLoc.id[d*rows+i] * w[j];
          }
       }
-      free(basisLoc);
-      free(basisPrimeLoc);
-      free(basisIndCopy);
    } // end omp parallel
+
+   JACOBIAN_TIME += get_cur_time() - time_start;
+}
+#endif
+
+void GetJacobian(quadrature *q, CMatrix JACOBIAN)
+{
+   double time_start = get_cur_time();
+
+   int dim  = q->dim;
+   int rows = q->basis->numFuncs;
+   int cols = q->num_nodes;
+   const double *w = q->w;
+   const double *x = q->x;
+
+   Basis *basis       = q->basis;
+   Vector basis_funcs = basis->basis_funcs;
+   Vector basis_der   = basis->basis_der;
+   for(int j = 0; j < cols; ++j)
+   {
+      const double *curNode = &x[dim*j];
+      BasisFuncs(basis, curNode, basis_funcs);
+      BasisDer(basis, curNode, basis_der);
+
+      for(int i = 0; i < rows; ++i) {
+         JACOBIAN.cid[j][i] = basis_funcs.id[i];
+         for(int d = 0; d < dim; ++d)
+            JACOBIAN.cid[j*dim+cols+d][i] = basis_der.id[d*rows+i] * w[j];
+      }
+   }
 
    JACOBIAN_TIME += get_cur_time() - time_start;
 }

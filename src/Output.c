@@ -9,7 +9,7 @@
 
 
 // Prints history and quadrature parameters to a file.
-void HistoryToFile(const quadrature *q, int arr_size, history **hist_arr)
+void HistoryToFile(const quadrature *q, int arr_size, history **hist)
 {
    char str[80];
    int i,j;
@@ -23,22 +23,19 @@ void HistoryToFile(const quadrature *q, int arr_size, history **hist_arr)
    for(i = 0; i < arr_size; ++i)
    {
       fprintf(FID, "*********************************************************\n\n");
-      fprintf(FID, "dimension = %i\n", hist_arr[i]->dim);
-      fprintf(FID, "degree of precision = %i\n", hist_arr[i]->degree);
-      fprintf(FID, "DOMAIN_TYPE = %s\n", get_domain_string(hist_arr[i]->D));
-      fprintf(FID, "number of basis functions = %i\n", hist_arr[i]->num_funcs);
-      fprintf(FID, "initial number of nodes = %i\n", hist_arr[i]->nodes_initial);
-      fprintf(FID, "final number of nodes = %i\n", hist_arr[i]->nodes_final);
-      fprintf(FID, "total eliminations = %i\n", hist_arr[i]->list->size);
-      fprintf(FID, "final residual = %.16e\n\n", hist_arr[i]->res);
-      node *curr = hist_arr[i]->list->first;
-      for(j = 0; j < hist_arr[i]->list->size; ++j)
+      fprintf(FID, "dimension = %i\n", hist[i]->dim);
+      fprintf(FID, "degree of precision = %i\n", hist[i]->degree);
+      fprintf(FID, "DOMAIN_TYPE = %s\n", get_domain_string(hist[i]->D));
+      fprintf(FID, "number of basis functions = %i\n", hist[i]->num_funcs);
+      fprintf(FID, "initial number of nodes = %i\n", hist[i]->nodes_initial);
+      fprintf(FID, "final number of nodes = %i\n", hist[i]->nodes_final);
+      fprintf(FID, "total eliminations = %i\n", hist[i]->total_elims);
+      fprintf(FID, "final residual = %.16e\n\n", hist[i]->res);
+      for(j = 0; j < hist[i]->total_elims; ++j)
       {
-         hist_data *cur_d = (hist_data *)(curr->data);
-         fprintf(FID, "total number of nodes[%i] = %i\n", j, cur_d->nodes_tot);
-         fprintf(FID, "success_node[%i] = %i\n", j, cur_d->success_node);
-         fprintf(FID, "Converged in %i iterations\n\n", cur_d->success_its);
-         curr = curr->next;
+         fprintf(FID, "total number of nodes[%i] = %i\n", j, hist[i]->hist_array[j].nodes_tot);
+         fprintf(FID, "success_node[%i] = %i\n", j, hist[i]->hist_array[j].success_node);
+         fprintf(FID, "Converged in %i iterations\n\n", hist[i]->hist_array[j].success_its);
       }
       fprintf(FID, "\n");
    }

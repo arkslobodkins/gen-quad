@@ -373,7 +373,7 @@ int ProjectNode(const CMatrix eqn_matrix, const Vector dx, Vector x_projected)
          PROJECTOR.rid[i][j] = -PROJECTOR.rid[i][j];
    for(i = 0; i < M; ++i) ++PROJECTOR.rid[i][i];
 
-   memset(x_projected.id, 0, x_projected.len*size_double);
+   memset(x_projected.id, 0, x_projected.len*sizeof(double));
    RMatVec(PROJECTOR, dx, x_projected);
 
    RMatrix_free(PROJECTOR);
