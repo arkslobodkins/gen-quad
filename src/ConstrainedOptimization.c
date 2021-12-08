@@ -7,46 +7,6 @@
 #include <string.h>
 #include <stdlib.h>
 
-ConstrVectData ConstrVectDataInit()
-{
-   ConstrVectData cVectData;
-   cVectData.boundaryNodeId = -1;
-   cVectData.eqnId          = -1;
-   cVectData.tMin           =  1.0;
-   cVectData.ACTIVE         = OFF;
-   cVectData.N_OR_W         = NONE;
-
-   return cVectData;
-}
-
-void ConstrVectDataReset(ConstrVectData *cVectData)
-{
-   cVectData->boundaryNodeId = -1;
-   cVectData->eqnId          = -1;
-   cVectData->tMin           =  1.0;
-   cVectData->ACTIVE         = OFF;
-   cVectData->N_OR_W         = NONE;
-}
-
-ConstrNodeData ConstrNodeDataInit()
-{
-   ConstrNodeData cNodeData;
-   cNodeData.eqnId  = -1;
-   cNodeData.tMin   =  1.0;
-   cNodeData.ACTIVE = OFF;
-   cNodeData.N_OR_W = NONE;
-
-   return cNodeData;
-}
-
-ATTR_UNUSED void ConstrNodeDataReset(ConstrNodeData *cNodeData)
-{
-   cNodeData->eqnId  = -1;
-   cNodeData->tMin   =  1.0;
-   cNodeData->ACTIVE = OFF;
-   cNodeData->N_OR_W = NONE;
-}
-
 
 int ConstrainedProjection(const quadrature *q_prev, quadrature *q_next)
 {
@@ -80,9 +40,8 @@ int ConstrainedProjection(const quadrature *q_prev, quadrature *q_next)
 
       if(do_project)
       {
-         int count = 0;
          CMatrix eqn_matrix = CMatrix_init(dim, active_eqn_count);
-
+         int count = 0;
          for(j = 0; j < num_eqns; ++j) {
             if(eqn_flags[j] == true) {
                for(d = 0; d < dim; ++d)
@@ -90,10 +49,8 @@ int ConstrainedProjection(const quadrature *q_prev, quadrature *q_next)
                ++count;
             }
          }
-
          for(d = 0; d < dim; ++d)
             node_change.id[d] = q_next->x[node_index+d] - q_prev->x[node_index+d];
-
          int P_FLAG = ProjectNode(eqn_matrix, node_change, node_projected);
          if(P_FLAG != CONSTR_SUCCESS) {
             CMatrix_free(eqn_matrix);
@@ -107,25 +64,9 @@ int ConstrainedProjection(const quadrature *q_prev, quadrature *q_next)
 
    }
    COND_TEST_1;
-
    return CONSTR_SUCCESS;
 }
 
-
-ConstrOptData* ConstrainedOptimizationInit(quadrature *q_next)
-{
-   ConstrOptData *data = (ConstrOptData*)malloc(sizeof(ConstrOptData));
-   data->q_next_copy = quadrature_make_full_copy(q_next);
-   data->q_diff = Vector_init(q_next->z.len);
-   return data;
-}
-
-void ConstrainedOptimizationFree(ConstrOptData *data)
-{
-   Vector_free(data->q_diff);
-   quadrature_free(data->q_next_copy);
-   free(data);
-}
 
 int ConstrainedOptimization(ConstrOptData *data, const quadrature *q_prev, quadrature *q_next, ConstrVectData *cVectData)
 {
@@ -135,7 +76,7 @@ int ConstrainedOptimization(ConstrOptData *data, const quadrature *q_prev, quadr
    Vector q_diff           = data->q_diff;
    quadrature *q_next_copy = data->q_next_copy;
    for(int i = 0; i < qlen; ++i)
-      q_diff.id[i] = q_prev->z.id[i] - q_next_copy->z.id[i];
+      q_diff.id[i] = q_next_copy->z.id[i] - q_prev->z.id[i];
 
    if(QuadInConstraint(q_prev) == false)
       return CANNOT_CONSTRAIN;
@@ -144,13 +85,12 @@ int ConstrainedOptimization(ConstrOptData *data, const quadrature *q_prev, quadr
    {
       int RET_FLAG = ShortenVector(q_prev, q_next_copy, cVectData);
 
-      // return if quadrature vector was not shortened successfully
       if(RET_FLAG != CONSTR_SUCCESS) {
          ConstrVectDataReset(cVectData);
          return RET_FLAG;
       }
       for(int i = 0; i < qlen; ++i)
-         q_next_copy->z.id[i] = q_prev->z.id[i] + (-cVectData->tMin + BOUND_CORRECTION) * q_diff.id[i];
+         q_next_copy->z.id[i] = q_prev->z.id[i] + (cVectData->tMin - BOUND_CORRECTION) * q_diff.id[i];
       COND_TEST_2;
 
       if(QuadInConstraintEps(q_next_copy) == true) {
@@ -165,16 +105,18 @@ int ConstrainedOptimization(ConstrOptData *data, const quadrature *q_prev, quadr
    }
 }
 
+
 // Shortens q_next vector such that every node satisfies the inequality
 // A*q_next(node[i]) <=  b, provided that q_prev satisfies the constraints.
 int ShortenVector(const quadrature *q_prev, const quadrature *q_next, ConstrVectData *cVectData)
 {
    assert(q_prev->num_nodes == q_next->num_nodes);
+   if(!QuadInConstraint(q_prev)) return CANNOT_CONSTRAIN;
+   if(QuadInConstraint(q_next))  return CONSTR_NOT_NEEDED;
 
    int i, count;
    int k = q_prev->num_nodes;
    int dim = q_prev->dim;
-   int *eqn = (int *)calloc(k, sizeof(int));
    const RMatrix A = q_prev->constr->M_FULL;
    const Vector b = q_prev->constr->b_FULL;
 
@@ -188,21 +130,18 @@ int ShortenVector(const quadrature *q_prev, const quadrature *q_next, ConstrVect
    Vector z_next_node = {0}; z_next_node.len = dim+1;
    double z_next_id[dim+1];  z_next_node.id = z_next_id;
 
-   if(!QuadInConstraint(q_prev)) return CANNOT_CONSTRAIN;
-   if(QuadInConstraint(q_next))  return CONSTR_NOT_NEEDED;
 
    for(count = 0, i = 0; i < k; ++i)
    {
       quadrature_get_elem(q_prev, i, z_prev_node);
       quadrature_get_elem(q_next, i, z_next_node);
 
-      if( !QuadInConstraintElem(q_next, i) ) {
+      if( !QuadInConstraintElem(q_next, i)) {
          cNodeDataArr[i] = ShortenNode(A, b, z_prev_node, z_next_node);
          if(cNodeDataArr[i].ACTIVE == ON) ++count;
          else {
             ConstrVectDataReset(cVectData);
             free(cNodeDataArr);
-            free(eqn);
             return CONSTR_FAIL;
          }
       }
@@ -223,17 +162,15 @@ int ShortenVector(const quadrature *q_prev, const quadrature *q_next, ConstrVect
       cVectData->N_OR_W         = cNodeDataArr[min_index].N_OR_W;
 
       Vector_free(tVec);
+      free(cNodeDataArr);
+      return CONSTR_SUCCESS;
    }
    else
    {
       ConstrVectDataReset(cVectData);
+      free(cNodeDataArr);
       return CONSTR_UNEXPECTED;
    }
-
-   free(cNodeDataArr);
-   free(eqn);
-
-   return CONSTR_SUCCESS;
 }
 
 
@@ -386,4 +323,61 @@ int ProjectNode(const CMatrix eqn_matrix, const Vector dx, Vector x_projected)
 
    return CONSTR_SUCCESS;
 }
+
+
+ConstrOptData* ConstrainedOptimizationInit(quadrature *q_next)
+{
+   ConstrOptData *data = (ConstrOptData*)malloc(sizeof(ConstrOptData));
+   data->q_next_copy = quadrature_make_full_copy(q_next);
+   data->q_diff = Vector_init(q_next->z.len);
+   return data;
+}
+
+void ConstrainedOptimizationFree(ConstrOptData *data)
+{
+   Vector_free(data->q_diff);
+   quadrature_free(data->q_next_copy);
+   free(data);
+}
+
+ConstrVectData ConstrVectDataInit()
+{
+   ConstrVectData cVectData;
+   cVectData.boundaryNodeId = -1;
+   cVectData.eqnId          = -1;
+   cVectData.tMin           =  1.0;
+   cVectData.ACTIVE         = OFF;
+   cVectData.N_OR_W         = NONE;
+
+   return cVectData;
+}
+
+void ConstrVectDataReset(ConstrVectData *cVectData)
+{
+   cVectData->boundaryNodeId = -1;
+   cVectData->eqnId          = -1;
+   cVectData->tMin           =  1.0;
+   cVectData->ACTIVE         = OFF;
+   cVectData->N_OR_W         = NONE;
+}
+
+ConstrNodeData ConstrNodeDataInit()
+{
+   ConstrNodeData cNodeData;
+   cNodeData.eqnId  = -1;
+   cNodeData.tMin   =  1.0;
+   cNodeData.ACTIVE = OFF;
+   cNodeData.N_OR_W = NONE;
+
+   return cNodeData;
+}
+
+ATTR_UNUSED void ConstrNodeDataReset(ConstrNodeData *cNodeData)
+{
+   cNodeData->eqnId  = -1;
+   cNodeData->tMin   =  1.0;
+   cNodeData->ACTIVE = OFF;
+   cNodeData->N_OR_W = NONE;
+}
+
 
