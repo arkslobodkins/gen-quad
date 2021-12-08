@@ -28,8 +28,9 @@ RMatrix PredictorLapack(quadrature *q, int *arrayIndex);
 #ifdef _OPENMP
 RMatrix PredictorPlasma(quadrature *q, int *arrayIndex);
 #endif
+static void ReorderWithBoundaryDist(RMatrix predictor, quadrature *q, int *arrayIndex);
 static void ExtractFromPredictor(RMatrix Z, int arrayIndex, quadrature *q);
-static void ConstrainQTemp(quadrature *q_new, int arrayIndex, quadrature *q_temp);
+//static void ConstrainQTemp(quadrature *q_new, int arrayIndex, quadrature *q_temp);
 static void InsertionSort(int num_entries, double *norms, int *arrayIndex);
 static double TwoNorm(int n, double *z);
 ATTR_UNUSED static bool TestQR(const CMatrix Q);
@@ -56,7 +57,7 @@ void NodeElimination(const quadrature *q_initial, quadrature *q_final, history *
    int n_initial       = q_initial->num_nodes;
    int numFuncs        = q_initial->basis->numFuncs;
    int dim             = q_initial->dim;
-   double tol = QUAD_TOL; // 10^(-15);
+   double tol = QUAD_TOL; // 10^(-14);
 
    RMatrix(*Predictor_Ptr)(quadrature *, int *);
 #ifdef _OPENMP
@@ -78,7 +79,8 @@ void NodeElimination(const quadrature *q_initial, quadrature *q_final, history *
    PrintDouble(res, "initial orthogonal basis residual in NodeElimination");
    if(fabs(res) > tol)
    {
-      bool SOL_FLAG = LeastSquaresNewton(ON, q_temp, 0);
+      int its = 0;
+      bool SOL_FLAG = LeastSquaresNewton(ON, q_temp, &its);
       if(SOL_FLAG == SOL_FOUND) {
          n_initial = q_temp->num_nodes;
          quadrature_realloc_array(n_initial, q_new);
@@ -91,6 +93,7 @@ void NodeElimination(const quadrature *q_initial, quadrature *q_final, history *
       }
    }
 
+
    // run Node Elimination Algorithm. Theoretical optimum is reached when
    // (dim+1)*k = numFuncs, at which point elimination is pursued no further.
    int n_prev                   = -1;
@@ -102,7 +105,7 @@ void NodeElimination(const quadrature *q_initial, quadrature *q_final, history *
    PrintElimInfo( dim, n_cur , n_opt, efficiency);
    while( ((dim+1)*n_cur > numFuncs)  && (n_cur >= 1) )
    {
-      if(n_cur <= 1) goto FREERETURN;
+      if(n_cur <= 1) break;
       if(dim == MAX_DIM)
          if(n_cur == n_prev) CONSTR_FLAG = ON;
          else                CONSTR_FLAG = OFF;
@@ -116,6 +119,7 @@ void NodeElimination(const quadrature *q_initial, quadrature *q_final, history *
       double start_time = get_cur_time();
       RMatrix Z = Predictor_Ptr(q_new, arrayIndex);
       PREDICTOR_TIME += get_cur_time() - start_time;
+      ReorderWithBoundaryDist(Z, q_temp, arrayIndex);
       for(int i = 0; i < n_cur; ++i)
       {
          // store ith initial quadrature guess of Z in q_temp
@@ -129,7 +133,6 @@ void NodeElimination(const quadrature *q_initial, quadrature *q_final, history *
          }
 
          int its = 0;
-         ConstrainQTemp(q_new, arrayIndex[i], q_temp);
          SOL_FLAG = LeastSquaresNewton(CONSTR_FLAG, q_temp, &its);
          // store nodes and weights if Newton's method succeeded, update history
          if(SOL_FLAG == SOL_FOUND)
@@ -166,7 +169,6 @@ void NodeElimination(const quadrature *q_initial, quadrature *q_final, history *
 
    }// end while loop
 
-FREERETURN:
    // save nodes and weights
    q_final->num_nodes = n_cur;
    quadrature_assign(q_new, q_final);
@@ -183,7 +185,7 @@ static void FreeMemory(quadrature *q_temp, quadrature *q_new)
    quadrature_free(q_new);
 }
 
-// not an easy world we live in
+
 RMatrix PredictorLapack(quadrature *q, int *arrayIndex)
 {
    const int numFuncs  = q->basis->numFuncs;
@@ -216,7 +218,6 @@ RMatrix PredictorLapack(quadrature *q, int *arrayIndex)
    // obtain i*(dim+1)th rows of Q(from J_TR) explicitly and store them in QWeight rows
    if(DORMQR_LAPACK('R',  'N', REFL, J_TR, QWeight) != 0)
       PRINT_ERR(STR_LAPACK_ERR, __LINE__, __FILE__);
-//   COND_TEST_4;
 
 
    // extract i*(dim+1)th rows of Q2 and compute their norm, where Q = [Q1, Q2]
@@ -250,6 +251,8 @@ RMatrix PredictorLapack(quadrature *q, int *arrayIndex)
             Z.rid[i][n_cur+j*dim+d] = q->x[j*dim+d] - dZ.rid[i][j*(dim+1)+d+1];
       }
    }
+   for(int i = 0; i < QWeight.rows; ++i)
+      arrayIndex[i] = i;
    InsertionSort(n_cur, signif_ind, arrayIndex); // store indices of signif_ind in arrayIndex in ascending order
 
    free(ith_row);
@@ -361,6 +364,45 @@ RMatrix PredictorPlasma(quadrature *q, int *arrayIndex)
 }
 #endif
 
+static void ReorderWithBoundaryDist(RMatrix predictor, quadrature *q, int *arrayIndex)
+{
+   int numGuesses = predictor.rows;
+   quadrature *q_temp = quadrature_make_full_copy(q);
+
+   int rowBoundOrder[numGuesses];
+   double boundIndex[numGuesses];
+   int rowRemainOrder[numGuesses];
+
+   int boundCount = 0;
+   int remainCount = 0;
+   for(int i = 0; i < numGuesses; ++i)
+   {
+      ExtractFromPredictor(predictor, arrayIndex[i], q_temp);
+      if(QuadInConstraint(q_temp)) {
+         rowBoundOrder[boundCount] = arrayIndex[i];
+         boundIndex[boundCount] = QuadMinDistFromTheBoundary(q_temp);
+         ++boundCount;
+      }
+      else {
+         rowRemainOrder[remainCount] = arrayIndex[i];
+         ++remainCount;
+      }
+   }
+
+   int tempBoundReorder[numGuesses];
+   InsertionSort(boundCount, boundIndex, tempBoundReorder);
+   int boundDecreaseReorder[boundCount];
+   for(int i = 0; i < boundCount; ++i)
+      boundDecreaseReorder[i] = tempBoundReorder[boundCount-1-i];
+
+   for(int i = 0; i < boundCount; ++i)
+      arrayIndex[i] = rowBoundOrder[boundDecreaseReorder[i]];
+   for(int i = 0; i < remainCount; ++i)
+      arrayIndex[boundCount+i] = rowRemainOrder[i];
+
+   quadrature_free(q_temp);
+}
+
 static void ExtractFromPredictor(RMatrix Z, int arrayIndex, quadrature *q)
 {
    int count, j, d;
@@ -374,19 +416,6 @@ static void ExtractFromPredictor(RMatrix Z, int arrayIndex, quadrature *q)
       for(d = 0; d < dim; ++d)
          q->x[count*dim+d] = Z.rid[arrayIndex][Z.cols/(dim+1)+j*dim+d];
       ++count;
-   }
-}
-
-static void ConstrainQTemp(quadrature *q_new, int arrayIndex, quadrature *q_temp)
-{
-   ConstrVectData cVectData = ConstrVectDataInit();
-   if(QuadInConstraint(q_temp) == false) {
-      quadrature *q_prev = quadrature_without_element(q_new, arrayIndex);
-      ConstrainedOptimization(q_prev, q_temp, &cVectData);
-
-      if(cVectData.N_OR_W == WEIGHT)
-         quadrature_remove_element(cVectData.boundaryNodeId, q_temp);
-      quadrature_free(q_prev);
    }
 }
 

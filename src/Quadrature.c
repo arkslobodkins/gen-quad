@@ -274,6 +274,13 @@ void vector_to_quadrature(const Vector v, quadrature q)
 }
 
 
+void quadrature_fill_random(quadrature *q)
+{
+   for(int i = 0; i < q->z.len; ++i)
+      q->z.id[i] = (double)rand() / (double) RAND_MAX;
+}
+
+
 void quadrature_free(quadrature *q)
 {
    q->free_ptr(q);
@@ -356,31 +363,39 @@ bool QuadOnTheBoundary(const quadrature *q, int elem)
 }
 
 
-bool QuadInDomain(const quadrature *q)
+double QuadDistFromTheBoundaryElem(const quadrature *q, int elem)
 {
    if(q->isFullyInitialized == GQ_FALSE) {
       PRINT_ERR(STR_QUAD_NOT_FULL_INIT, __LINE__, __FILE__);
-      return false;
+      return NAN;
    }
-
-   int dim = q->dim;
-   RMatrix M = q->constr->M;
+   int node_loc = elem*q->dim;
    Vector b = q->constr->b;
+   RMatrix A = q->constr->M;
 
-   for(int i = 0; i < q->num_nodes; ++i)
+   double minDist;
+   for(int i = 0; i < A.rows; ++i)
    {
-      double lhs[M.rows]; memset(lhs, 0, M.rows*sizeof(double));
-      const double *X_ixdim = &q->x[i*dim];
-
-      for(int r = 0; r < M.rows; ++r)
-         for(int c = 0; c < M.cols; ++c)
-            lhs[r] += M.rid[r][c] * X_ixdim[c];
-
-      for(int r = 0; r < M.rows; ++r)
-         if(lhs[r] > b.id[r])
-            return false;
+      double b_elem = 0.0;
+      for(int d = 0; d < A.cols; ++d)
+         b_elem += A.rid[i][d] * q->x[node_loc+d];
+      if(i == 0) minDist = fabs(b_elem-b.id[0]);
+      else       minDist = MIN(fabs(b_elem-b.id[i]), minDist);
    }
-   return true;
+   return minDist;
+}
+
+
+double QuadMinDistFromTheBoundary(const quadrature *q)
+{
+   if(q->isFullyInitialized == GQ_FALSE) {
+      PRINT_ERR(STR_QUAD_NOT_FULL_INIT, __LINE__, __FILE__);
+      return NAN;
+   }
+   double minDist = QuadDistFromTheBoundaryElem(q, 0);
+   for(int i = 1; i < q->num_nodes; ++i)
+      minDist = MIN(minDist, QuadDistFromTheBoundaryElem(q, i));
+   return minDist;
 }
 
 
@@ -409,6 +424,87 @@ bool QuadInDomainElem(const quadrature *q, int elem)
 }
 
 
+bool QuadInDomainElemEps(const quadrature *q, int elem)
+{
+   if(q->isFullyInitialized == GQ_FALSE) {
+      PRINT_ERR(STR_QUAD_NOT_FULL_INIT, __LINE__, __FILE__);
+      return false;
+   }
+
+   double eps = POW_DOUBLE(10, -12);
+   int dim = q->dim;
+   RMatrix M = q->constr->M;
+   Vector b = q->constr->b;
+   const double *X_ixdim = &q->x[elem*dim];
+   double lhs[M.rows]; memset(lhs, 0, M.rows*sizeof(double));
+
+   for(int r = 0; r < M.rows; ++r)
+      for(int c = 0; c < M.cols; ++c)
+         lhs[r] += M.rid[r][c] * X_ixdim[c];
+
+   for(int r = 0; r < M.rows; ++r)
+      if(lhs[r] > b.id[r] + eps)
+         return false;
+
+   return true;
+}
+
+
+bool QuadInDomain(const quadrature *q)
+{
+   if(q->isFullyInitialized == GQ_FALSE) {
+      PRINT_ERR(STR_QUAD_NOT_FULL_INIT, __LINE__, __FILE__);
+      return false;
+   }
+
+   for(int i = 0; i < q->num_nodes; ++i)
+      if(!QuadInDomainElem(q, i))
+            return false;
+   return true;
+}
+
+
+bool QuadInDomainEps(const quadrature *q)
+{
+   if(q->isFullyInitialized == GQ_FALSE) {
+      PRINT_ERR(STR_QUAD_NOT_FULL_INIT, __LINE__, __FILE__);
+      return false;
+   }
+
+   for(int i = 0; i < q->num_nodes; ++i)
+      if(!QuadInDomainElemEps(q, i))
+         return false;
+   return true;
+}
+
+
+bool QuadInDomainEqnElemEps(const quadrature *q, int elem, int eqn)
+{
+   if(q->isFullyInitialized == GQ_FALSE) {
+      PRINT_ERR(STR_QUAD_NOT_FULL_INIT, __LINE__, __FILE__);
+      return false;
+   }
+   int dim = q->dim;
+   double eps = POW_DOUBLE(10, -12);
+   RMatrix M = q->constr->M;
+   Vector b = q->constr->b;
+   assert(eqn >= 0  && eqn < M.rows);
+
+   const double *xi = &q->x[elem*dim];
+   double lhs = 0;
+   for(int c = 0; c < M.cols; ++c)
+      lhs += M.rid[eqn][c] * xi[c];
+   if(lhs > b.id[eqn] + eps) return false;
+   return true;
+}
+
+
+static inline bool QuadPosWeightsElem(const quadrature *q, int elem)
+{
+   return is_greater_than_zero(q->w[elem]);
+}
+
+
 bool QuadPosWeights(const quadrature *q)
 {
    const quadrature _q = *q;
@@ -420,9 +516,25 @@ bool QuadPosWeights(const quadrature *q)
 }
 
 
-static inline bool QuadPosWeightsElem(const quadrature *q, int elem)
+bool QuadPosWeightsEps(const quadrature *q)
 {
-   return is_greater_than_zero(q->w[elem]);
+   const quadrature _q = *q;
+   double eps = POW_DOUBLE(10, -14);
+   for(int i = 0; i < _q.num_nodes; ++i)
+      if(_q.w[i] + eps < 0)
+         return false;
+
+   return true;
+}
+
+
+bool QuadInConstraintElem(const quadrature *q, int elem)
+{
+   if(q->isFullyInitialized == GQ_FALSE) {
+      PRINT_ERR(STR_QUAD_NOT_FULL_INIT, __LINE__, __FILE__);
+      return false;
+   }
+   return QuadInDomainElem(q, elem) & QuadPosWeightsElem(q, elem);
 }
 
 
@@ -436,13 +548,13 @@ bool QuadInConstraint(const quadrature *q)
 }
 
 
-bool QuadInConstraintElem(const quadrature *q, int elem)
+bool QuadInConstraintEps(const quadrature *q)
 {
    if(q->isFullyInitialized == GQ_FALSE) {
       PRINT_ERR(STR_QUAD_NOT_FULL_INIT, __LINE__, __FILE__);
       return false;
    }
-   return QuadInDomainElem(q, elem) & QuadPosWeightsElem(q, elem);
+   return QuadInDomainEps(q) & QuadPosWeightsEps(q);
 }
 
 
@@ -467,9 +579,11 @@ double QuadTestIntegral(const quadrature *q, BASIS_TYPE btype)
       case orthogonal:
          BasisIntegrals(q->basis, integrals);
          basisPtr = &BasisFuncs;
+         break;
       case monomial:
          BasisIntegralsMonomial(q->basis, integrals);
          basisPtr = &BasisMonomial;
+         break;
    }
    Vector functions = q->basis->functions;
 
@@ -487,7 +601,6 @@ double QuadTestIntegral(const quadrature *q, BASIS_TYPE btype)
    Vector_free(res_arr);
    return res;
 }
-
 
 
 double QuadTestIntegralExp(const quadrature *q)

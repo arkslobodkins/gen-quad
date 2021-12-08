@@ -10,16 +10,7 @@ extern "C" {
 #define SOL_FOUND true
 #define SOL_NOT_FOUND false
 
-
-#define CONSTR_NOT_NEEDED 1
-
-#define CONSTR_SUCCESS  0
-#define CONSTR_FAIL -1
-#define CONSTR_INV_INPUT -2
-#define CONSTR_UNEXPECTED -3
-
 bool LeastSquaresNewton(const bool_enum CONSTR_OPT, quadrature *q_orig, int *its);
-
 
 #ifdef __cplusplus
 }

@@ -112,51 +112,57 @@ int ConstrainedProjection(const quadrature *q_prev, quadrature *q_next)
 }
 
 
-int ConstrainedOptimization(const quadrature *q_prev, quadrature *q_next, ConstrVectData *cVectData)
+ConstrOptData* ConstrainedOptimizationInit(quadrature *q_next)
+{
+   ConstrOptData *data = (ConstrOptData*)malloc(sizeof(ConstrOptData));
+   data->q_next_copy = quadrature_make_full_copy(q_next);
+   data->q_diff = Vector_init(q_next->z.len);
+   return data;
+}
+
+void ConstrainedOptimizationFree(ConstrOptData *data)
+{
+   Vector_free(data->q_diff);
+   quadrature_free(data->q_next_copy);
+   free(data);
+}
+
+int ConstrainedOptimization(ConstrOptData *data, const quadrature *q_prev, quadrature *q_next, ConstrVectData *cVectData)
 {
    assert(q_prev->num_nodes == q_next->num_nodes);
+   int qlen = q_next->z.len;
 
-   int q_len =  q_next->z.len;
-   int RET_FLAG;
-
-   Vector q_diff = Vector_init(q_len);
-   quadrature *q_next_copy = quadrature_make_full_copy(q_next);
-   for(int i = 0; i < q_len; ++i)
+   Vector q_diff           = data->q_diff;
+   quadrature *q_next_copy = data->q_next_copy;
+   for(int i = 0; i < qlen; ++i)
       q_diff.id[i] = q_prev->z.id[i] - q_next_copy->z.id[i];
 
-   if( ( QuadInConstraint(q_next_copy) == false )
+   if(QuadInConstraint(q_prev) == false)
+      return CANNOT_CONSTRAIN;
+   else if( ( QuadInConstraint(q_next_copy) == false )
          && ( QuadInConstraint(q_prev) == true ) )
    {
-      RET_FLAG = ShortenVector(q_prev, q_next_copy, cVectData);
-      COND_TEST_2;
+      int RET_FLAG = ShortenVector(q_prev, q_next_copy, cVectData);
 
       // return if quadrature vector was not shortened successfully
-      if(RET_FLAG != CONSTR_SUCCESS && cVectData->ACTIVE == OFF) {
+      if(RET_FLAG != CONSTR_SUCCESS) {
          ConstrVectDataReset(cVectData);
-         Vector_free(q_diff);
          return RET_FLAG;
       }
+      for(int i = 0; i < qlen; ++i)
+         q_next_copy->z.id[i] = q_prev->z.id[i] + (-cVectData->tMin + BOUND_CORRECTION) * q_diff.id[i];
+      COND_TEST_2;
 
-      for(int i = 0; i < q_len; ++i)
-         q_next_copy->z.id[i] = q_prev->z.id[i] + (-cVectData->tMin + BOUND_CORRECTION ) * q_diff.id[i];
-      COND_TEST_3;
-
-      if(QuadInConstraint(q_next_copy) == 1) {
+      if(QuadInConstraintEps(q_next_copy) == true) {
          quadrature_assign(q_next_copy, q_next);
-         RET_FLAG = CONSTR_SUCCESS;
+         return CONSTR_SUCCESS;
       }
-      else RET_FLAG = CONSTR_FAIL;
-
+      else return CONSTR_FAIL;
    }
-   else
-   {
+   else {
       ConstrVectDataReset(cVectData);
-      RET_FLAG = CONSTR_SUCCESS;
+      return CONSTR_NOT_NEEDED;
    }
-
-   quadrature_free(q_next_copy);
-   Vector_free(q_diff);
-   return RET_FLAG;
 }
 
 // Shortens q_next vector such that every node satisfies the inequality
@@ -182,8 +188,8 @@ int ShortenVector(const quadrature *q_prev, const quadrature *q_next, ConstrVect
    Vector z_next_node = {0}; z_next_node.len = dim+1;
    double z_next_id[dim+1];  z_next_node.id = z_next_id;
 
-   if(!QuadInConstraint(q_prev)) return CONSTR_INV_INPUT;
-   if(QuadInConstraint(q_next))  return CONSTR_SUCCESS;
+   if(!QuadInConstraint(q_prev)) return CANNOT_CONSTRAIN;
+   if(QuadInConstraint(q_next))  return CONSTR_NOT_NEEDED;
 
    for(count = 0, i = 0; i < k; ++i)
    {

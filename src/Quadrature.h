@@ -21,18 +21,28 @@ void quadrature_remove_element(int index, quadrature *quad);
 void quadrature_to_vector(const quadrature quad, Vector v);
 void quadrature_get_elem(const quadrature *q, int i, Vector v);
 void vector_to_quadrature(const Vector v, quadrature quad);
+void quadrature_fill_random(quadrature *q);
 void quadrature_free(quadrature *quad);
 
 #ifdef _OPENMP
 void QuadAllocBasisOmp(quadrature *q, int num_threads);
 void QuadFreeBasisOmp(quadrature *q, int num_threads);
 #endif
-bool QuadInDomain(const quadrature *q);
 bool QuadInDomainElem(const quadrature *q, int elem);
-bool QuadPosWeights(const quadrature *q);
-bool QuadInConstraint(const quadrature *q);
-bool QuadInConstraintElem(const quadrature *quad, int elem);
+bool QuadInDomainElemEps(const quadrature *q, int elem);
+bool QuadInDomain(const quadrature *q);
+bool QuadInDomainEps(const quadrature *q);
+bool QuadInDomainEqnElemEps(const quadrature *q, int elem, int eqn);
 
+bool QuadPosWeights(const quadrature *q);
+bool QuadPosWeightsEps(const quadrature *q);
+
+bool QuadInConstraintElem(const quadrature *quad, int elem);
+bool QuadInConstraint(const quadrature *q);
+bool QuadInConstraintEps(const quadrature *q);
+
+double QuadDistFromTheBoundaryElem(const quadrature *q, int elem);
+double QuadMinDistFromTheBoundary(const quadrature *q);
 bool QuadOnTheBoundary(const quadrature *q, int elem);
 bool QuadEqnOnTheBoundary(const quadrature *q, int elem, int eqn);
 

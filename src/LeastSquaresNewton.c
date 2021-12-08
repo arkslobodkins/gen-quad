@@ -22,7 +22,7 @@
 #include <assert.h>
 
 
-static int CheckForFail(int INFO, double errorNorm, double errorNormPrev, Vector least_sq_sol);
+static int CheckForStop(int INFO, double errorNorm, double errorNormPrev, Vector least_sq_sol);
 
 // LeastSquaresNewton
 // Receives initial quadrature guess. Primarily solves
@@ -36,10 +36,10 @@ bool LeastSquaresNewton(const bool_enum CONSTR_OPT, quadrature *q_orig, int *its
 {
    assert(q_orig->num_nodes >= 1);
 
-   int k               = q_orig->num_nodes;
-   int numFuncs        = q_orig->basis->numFuncs;
-   int dim             = q_orig->dim;
-   bool SOL_FLAG       = SOL_NOT_FOUND;
+   int k         = q_orig->num_nodes;
+   int numFuncs  = q_orig->basis->numFuncs;
+   int dim       = q_orig->dim;
+   bool SOL_FLAG = SOL_NOT_FOUND;
 
    int itsLoc   = 0;
    int maxiter  = 25;
@@ -126,7 +126,7 @@ bool LeastSquaresNewton(const bool_enum CONSTR_OPT, quadrature *q_orig, int *its
       errorNormPrev = errorNorm;
       getFunc_ptr(q_next, RHS);
       errorNorm = V_InfNorm(RHS);
-      int check_values = CheckForFail(INFO, errorNorm, errorNormPrev, LEAST_SQ_SOL);
+      int check_values = CheckForStop(INFO, errorNorm, errorNormPrev, LEAST_SQ_SOL);
       if(check_values != GQ_SUCCESS) {
          SOL_FLAG = SOL_NOT_FOUND;
          goto FREERETURN;
@@ -140,9 +140,11 @@ bool LeastSquaresNewton(const bool_enum CONSTR_OPT, quadrature *q_orig, int *its
             SOL_FLAG = SOL_NOT_FOUND;
             goto FREERETURN;
          }
-         int C_FLAG = ConstrainedOptimization(q_prev, q_next, &cVectData);
-         if(C_FLAG != CONSTR_SUCCESS) {
-            COND_PRINT_ERR(C_FLAG);
+         ConstrOptData *data = ConstrainedOptimizationInit(q_next);
+         int C_FLAG = ConstrainedOptimization(data, q_prev, q_next, &cVectData);
+         ConstrainedOptimizationFree(data);
+         if(C_FLAG < 0) {
+            PRINT_ERR("Constrained optimization failed", __LINE__, __FILE__);
             SOL_FLAG = SOL_NOT_FOUND;
             goto FREERETURN;
          }
@@ -195,7 +197,7 @@ FREERETURN:
 
 
 
-static int CheckForFail(int INFO, double errorNorm, double errorNormPrev, Vector least_sq_sol)
+static int CheckForStop(int INFO, double errorNorm, double errorNormPrev, Vector least_sq_sol)
 {
 
    if(errorNorm > errorNormPrev+2)     // fail if method is not converging
