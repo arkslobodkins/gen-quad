@@ -5,13 +5,16 @@
 #include "../plasma-17.1/include/plasma.h"
 
 
-void MATMUL_LAPACK(int M, int K, int N, double *MAT1, double *MAT2, double *MAT3)
+void DGEMM_LAPACK(CMatrix A, CMatrix B, CMatrix C)
 {
    char TRANS1  = 'N';
    char TRANS2  = 'N';
    double alpha = 1.0;
    double beta  = 0.0;
-   dgemm_(&TRANS1, &TRANS2, &M, &N, &K, &alpha, MAT1, &M, MAT2, &K, &beta, MAT3, &M);
+   int M = A.rows;
+   int K = A.cols;
+   int N = B.cols;
+   dgemm_(&TRANS1, &TRANS2, &M, &N, &K, &alpha, A.id, &M, B.id, &K, &beta, C.id, &M);
 }
 
 int DGEQR2_LAPACK(CMatrix A, Vector TAU)
@@ -54,6 +57,20 @@ int DORMQR_LAPACK(char SIDE, char TRANS, Vector TAU, CMatrix Q, CMatrix A)
    return INFO;
 }
 
+int DORGQR_LAPACK(CMatrix Q, Vector TAU)
+{
+   int INFO;
+   int LDA = Q.rows;
+   int LWORK = 2*Q.cols;
+   double *WORK = (double *)malloc(LWORK*sizeof(LWORK));
+
+   dorgqr_(&Q.rows, &Q.cols, &TAU.len, Q.id, &LDA,
+          TAU.id, WORK, &LWORK, &INFO);
+
+   free(WORK);
+   return INFO;
+}
+
 int DGELS_LAPACK(CMatrix A, Vector RHS_TO_X)
 {
    assert(RHS_TO_X.len == MAX(A.rows, A.cols));
@@ -91,6 +108,20 @@ int DGELS_PLASMA(CMatrix A, Vector RHS_TO_X)
    plasma_desc_destroy(&T);
    plasma_finalize();
 
+   return INFO;
+}
+
+int DGEMM_PLASMA(CMatrix A, CMatrix B, CMatrix C)
+{
+   char TRANS1  = PlasmaNoTrans;
+   char TRANS2  = PlasmaNoTrans;
+   double alpha = 1.0;
+   double beta  = 0.0;
+   int M = A.rows;
+   int K = A.cols;
+   int N = B.cols;
+   int INFO = plasma_dgemm(TRANS1, TRANS2, M, N, K, alpha, A.id, M,
+                           B.id, K, beta, C.id, M);
    return INFO;
 }
 #endif

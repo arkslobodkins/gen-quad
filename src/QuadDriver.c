@@ -138,7 +138,7 @@ static void TimesToScreen(DOMAIN_TYPE D, int deg, int dim, double total_time)
    printf("wall clock time for GetJacobian routine = %le\n", JACOBIAN_TIME);
    printf("wall clock time for GetFunction routine = %le\n", FUNCTION_TIME);
    printf("wall clock time for predictor routine = %le\n", PREDICTOR_TIME);
-   printf("wall clock time for constraints routines = %le\n", CONSTR_TIME);
+   printf("wall clock time for constraint routines = %le\n", CONSTR_TIME);
    printf("total wall clock time = %le\n", total_time);
 }
 
@@ -159,7 +159,7 @@ static void TimesToFile(DOMAIN_TYPE D, int deg, int dim, double total_time)
    fprintf(file, "wall clock time for GetJacobian routine = %le\n", JACOBIAN_TIME);
    fprintf(file, "wall clock time for GetFunction routine = %le\n", FUNCTION_TIME);
    fprintf(file, "wall clock time for predictor routine = %le\n", PREDICTOR_TIME);
-   fprintf(file, "wall clock time for constraints routines = %le\n", CONSTR_TIME);
+   fprintf(file, "wall clock time for constraint routines = %le\n", CONSTR_TIME);
    fprintf(file, "total wall clock time = %le\n", total_time);
 
    fclose(file);

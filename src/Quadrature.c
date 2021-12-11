@@ -137,6 +137,8 @@ void quadrature_reinit_simple(int n, int dim, int *dims, int deg, quadrature *q)
 
 void quadrature_realloc_array(int n, quadrature *q)
 {
+   if(q->num_nodes == n) return;
+
    q->num_nodes = n;
    int dim = q->dim;
    Vector_realloc(n*(dim+1), &q->z);
@@ -151,8 +153,9 @@ void quadrature_realloc_array(int n, quadrature *q)
 void quadrature_shrink_array(int n, quadrature *q)
 {
    assert(q->num_nodes >= n);
-   q->num_nodes = n;
+   if(q->num_nodes == n) return;
 
+   q->num_nodes = n;
    int dim = q->dim;
    double *x = (double *)malloc(SIZE_DOUBLE(n*dim));
    double *w = (double *)malloc(SIZE_DOUBLE(n));

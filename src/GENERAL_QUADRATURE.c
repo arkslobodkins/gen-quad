@@ -1,6 +1,7 @@
 #include "GENERAL_QUADRATURE.h"
 #include <strings.h>
 #include <assert.h>
+#include <omp.h>
 
 char *get_domain_string(DOMAIN_TYPE D)
 {
@@ -109,5 +110,11 @@ GQ_BOOL OMP_CONDITION(int deg, int dim)
    else if(dim == 6  && deg  >= 5) return GQ_TRUE;
    else if(dim > 6)                return GQ_TRUE;
    else                            return GQ_FALSE;
+}
+
+GQ_BOOL PLASMA_CONDITION()
+{
+   if(omp_get_max_threads() > 4) return GQ_TRUE;
+   else                          return GQ_FALSE;
 }
 #endif

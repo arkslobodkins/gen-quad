@@ -23,6 +23,7 @@ void PrintInt(int x, const char *name);
 void PrintBool(bool x, const char *name);
 void PrintFloat(float x, const char *name);
 void PrintDouble(double x, const char *name);
+void PrintDoubles(double *x, int n, const char *name);
 void Print(const char *x);
 void PRINT_ERR(const char *x, int line_num, const char *file_name);
 void PRINT_WARN(const char *x, int line_num, const char *file_name);

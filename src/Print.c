@@ -97,6 +97,12 @@ void PrintDouble(double x, const char *name)
    printf("%s = %.16e\n", name, x);
 }
 
+void PrintDoubles(double *x, int n, const char *name)
+{
+   for(int i = 0; i < n; ++i)
+      printf("%s[%i] = %.16e\n", name, i, x[i]);
+}
+
 void Print(const char *x)
 {
    printf("%s\n", x);

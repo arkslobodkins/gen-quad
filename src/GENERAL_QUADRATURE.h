@@ -62,6 +62,7 @@ double expIntegralNDimCube(int dim);
 double expIntegralNDimSimplex(int dim);
 #ifdef _OPENMP
 GQ_BOOL OMP_CONDITION(int deg, int dim);
+GQ_BOOL PLASMA_CONDITION();
 #endif
 
 typedef struct
