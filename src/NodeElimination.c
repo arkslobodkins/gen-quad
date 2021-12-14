@@ -14,7 +14,6 @@
 #include "Conditional_Debug.h"
 #include "get_time.h"
 
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
@@ -56,10 +55,10 @@ void NodeElimination(const quadrature *q_initial, quadrature *q_final, history *
       PRINT_ERR(STR_QUAD_NOT_FULL_INIT, __LINE__, __FILE__);
       return;
    }
-   int n_initial       = q_initial->num_nodes;
-   int numFuncs        = q_initial->basis->numFuncs;
-   int dim             = q_initial->dim;
-   double tol = QUAD_TOL; // 10^(-14);
+   int nodesInitial = q_initial->num_nodes;
+   int numFuncs     = q_initial->basis->numFuncs;
+   int dim          = q_initial->dim;
+   double tol       = QUAD_TOL; // 10^(-14);
 
    RMatrix(*Predictor_Ptr)(quadrature *, int *);
 #ifdef _OPENMP
@@ -82,8 +81,8 @@ void NodeElimination(const quadrature *q_initial, quadrature *q_final, history *
       int its = 0;
       bool SOL_FLAG = LeastSquaresNewton(ON, q_temp, &its);
       if(SOL_FLAG == SOL_FOUND) {
-         n_initial = q_temp->num_nodes;
-         quadrature_realloc_array(n_initial, q_new);
+         nodesInitial = q_temp->num_nodes;
+         quadrature_realloc_array(nodesInitial, q_new);
          quadrature_assign(q_temp, q_new);
       }
       else if(SOL_FLAG == SOL_NOT_FOUND) {
@@ -95,16 +94,15 @@ void NodeElimination(const quadrature *q_initial, quadrature *q_final, history *
 
    // run Node Elimination Algorithm. Theoretical optimum is reached when
    // (dim+1)*k = numFuncs, at which point elimination is pursued no further.
-   int n_prev                   = -1;
-   int n_cur                    = n_initial;
-   bool_enum CONSTR_FLAG        = OFF;
-   bool SOL_FLAG                = SOL_NOT_FOUND;
-   int n_opt                    = ceil(1.0*numFuncs/(dim+1));
-   double efficiency            = (double)n_opt/n_initial;
+   int n_prev            = -1;
+   int n_cur             = nodesInitial;
+   bool_enum CONSTR_FLAG = OFF;
+   bool SOL_FLAG         = SOL_NOT_FOUND;
+   int n_opt             = ceil(1.0*numFuncs/(dim+1));
+   double efficiency     = (double)n_opt/nodesInitial;
    PrintElimInfo( dim, n_cur , n_opt, efficiency);
    while( ((dim+1)*n_cur > numFuncs)  && (n_cur >= 1) )
    {
-      if(n_cur <= 1) break;
       if(dim == MAX_DIM)
          if(n_cur == n_prev) CONSTR_FLAG = ON;
          else                CONSTR_FLAG = OFF;
@@ -113,7 +111,6 @@ void NodeElimination(const quadrature *q_initial, quadrature *q_final, history *
 
       quadrature_shrink_array(n_cur-1, q_temp);
       quadrature_shrink_array(n_cur, q_new);
-
 
 //      int *arrayIndexMerge = (int *)malloc(SIZE_INT(n_cur*(n_cur-1)/2));
 //      int *arrayAssociate = (int *)malloc(SIZE_INT(n_cur*(n_cur-1)/2));
@@ -147,7 +144,6 @@ void NodeElimination(const quadrature *q_initial, quadrature *q_final, history *
 //      RMatrix_free(ZMerge);
 //      free(arrayIndexMerge);
 //      free(arrayAssociate);
-
 
       int *arrayIndex = (int *)malloc(SIZE_INT(n_cur));
       double start_time = get_cur_time();
@@ -183,21 +179,17 @@ void NodeElimination(const quadrature *q_initial, quadrature *q_final, history *
       RMatrix_free(Z);
       free(arrayIndex);
 
-
-
       if(SOL_FLAG == SOL_FOUND && CONSTR_FLAG == ON)
          Print("Solution found using constraint");
-
-      // end NodeElimination if repeat flag is off and all iterations were unsuccessful
       if (SOL_FLAG == SOL_FOUND)
          PrintElimInfo(dim, n_cur, n_opt, efficiency);
       else if( (SOL_FLAG == SOL_NOT_FOUND) && (CONSTR_FLAG != ON)  && (dim == MAX_DIM) )
          Print("rerunning with constrained optimization");
+      // end NodeElimination if repeat flag is off and all iterations were unsuccessful
       else if(SOL_FLAG == SOL_NOT_FOUND) {
          Print("Last iteration did not converge");
          break; // break while loop
       }
-
    }// end while loop
 
    // save nodes and weights
@@ -419,7 +411,7 @@ RMatrix PredictorMergeLapack(quadrature *q, int *arrayIndex, int *arrayAssociate
    CMatrix FullQ          = CMatrix_init(n_cur*(dim+1), n_cur*(dim+1));
    RMatrix Z              = RMatrix_init(n_cur*(n_cur-1)/2, n_cur*(dim+1));
    RMatrix dZ             = RMatrix_init(n_cur*(n_cur-1)/2, n_cur*(dim+1));
-   double *distance     = (double *)malloc(SIZE_DOUBLE(n_cur*(n_cur-1)/2));
+   double *distance       = (double *)malloc(SIZE_DOUBLE(n_cur*(n_cur-1)/2));
    double *norm_Q2_ROW    = (double *)malloc(n_cur*(n_cur-1)/2*sizeof(double));
    double *dz             = (double *)malloc(n_cur*(dim+1)*sizeof(double));
 
@@ -509,6 +501,7 @@ static void ReorderWithBoundaryDist(RMatrix predictor, quadrature *q, int *array
 {
    int numGuesses = predictor.rows;
    quadrature *q_temp = quadrature_make_full_copy(q);
+   int maxBound = 5;
 
    int rowBoundOrder[numGuesses];
    double boundIndex[numGuesses];
@@ -519,7 +512,7 @@ static void ReorderWithBoundaryDist(RMatrix predictor, quadrature *q, int *array
    for(int i = 0; i < numGuesses; ++i)
    {
       ExtractFromPredictor(predictor, arrayIndex[i], q_temp);
-      if(QuadInConstraint(q_temp)) {
+      if(QuadInConstraint(q_temp) && boundCount < maxBound) {
          rowBoundOrder[boundCount] = arrayIndex[i];
          boundIndex[boundCount] = QuadMinDistFromTheBoundary(q_temp);
          ++boundCount;

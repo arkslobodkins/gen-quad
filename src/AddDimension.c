@@ -7,7 +7,6 @@
 #include "GeneralGaussTensor.h"
 
 #include <assert.h>
-#include <stdio.h>
 
 // Computes tensor product of arbitrary quadrature over (dim-1)-dimensional
 // domain Ω and 1-dimensional interval [0, 1]. Quadrature of dimension dim
@@ -19,12 +18,12 @@ void AddLineFirst(const quadrature *q1D, const quadrature *quad_prev, quadrature
    assert(q1D->dim + quad_prev->dim == quad_new->dim);
    assert(q1D->num_nodes * quad_prev->num_nodes == quad_new->num_nodes);
 
-   const int dim = quad_new->dim;
-   const int n1D = q1D->num_nodes;
-   const int n_prev = quad_prev->num_nodes;
-   const double *x1D = q1D->x;
+   const int n1D        = q1D->num_nodes;
+   const double *x1D    = q1D->x;
+   const int n_prev     = quad_prev->num_nodes;
    const double *x_prev = quad_prev->x;
-   double *x_new = quad_new->x;
+   const int dim        = quad_new->dim;
+   double *x_new        = quad_new->x;
 
    // compute tensor product for nodes
    for(int j = 0; j < n_prev; ++j)
@@ -50,11 +49,9 @@ void AddLineSimplex(const quadrature *q1D, const quadrature *quad_prev, quadratu
    assert(q1D->dim == 1);
    assert(q1D->dim + quad_prev->dim == quad_new->dim);
    assert(q1D->num_nodes * quad_prev->num_nodes == quad_new->num_nodes);
-   assert(quad_prev->D == SIMPLEX || quad_prev->D == INTERVAL);
-   assert(quad_new->D == SIMPLEX);
 
-   int dim = quad_new->dim;
-   int n_new = quad_new->num_nodes;
+   const int dim = quad_new->dim;
+   const int n_new = quad_new->num_nodes;
    double *x_new = quad_new->x;
    double *w_new = quad_new->w;
 
@@ -69,7 +66,6 @@ void AddLineSimplex(const quadrature *q1D, const quadrature *quad_prev, quadratu
          w_new[i] *= x_new[ind];
       }
    }
-
 }
 
 
@@ -77,8 +73,8 @@ void AddLineSimplex(const quadrature *q1D, const quadrature *quad_prev, quadratu
 // simplex of dimension dim using generalized Duffy transformation.
 void GeneralDuffy(quadrature *q)
 {
-   int dim = q->dim;
-   int N = q->num_nodes;
+   const int dim = q->dim;
+   const int N = q->num_nodes;
    double *x = q->x;
    double *w = q->w;
 
@@ -98,23 +94,24 @@ void MixedTensor(const quadrature *q1, const quadrature *q2, quadrature *q_tp)
    assert(q1->dim + q2->dim == q_tp->dim);
    assert(q1->num_nodes * q2->num_nodes == q_tp->num_nodes);
 
-   const int n1 = q1->num_nodes;
-   const int n2 = q2->num_nodes;
-   const int dim1 = q1->dim;
-   const int dim2 = q2->dim;
+   const int n1     = q1->num_nodes;
+   const int dim1   = q1->dim;
+   const double *x1 = q1->x;
+   const int n2     = q2->num_nodes;
+   const int dim2   = q2->dim;
+   const double *x2 = q2->x;
    const int dim_tp = q_tp->dim;
+   double *xtp      = q_tp->x;
 
-   for(int i = 0; i < n1; ++i)
-   {
-      for(int j = 0; j < n2; ++j)
-      {
+   for(int i = 0; i < n1; ++i) {
+      for(int j = 0; j < n2; ++j) {
          int id = i*n2*dim_tp + j*dim_tp;
          for(int d1 = 0; d1 < dim1; ++d1)
-            q_tp->x[id+d1] = q1->x[i*dim1+d1];
+            xtp[id+d1] = x1[i*dim1+d1];
 
          int count = 0;
          for(int d2 = dim1; d2 < dim_tp; ++d2) {
-            q_tp->x[id+d2] = q2->x[j*dim2+count];
+            xtp[id+d2] = x2[j*dim2+count];
             ++count;
          }
       }

@@ -90,9 +90,6 @@ quadrature *quadrature_init_basic(int n, int dim, int *dims, int deg, DOMAIN_TYP
          break;
    }
    q->constr           = NULL;
-   q->constr_init      = NULL;
-   q->get_constr       = NULL;
-   q->constr_free      = NULL;
    q->basis            = NULL;
    q->basisOmp         = NULL;
    q->expIntegralExact = NULL;
@@ -108,8 +105,7 @@ quadrature *quadrature_init_full(int n, int dim, int *dims, int deg, DOMAIN_TYPE
    quadrature *q = quadrature_init_basic(n, dim, dims, deg, D);
 
    q->setFuncs(q);
-   q->constr = q->constr_init(q->dims);
-   q->get_constr(q->constr);
+   constraints_get(q->constr);
    q->free_ptr = &quadrature_free_full;
    q->isFullyInitialized = GQ_TRUE;
    return q;
@@ -315,8 +311,8 @@ static void quadrature_free_full(quadrature *q)
 
    Vector_free(q->z);
    if(q->dims != NULL) { free(q->dims); q->dims = NULL; }
-   if(q->isFullyInitialized) q->constr_free(q->constr);
    if(q->dims != NULL) { free(q->dims); q->dims = NULL; }
+   if(q->constr != NULL) { constraints_free(q->constr); q->constr = NULL; }
    if(q->basis != NULL) { BasisFree(q->basis); q->basis = NULL;}
    free(q); q = NULL;
 }
@@ -677,17 +673,18 @@ static double ExpIntegralExactSimplexSimplex(const quadrature *q)
 
 static void SetIntervalFuncs(quadrature *q)
 {
-   q->constr_init      = &constraints_interval_init;
-   q->get_constr       = &get_constraints_interval;
-   q->constr_free      = &constraints_interval_free;
+   dimParamsInterval params;
+   constrInterface constrinterface = SetIntervalConstrInterface();
+   q->constr = constraints_init((void *)&params, &constrinterface);
 }
 
 static void SetCubeFuncs(quadrature *q)
 {
-   q->constr_init      = &constraints_cube_init;
-   q->get_constr       = &get_constraints_cube;
-   q->constr_free      = &constraints_cube_free;
    q->expIntegralExact = &ExpIntegralExactCube;
+
+   dimParamsCube dimCube = {q->dim};
+   constrInterface constrinterface = SetCubeConstrInterface();
+   q->constr = constraints_init((void *)&dimCube, &constrinterface);
 
    CubeParams cubeParams;
    cubeParams.deg = q->deg;
@@ -701,10 +698,11 @@ static void SetCubeFuncs(quadrature *q)
 
 static void SetSimplexFuncs(quadrature *q)
 {
-   q->constr_init      = &constraints_simplex_init;
-   q->get_constr       = &get_constraints_simplex;
-   q->constr_free      = &constraints_simplex_free;
    q->expIntegralExact = &ExpIntegralExactSimplex;
+
+   dimParamsSimplex dimSimplex = {q->dim};
+   constrInterface constrinterface = SetSimplexConstrInterface();
+   q->constr = constraints_init((void *)&dimSimplex, &constrinterface);
 
    SimplexParams simplexParams;
    simplexParams.deg = q->deg;
@@ -718,10 +716,13 @@ static void SetSimplexFuncs(quadrature *q)
 
 static void SetCubeSimplexFuncs(quadrature *q)
 {
-   q->constr_init      = &constraints_cubesimplex_init;
-   q->get_constr       = &get_constraints_cubesimplex;
-   q->constr_free      = &constraints_cubesimplex_free;
    q->expIntegralExact = &ExpIntegralExactCubeSimplex;
+
+   dimParamsCubeSimplex dimsCubeSimplex;
+   dimsCubeSimplex.dims[0] = q->dims[0];
+   dimsCubeSimplex.dims[1] = q->dims[1];
+   constrInterface constrinterface = SetCubeSimplexConstrInterface();
+   q->constr = constraints_init((void *)&dimsCubeSimplex, &constrinterface);
 
    CubeSimplexParams csParams;
    csParams.deg = q->deg;
@@ -736,10 +737,13 @@ static void SetCubeSimplexFuncs(quadrature *q)
 
 static void SetSimplexSimplexFuncs(quadrature *q)
 {
-   q->constr_init      = &constraints_simplexsimplex_init;
-   q->get_constr       = &get_constraints_simplexsimplex;
-   q->constr_free      = &constraints_simplexsimplex_free;
    q->expIntegralExact = &ExpIntegralExactSimplexSimplex;
+
+   dimParamsSimplexSimplex dimsSimplexSimplex;
+   dimsSimplexSimplex.dims[0] = q->dims[0];
+   dimsSimplexSimplex.dims[1] = q->dims[1];
+   constrInterface constrinterface = SetSimplexSimplexConstrInterface();
+   q->constr = constraints_init((void *)&dimsSimplexSimplex, &constrinterface);
 
    SimplexSimplexParams ssParams;
    ssParams.deg = q->deg;

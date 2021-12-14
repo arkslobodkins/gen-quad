@@ -151,7 +151,7 @@ bool LeastSquaresNewton(const bool_enum CONSTR_OPT, quadrature *q_orig, int *its
          CONSTR_TIME += get_cur_time() - start_time;
       }
       else {
-         if(!QuadInConstraint(q_next) && itsLoc > 5) {
+         if(!QuadInConstraint(q_next) && itsLoc > 10) {
             SOL_FLAG = SOL_NOT_FOUND;
             goto FREERETURN;
          }

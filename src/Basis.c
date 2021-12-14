@@ -10,7 +10,6 @@
 #include <string.h>
 #include <omp.h>
 
-static void ComputeBasisIndices(Basis *basis);
 static void BasisIndices(int deg, int dim, INT_8 *f);
 static int BasisSize(int deg, int dim);
 static void LegendrePoly(int order, double x, double *p, double *dp);
@@ -27,11 +26,11 @@ Basis* BasisInit(void *params, BasisInterface *interface)
 
    int numFuncs = basis->numFuncs;
    int dim = basis->dim;
-   basis->indices   = (INT_8 *) malloc(numFuncs*dim*sizeof(INT_8));
-   ComputeBasisIndices(basis);
-   basis->functions     = Vector_init(numFuncs);
-   basis->derivatives       = Vector_init(numFuncs*dim);
-   basis->integrals = Vector_init(numFuncs);
+   basis->indices = (INT_8 *) malloc(numFuncs*dim*sizeof(INT_8));
+   BasisIndices(basis->deg, basis->dim, basis->indices);
+   basis->functions   = Vector_init(numFuncs);
+   basis->derivatives = Vector_init(numFuncs*dim);
+   basis->integrals   = Vector_init(numFuncs);
    return basis;
 }
 
@@ -57,17 +56,22 @@ void BasisIntegralsMonomial(Basis *basis, Vector v)
 
 void BasisFree(Basis *basis)
 {
-   if(basis->indices != NULL) {
-      free(basis->indices);
-      basis->indices = NULL;
-   }
+   if(basis == NULL) return;
+   BasisInterface *interface = basis->interface;
+
    Vector_free(basis->integrals);
    Vector_free(basis->derivatives);
    Vector_free(basis->functions);
-   free(basis->indices);
+   if(basis->indices) {
+      free(basis->indices);
+      basis->indices = NULL;
+   }
+
    basis->interface->basisFree(basis);
-   free(basis->interface);
-   free(basis);
+   if(interface) {
+      free(interface);
+      interface = NULL;
+   }
 }
 
 
@@ -209,7 +213,17 @@ void CubeBasisIntegralsMonomial(CubeBasis *basis, Vector v)
 
 void CubeBasisFree(CubeBasis *basis)
 {
-   free(basis->params);
+   if(basis == NULL) return;
+
+   if(basis->params) {
+      free(basis->params);
+      basis->params = NULL;
+   }
+   if(basis->addData) {
+      free(basis->addData);
+      basis->addData = NULL;
+   }
+   free(basis); basis = NULL;
 }
 
 
@@ -390,12 +404,21 @@ void SimplexBasisIntegralsMonomial(SimplexBasis *basis, Vector v)
 
 void SimplexBasisFree(SimplexBasis *basis)
 {
-   free(basis->params);
+   if(basis == NULL) return;
+
    Vector_free(basis->addData->phi_backw1);
    Vector_free(basis->addData->phi_backw2);
    Vector_free(basis->addData->phi_forw1);
    Vector_free(basis->addData->phi_forw2);
-   free(basis->addData);
+   if(basis->params) {
+      free(basis->params);
+      basis->params = NULL;
+   }
+   if(basis->addData) {
+      free(basis->addData);
+      basis->addData = NULL;
+   }
+   free(basis); basis = NULL;
 }
 
 
@@ -578,13 +601,22 @@ void CubeSimplexBasisIntegralsMonomial(CubeSimplexBasis *basis, Vector v)
 
 void CubeSimplexBasisFree(CubeSimplexBasis *basis)
 {
-   free(basis->params);
+   if(basis == NULL) return;
+
    Vector_free(basis->addData->basis_polytopic);
    Vector_free(basis->addData->phi_backw1);
    Vector_free(basis->addData->phi_backw2);
    Vector_free(basis->addData->phi_forw1);
    Vector_free(basis->addData->phi_forw2);
-   free(basis->addData);
+   if(basis->params) {
+      free(basis->params);
+      basis->params = NULL;
+   }
+   if(basis->addData) {
+      free(basis->addData);
+      basis->addData = NULL;
+   }
+   free(basis); basis = NULL;
 }
 
 
@@ -768,13 +800,22 @@ void SimplexSimplexBasisIntegralsMonomial(SimplexSimplexBasis *basis, Vector v)
 
 void SimplexSimplexBasisFree(SimplexSimplexBasis *basis)
 {
-   free(basis->params);
+   if(basis == NULL) return;
+
    Vector_free(basis->addData->basis_polytopic);
    Vector_free(basis->addData->phi_backw1);
    Vector_free(basis->addData->phi_backw2);
    Vector_free(basis->addData->phi_forw1);
    Vector_free(basis->addData->phi_forw2);
-   free(basis->addData);
+   if(basis->params) {
+      free(basis->params);
+      basis->params = NULL;
+   }
+   if(basis->addData) {
+      free(basis->addData);
+      basis->addData = NULL;
+   }
+   free(basis); basis = NULL;
 }
 
 
@@ -1003,44 +1044,6 @@ void SimplexFuncsPolytopicTwo(MixedPolytopeBasis *basis, const double *x, Vector
 }
 
 
-static void ComputeBasisIndices(Basis *basis)
-{
-   int dim = basis->dim;
-   int deg = basis->deg;
-   INT_8* f = basis->indices;
-
-   if(dim == 1) {
-      for(int i = 0; i <= deg; ++i) f[i] = i;
-      return;
-   }
-
-   int counter;
-   // compute basis indices using nested recursion if dimension >= 2
-   for(int j = 2; counter = 0, j <= dim; ++j)
-   {
-      for(int i = 0; i <= deg; ++i)
-      {
-         int size = BasisSize(deg-i, j-1);
-         int dimxsize = dim*size;
-         INT_8 recursiveF[size*(j-1)];
-         BasisIndices(deg-i, j-1, recursiveF);
-         if(j == dim)
-         {
-            for(int k = 0; k < size; ++k)
-            {
-               int kxdim = k*dim;
-               int kxdim_minus1 = k*(dim-1);
-               for(int d = 0; d < dim-1; ++d)
-                  f[counter+kxdim+d] = recursiveF[kxdim_minus1+d];
-               f[counter+kxdim+j-1] = i;
-            }
-            counter += dimxsize;
-         }
-      }
-   }
-}
-
-
 static void BasisIndices(int deg, int dim, INT_8 *f)
 {
    if(dim == 1) {
@@ -1122,7 +1125,7 @@ void orthogonal_cube_basis_test(int deg, int dim)
    }
    printf("\nTesting orthogonality of cube basis functions. Maximum error of basis functions = %.16e\n\n", max_res);
 
-   free(quad_integrals);
+   free(quad_integrals); quad_integrals = NULL;
    quadrature_free(quad_1D);
    quadrature_free(quad_C);
 }
@@ -1160,7 +1163,7 @@ void orthogonal_simplex_basis_test(int deg, int dim)
    }
    printf("\nTesting orthogonality of simplex basis functions. Maximum error of basis functions = %.16e\n\n", max_res);
 
-   free(quad_integrals);
+   free(quad_integrals); quad_integrals = NULL;
    quadrature_free(quad_1D);
    quadrature_free(quad_S);
 }

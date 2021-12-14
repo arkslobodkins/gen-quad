@@ -1,5 +1,6 @@
 #include "ConstrainedOptimization.h"
 #include "Quadrature.h"
+#include "Constraints.h"
 #include "Conditional_Debug.h"
 #include "LINALG.h"
 

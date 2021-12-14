@@ -85,41 +85,10 @@ typedef struct
    int total_elims;
 } history;
 
-typedef struct
-{
-   int            eqnId;
-   double         tMin;
-   bool_enum      ACTIVE;
-   NODE_OR_WEIGHT N_OR_W;
-} ConstrNodeData;
-
-typedef struct
-{
-   int            boundaryNodeId;
-   int            eqnId;
-   double         tMin;
-   bool_enum      ACTIVE;
-   NODE_OR_WEIGHT N_OR_W;
-} ConstrVectData;
-
 typedef struct quadrature quadrature;
-typedef struct constraints constraints;
 typedef void(*SetFuncs)(quadrature *q);
 typedef double(*ExpIntegralExact)(const quadrature *q);
 typedef void(*FreePtr)(quadrature *quad);
-typedef constraints*(*constraints_init)(int *dims);
-typedef void (*get_constraints)    (constraints *cons);
-typedef void (*constraints_free)   (constraints *cons);
-
-struct constraints
-{
-   int dim;
-   int *dims;
-   RMatrix M;
-   Vector b;
-   RMatrix M_FULL;
-   Vector b_FULL;
-};
 
 struct quadrature
 {
@@ -133,16 +102,14 @@ struct quadrature
    double *w;
    double *x;
    Vector z;
-   constraints *constr;
-   struct Basis *basis;
-   struct Basis **basisOmp;
 
    int isFullyInitialized;
    SetFuncs setFuncs;
+
+   struct constraints *constr;
+   struct Basis *basis;
+   struct Basis **basisOmp;
    ExpIntegralExact expIntegralExact;
-   constraints_init    constr_init;
-   get_constraints     get_constr;
-   constraints_free    constr_free;
 
    FreePtr free_ptr;
 };

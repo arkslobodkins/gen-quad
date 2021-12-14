@@ -15,6 +15,23 @@ extern "C" {
 #define CONSTR_FAIL -1
 #define CONSTR_UNEXPECTED -2
 
+typedef struct
+{
+   int            eqnId;
+   double         tMin;
+   bool_enum      ACTIVE;
+   NODE_OR_WEIGHT N_OR_W;
+} ConstrNodeData;
+
+typedef struct
+{
+   int            boundaryNodeId;
+   int            eqnId;
+   double         tMin;
+   bool_enum      ACTIVE;
+   NODE_OR_WEIGHT N_OR_W;
+} ConstrVectData;
+
 ConstrVectData ConstrVectDataInit();
 void ConstrVectDataReset(ConstrVectData *cVectData);
 ConstrNodeData ConstrNodeDataInit();
