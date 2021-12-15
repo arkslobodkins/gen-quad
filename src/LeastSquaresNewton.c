@@ -72,8 +72,7 @@ bool LeastSquaresNewton(const bool_enum CONSTR_OPT, quadrature *q_orig, int *its
    AllocVectorOmpData(&RHS);
    getFunc_ptr      = &GetFunctionOmp;
    getJacobian_ptr  = &GetJacobianOmp;
-   int deg = q_orig->deg;
-   if(OMP_CONDITION(deg, dim)) leastsquares_ptr = DGELS_PLASMA;
+   if(PLASMA_CONDITION()) leastsquares_ptr = DGELS_PLASMA;
    else                        leastsquares_ptr = DGELS_LAPACK;
 #else
    leastsquares_ptr = &DGELS_LAPACK;
