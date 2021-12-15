@@ -23,9 +23,9 @@ void GetFunctionOmp(quadrature *q, Vector f)
    assert(f.len = q->basis->numFuncs);
    double time_start = get_cur_time();
 
-   int dim   = q->dim;
-   int deg   = q->deg;
-   int len   = q->basis->numFuncs;
+   int dim = q->dim;
+   int deg = q->deg;
+   int len = q->basis->numFuncs;
    int nodes = q->num_nodes;
    const double *w = q->w;
    const double *x = q->x;
@@ -73,7 +73,7 @@ void GetFunction(quadrature *q, Vector f)
    assert(f.len = q->basis->numFuncs);
    double time_start = get_cur_time();
 
-   int dim   = q->dim;
+   int dim = q->dim;
    int nodes = q->num_nodes;
    const double *w = q->w;
    const double *x = q->x;

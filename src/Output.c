@@ -33,6 +33,7 @@ void HistoryToFile(const quadrature *q, int arr_size, history **hist)
       fprintf(FID, "final residual = %.16e\n\n", hist[i]->res);
       for(j = 0; j < hist[i]->total_elims; ++j)
       {
+         fprintf(FID, "type: %s\n", ElimToString(hist[i]->hist_array[j].elim_type));
          fprintf(FID, "total number of nodes[%i] = %i\n", j, hist[i]->hist_array[j].nodes_tot);
          fprintf(FID, "success_node[%i] = %i\n", j, hist[i]->hist_array[j].success_node);
          fprintf(FID, "Converged in %i iterations\n\n", hist[i]->hist_array[j].success_its);
@@ -42,6 +43,7 @@ void HistoryToFile(const quadrature *q, int arr_size, history **hist)
 
    fclose(FID);
 }
+
 
 // Prints final quadrature to a file
 void QuadratureToFile(const quadrature *quad)

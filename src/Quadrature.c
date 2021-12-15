@@ -36,18 +36,24 @@ quadrature *quadrature_init_basic(int n, int dim, int *dims, int deg, DOMAIN_TYP
 
       case CUBE:
          assert(dim == dims[0]);
+         assert(dims[0] >= 2);
          break;
 
       case SIMPLEX:
          assert(dim == dims[0]);
+         assert(dims[0] >= 2);
          break;
 
       case CUBESIMPLEX:
          assert(dim == dims[0]+dims[1]);
+         assert(dims[0] >= 1);
+         assert(dims[1] >= 2);
          break;
 
       case SIMPLEXSIMPLEX:
          assert(dim == dims[0]+dims[1]);
+         assert(dims[0] >= 2);
+         assert(dims[1] >= 2);
          break;
 
       default:
@@ -64,29 +70,29 @@ quadrature *quadrature_init_basic(int n, int dim, int *dims, int deg, DOMAIN_TYP
    q->x = &q->z.id[n];
 
    int num_dims = GetNumDims(D);
-   q->dims      = (int *)malloc(num_dims*sizeof(int));
+   q->dims = (int *)malloc(num_dims*sizeof(int));
    for(int i = 0; i < num_dims; ++i)
       q->dims[i] = dims[i];
-   q->num_dims  = num_dims;
-   q->dim       = dim;
-   q->deg       = deg;
+   q->num_dims = num_dims;
+   q->dim = dim;
+   q->deg = deg;
    q->D = D;
    switch(D)
    {
       case INTERVAL:
-         q->setFuncs = SetIntervalFuncs;
+         q->setBasisAndConstr = SetIntervalFuncs;
          break;
       case CUBE:
-         q->setFuncs = SetCubeFuncs;
+         q->setBasisAndConstr = SetCubeFuncs;
          break;
       case SIMPLEX:
-         q->setFuncs = SetSimplexFuncs;
+         q->setBasisAndConstr = SetSimplexFuncs;
          break;
       case CUBESIMPLEX:
-         q->setFuncs = SetCubeSimplexFuncs;
+         q->setBasisAndConstr = SetCubeSimplexFuncs;
          break;
       case SIMPLEXSIMPLEX:
-         q->setFuncs = SetSimplexSimplexFuncs;
+         q->setBasisAndConstr = SetSimplexSimplexFuncs;
          break;
    }
    q->constr           = NULL;
@@ -104,18 +110,17 @@ quadrature *quadrature_init_full(int n, int dim, int *dims, int deg, DOMAIN_TYPE
 {
    quadrature *q = quadrature_init_basic(n, dim, dims, deg, D);
 
-   q->setFuncs(q);
-   constraints_get(q->constr);
+   q->setBasisAndConstr(q);
    q->free_ptr = &quadrature_free_full;
    q->isFullyInitialized = GQ_TRUE;
    return q;
 }
 
 
-void quadrature_reinit_simple(int n, int dim, int *dims, int deg, quadrature *q)
+void quadrature_reinit_basic(int n, int dim, int *dims, int deg, quadrature *q)
 {
    if(q->isFullyInitialized == GQ_TRUE) {
-      PRINT_ERR(STR_QUAD_NOT_FULL_INIT, __LINE__, __FILE__);
+      PRINT_ERR("routine only supports basic quadrature objects", __LINE__, __FILE__);
       return ;
    }
    q->num_nodes = n;
@@ -211,7 +216,6 @@ quadrature *quadrature_without_element(quadrature *q, int i)
 }
 
 
-// Assignment operator
 void quadrature_assign(const quadrature *q1, quadrature *q2)
 {
    assert(q2->num_nodes == q1->num_nodes);
@@ -290,7 +294,7 @@ static void quadrature_free_basic(quadrature *q)
 {
    if(q->isFullyInitialized == GQ_TRUE)
    {
-      PRINT_ERR("full destructor was not called", __LINE__, __FILE__);
+      PRINT_ERR("full destructor must be called instead", __LINE__, __FILE__);
       return;
    }
    if(q == NULL) return;
@@ -304,7 +308,7 @@ static void quadrature_free_basic(quadrature *q)
 static void quadrature_free_full(quadrature *q)
 {
    if(q->isFullyInitialized == GQ_FALSE) {
-      PRINT_ERR("basic destructor was not called", __LINE__, __FILE__);
+      PRINT_ERR("basic destructor must be called instead", __LINE__, __FILE__);
       return;
    }
    if(q == NULL) return;
@@ -676,6 +680,7 @@ static void SetIntervalFuncs(quadrature *q)
    dimParamsInterval params;
    constrInterface constrinterface = SetIntervalConstrInterface();
    q->constr = constraints_init((void *)&params, &constrinterface);
+   constraints_get(q->constr);
 }
 
 static void SetCubeFuncs(quadrature *q)
@@ -685,6 +690,7 @@ static void SetCubeFuncs(quadrature *q)
    dimParamsCube dimCube = {q->dim};
    constrInterface constrinterface = SetCubeConstrInterface();
    q->constr = constraints_init((void *)&dimCube, &constrinterface);
+   constraints_get(q->constr);
 
    CubeParams cubeParams;
    cubeParams.deg = q->deg;
@@ -703,6 +709,7 @@ static void SetSimplexFuncs(quadrature *q)
    dimParamsSimplex dimSimplex = {q->dim};
    constrInterface constrinterface = SetSimplexConstrInterface();
    q->constr = constraints_init((void *)&dimSimplex, &constrinterface);
+   constraints_get(q->constr);
 
    SimplexParams simplexParams;
    simplexParams.deg = q->deg;
@@ -723,6 +730,7 @@ static void SetCubeSimplexFuncs(quadrature *q)
    dimsCubeSimplex.dims[1] = q->dims[1];
    constrInterface constrinterface = SetCubeSimplexConstrInterface();
    q->constr = constraints_init((void *)&dimsCubeSimplex, &constrinterface);
+   constraints_get(q->constr);
 
    CubeSimplexParams csParams;
    csParams.deg = q->deg;
@@ -744,6 +752,7 @@ static void SetSimplexSimplexFuncs(quadrature *q)
    dimsSimplexSimplex.dims[1] = q->dims[1];
    constrInterface constrinterface = SetSimplexSimplexConstrInterface();
    q->constr = constraints_init((void *)&dimsSimplexSimplex, &constrinterface);
+   constraints_get(q->constr);
 
    SimplexSimplexParams ssParams;
    ssParams.deg = q->deg;

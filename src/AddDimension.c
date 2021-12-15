@@ -40,7 +40,6 @@ void AddLineFirst(const quadrature *q1D, const quadrature *quad_prev, quadrature
 }
 
 
-// AddLineLastSimplex
 // Computes tensor product of unit (dim-1)-dimensional simplex
 // and 1-dimensional interval [0, 1], and maps the product to the unit
 // simplex of dimension dim using Duffy transformation.

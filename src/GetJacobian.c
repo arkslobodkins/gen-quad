@@ -24,8 +24,8 @@ void GetJacobianOmp(quadrature *q, CMatrix JACOBIAN)
 {
    double time_start = get_cur_time();
 
-   int dim  = q->dim;
-   int deg  = q->deg;
+   int dim = q->dim;
+   int deg = q->deg;
    int rows = q->basis->numFuncs;
    int cols = q->num_nodes;
    const double *w = q->w;
@@ -67,7 +67,7 @@ void GetJacobian(quadrature *q, CMatrix JACOBIAN)
 {
    double time_start = get_cur_time();
 
-   int dim  = q->dim;
+   int dim = q->dim;
    int rows = q->basis->numFuncs;
    int cols = q->num_nodes;
    const double *w = q->w;

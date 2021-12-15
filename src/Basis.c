@@ -847,7 +847,7 @@ static void JacobiPoly(int order, double x, double alpha, double beta, double *p
    fac1 = fac2 = fac3 = 0.0;
 
    // compute some constants to be used inside a for loop to avoid redundant computations,
-   // whereas some are computed repeatedly inide the loop(tuned)
+   // whereas some are computed repeatedly inside the loop(tuned)
    double a_plus_b               = ADD(alpha, beta);
    double a_plus_b_minus_1       = SUB(a_plus_b, 1.0);
    double a_plus_b_minus_2       = SUB(a_plus_b, 2.0);

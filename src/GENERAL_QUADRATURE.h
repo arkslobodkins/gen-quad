@@ -45,12 +45,14 @@ typedef int GQ_BOOL;
 #define SIZE_INT(x) ((x)*sizeof(int))
 #define SIZE_DOUBLE(x) ((x)*sizeof(double))
 
+typedef enum { MERGE, ELIM } ElimType;
 typedef enum { ON, OFF } bool_enum;
 typedef enum { orthogonal, monomial } BASIS_TYPE;
 typedef enum { INTERVAL, CUBE, SIMPLEX, CUBESIMPLEX, SIMPLEXSIMPLEX } DOMAIN_TYPE;
 typedef enum { NODE, WEIGHT, NONE } NODE_OR_WEIGHT;
 
 char *get_domain_string(DOMAIN_TYPE D);
+char *ElimToString(ElimType elimType);
 bool string_to_domain(const char *shape, DOMAIN_TYPE *D);
 int IntPower(int x, int power);
 double DoubleIntPower(double x, int power);
@@ -70,6 +72,7 @@ typedef struct
    int nodes_tot;
    int success_node;
    int success_its;
+   ElimType elim_type;
 } hist_data;
 
 typedef struct
@@ -86,7 +89,7 @@ typedef struct
 } history;
 
 typedef struct quadrature quadrature;
-typedef void(*SetFuncs)(quadrature *q);
+typedef void(*setBasisAndConstr)(quadrature *q);
 typedef double(*ExpIntegralExact)(const quadrature *q);
 typedef void(*FreePtr)(quadrature *quad);
 
@@ -104,7 +107,7 @@ struct quadrature
    Vector z;
 
    int isFullyInitialized;
-   SetFuncs setFuncs;
+   setBasisAndConstr setBasisAndConstr;
 
    struct constraints *constr;
    struct Basis *basis;
