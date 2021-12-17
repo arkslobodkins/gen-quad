@@ -126,8 +126,8 @@ CMatrix CMatrix_Transpose(CMatrix A)
    for(int j = 0; j < Acols; ++j)
       for(int i = 0; i < Arows; ++i)
          A_TR.cid[i][j] = A.cid[j][i];
-   CMatrix_free(A);
 
+   CMatrix_free(A);
    return A_TR;
 }
 

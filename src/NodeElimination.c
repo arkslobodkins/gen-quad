@@ -38,6 +38,7 @@ static void ExtractFromPredictorMerge(RMatrix Z, int arrayIndex, int arrayAssoci
 static void InsertionSort(int num_entries, double *norms, int *arrayIndex);
 static double TwoNorm(int n, double *z);
 ATTR_UNUSED static bool TestQR(const CMatrix Q);
+ATTR_UNUSED static void QuadSavePlots(quadrature *q);
 
 
 /***************************************************************************************************
@@ -46,6 +47,10 @@ ATTR_UNUSED static bool TestQR(const CMatrix Q);
  * to obtain quadrature rule with fewer nodes. The procedure is repeated
  * until no more nodes can be eliminated.
  ***************************************************************************************************/
+
+
+
+
 double PREDICTOR_TIME = 0.0;
 void NodeElimination(const quadrature *q_initial, quadrature *q_final, history *hist)
 {
@@ -474,6 +479,7 @@ static RMatrix PredictorMergeLapack(quadrature *q, int *arrayAssociate, double *
    return Z;
 }
 
+
 static RMatrix PredictorSimple(quadrature *q, double *signifIndex)
 {
    const int dim = q->dim;
@@ -691,4 +697,46 @@ static bool TestQR(const CMatrix Q)
    else                return PASSED;
 }
 
+
+static void QuadSavePlots(quadrature *q)
+{
+   int dim = q->dim;
+   int deg = q->deg;
+   int n = q->num_nodes;
+   static int plotNum = 0;
+
+   if(dim == 2)
+   {
+      FILE *gnuplot = popen("gnuplot", "w");
+      fprintf(gnuplot, "dim = %i;", (int)dim);
+      fprintf(gnuplot, "deg = %i;", (int)deg);
+      fprintf(gnuplot, "plotNum = %i;", (int)plotNum);
+      fprintf(gnuplot, "numPoints = %i;", (int)n);
+
+      int num_commands = 8;
+      char dataPath[80];
+      sprintf(dataPath, "../data/quadData%i.txt", plotNum);
+      FILE *data = fopen(dataPath, "w");
+      for (int i = 0; i < q->num_nodes; i++)
+         fprintf(data, "%g %g\n", q->x[2*i], q->x[2*i+1]);
+
+      char * commandsForGnuplot[] = {
+                                     "filePath(n) = sprintf('../data/quadData%i.txt', n)",
+                                     "fileName(a, b, c) = sprintf('../data/data_cube_deg%i_dim%i_#%i.png',a, b, c)",
+                                     "set xrange[0:1]",
+                                     "set yrange [0:1]",
+                                     "set terminal png size 500, 500",
+                                     "set output fileName(deg, dim, plotNum)",
+                                     "set title sprintf('Quadrature for a SQUARE, degree %i, %i points', deg, numPoints)",
+                                     "plot filePath(plotNum) with points pointtype 13 notitle"
+                                     };
+
+      for(int i = 0; i < num_commands; ++i)
+         fprintf(gnuplot, "%s \n", commandsForGnuplot[i]);
+
+      fflush(gnuplot);
+      fclose(data);
+   }
+   ++plotNum;
+}
 

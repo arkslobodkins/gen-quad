@@ -14,7 +14,7 @@ MATH= -lm
 RANLIB = ranlib
 VPATH= ../src:../src/Gauss_Lib
 
-all : quad results
+all : quad results data
 quad: Main.o LeastSquaresNewton.o  GeneralGaussTensor.o GENERAL_QUADRATURE.o GetJacobian.o  \
 	GetFunction.o NodeElimination.o Output.o AddDimension.o ComputeDomain.o QuadDriver.o     \
 	Constraints.o ConstrainedOptimization.o Vector.o Matrix.o Print.o Quadrature.o   \
@@ -28,6 +28,8 @@ libgaussq.a: $(OBJS)
 
 results:
 	mkdir -p ../results
+data:
+	mkdir -p ../data
 
 clean :
 	\rm -f *.o
@@ -35,9 +37,9 @@ clean :
 distclean : clean txtclean
 	\rm -f quad *~
 
-SUBDIR_ROOTS := ../results
+SUBDIR_ROOTS := ../results ../data
 DIRS := . $(shell find $(SUBDIR_ROOTS) -type d)
-PATTERNS := *.txt
+PATTERNS := *.txt *.png
 TXT_FILES := $(foreach DIR,$(DIRS),$(addprefix $(DIR)/,$(PATTERNS)))
 txtclean:
 	rm -rf $(TXT_FILES)
