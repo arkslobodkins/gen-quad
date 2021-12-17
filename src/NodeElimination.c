@@ -727,7 +727,7 @@ static void QuadSavePlots(quadrature *q)
                                      "set yrange [0:1]",
                                      "set terminal png size 500, 500",
                                      "set output fileName(deg, dim, plotNum)",
-                                     "set title sprintf('Quadrature for a SQUARE, degree %i, %i points', deg, numPoints)",
+                                     "set title sprintf('Quadrature on a SQUARE, degree %i, %i points', deg, numPoints)",
                                      "plot filePath(plotNum) with points pointtype 13 notitle"
                                      };
 
