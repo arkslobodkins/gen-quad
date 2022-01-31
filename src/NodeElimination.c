@@ -23,35 +23,66 @@
 
 extern int MAX_DIM;
 
-ATTR_UNUSED static RMatrix PredictorSimple(quadrature *q, double *signifIndex);
-static RMatrix PredictorLapack(quadrature *q, double *distance);
-static RMatrix PredictorMergeLapack(quadrature *q, int *arrayAssociate, double *distanceMerge);
+#define MAX_SEARCH_DEPTH 2
+#define SEARCH_DIM 3
+
+#define MAX_FAILS_LEVEL_1 8
+#define MAX_FAILS_LEVEL_2 1
+#define MAX_FAILS_ELIM 15
+
+
+
+typedef struct
+{
+   int index;
+   double d;
+} DistanceStruct;
+
+
+typedef struct
+{
+   double t[SEARCH_DIM];
+} ShortenParams;
+static const ShortenParams shortParams = {{0.5, 0.25, 0.125}};
+
+
+static DistanceStruct* distance_init(int n)
+{
+   DistanceStruct *distanceStr = (DistanceStruct *)malloc(n*sizeof(DistanceStruct));
+   for(int i = 0; i < n; ++i)  distanceStr[i].index = i;
+   return distanceStr;
+}
+
+
+static bool LsqSearch(bool_enum CONSTR_FLAG, quadrature *q_new, history *hist);
+
+static RMatrix PredictorLapack(quadrature *q, DistanceStruct *distance);
 #ifdef _OPENMP
-static RMatrix PredictorPlasma(quadrature *q, double *distance);
+static RMatrix PredictorPlasma(quadrature *q, DistanceStruct *distance);
 #endif
+__attribute__unused static RMatrix PredictorSimple(quadrature *q, DistanceStruct *signifIndex);
 
-ATTR_UNUSED static void ReorderWithBoundaryDist(RMatrix predictor, quadrature *q, int *arrayIndex);
-ATTR_UNUSED static void ReorderWithBoundaryDistMerge(RMatrix predictor, quadrature *q, int *arrayIndex, int *arrayAssociate);
 static void ExtractFromPredictor(RMatrix Z, int arrayIndex, quadrature *q);
-static void ExtractFromPredictorMerge(RMatrix Z, int arrayIndex, int arrayAssociate, quadrature *q);
+static void ExtractFromPredictorFull(RMatrix Z, int arrayIndex, quadrature *q);
+__attribute__unused static void ReorderWithBoundaryDist(RMatrix predictor, quadrature *q, DistanceStruct *arrayIndex);
+__attribute__unused static VMin SolveEigenvalue(quadrature *q, Vector v);
+__attribute__unused static void InsertionSort(int num_entries, double *norms, int *arrayIndex);
 
-static void InsertionSort(int num_entries, double *norms, int *arrayIndex);
+static int compareDouble(const void *a, const void *b);
 static double TwoNorm(int n, double *z);
-ATTR_UNUSED static bool TestQR(const CMatrix Q);
-ATTR_UNUSED static void QuadSavePlots(quadrature *q);
+
+__attribute__unused static bool TestQR(const CMatrix Q);
+__attribute__unused static void QuadSavePlots(quadrature *q);
 
 
+
+double PREDICTOR_TIME = 0.0;
 /***************************************************************************************************
  * A new node elimination scheme that eliminates one node at a time and computes
  * the initial guess for constrained Newton's method. Subsequently, Newton's method is called
  * to obtain quadrature rule with fewer nodes. The procedure is repeated
  * until no more nodes can be eliminated.
  ***************************************************************************************************/
-
-
-
-
-double PREDICTOR_TIME = 0.0;
 void NodeElimination(const quadrature *q_initial, quadrature *q_final, history *hist)
 {
    if(q_initial->isFullyInitialized != GQ_TRUE) {
@@ -67,7 +98,7 @@ void NodeElimination(const quadrature *q_initial, quadrature *q_final, history *
    int dim          = q_initial->dim;
    double tol       = QUAD_TOL; // 10^(-14);
 
-   RMatrix(*Predictor_Ptr)(quadrature *, double *);
+   RMatrix(*Predictor_Ptr)(quadrature *, DistanceStruct *);
 #ifdef _OPENMP
    if(PLASMA_CONDITION()) Predictor_Ptr = &PredictorPlasma;
    else                   Predictor_Ptr = &PredictorLapack;
@@ -75,7 +106,6 @@ void NodeElimination(const quadrature *q_initial, quadrature *q_final, history *
    Predictor_Ptr = &PredictorLapack;
 #endif
 
-   quadrature *q_temp = quadrature_make_full_copy(q_initial);
    quadrature *q_new  = quadrature_make_full_copy(q_initial);
 
    // test accuracy of the initial quadrature
@@ -86,12 +116,10 @@ void NodeElimination(const quadrature *q_initial, quadrature *q_final, history *
    if(fabs(res) > tol)
    {
       int its = 0;
+      quadrature *q_temp = quadrature_make_full_copy(q_initial);
       bool SOL_FLAG = LeastSquaresNewton(ON, q_temp, &its);
-      if(SOL_FLAG == SOL_FOUND) {
-         nodesInitial = q_temp->num_nodes;
-         quadrature_realloc_array(nodesInitial, q_new);
-         quadrature_assign(q_temp, q_new);
-      }
+      if(SOL_FLAG == SOL_FOUND)
+         quadrature_assign_resize(q_temp, q_new);
       else if(SOL_FLAG == SOL_NOT_FOUND) {
          Print("Initial quadrature did not converge. The initial guess should be more accurate.\n");
          quadrature_free(q_temp);
@@ -102,7 +130,6 @@ void NodeElimination(const quadrature *q_initial, quadrature *q_final, history *
 
    // run Node Elimination Algorithm. Theoretical optimum is reached when
    // (dim+1)*k = numFuncs, at which point elimination is pursued no further.
-   int n_prev            = -1;
    int n_cur             = nodesInitial;
    bool_enum CONSTR_FLAG = OFF;
    bool SOL_FLAG         = SOL_NOT_FOUND;
@@ -111,86 +138,126 @@ void NodeElimination(const quadrature *q_initial, quadrature *q_final, history *
    PrintElimInfo( dim, n_cur , n_opt, efficiency);
    while( ((dim+1)*n_cur > numFuncs)  && (n_cur >= 1) )
    {
+      SOL_FLAG = LsqSearch(CONSTR_FLAG, q_new, hist);
+      n_cur = q_new->num_nodes;
+      // implementation of 2-level b-tree solution search
+      // globally affects:
+      // 1.SOL_FLAG if solution is found
+      // 2.q_new if solution is found
+      // 3. n_cur if solution is found
       if(dim == MAX_DIM)
-         if(n_cur == n_prev) CONSTR_FLAG = ON;
-         else                CONSTR_FLAG = OFF;
-      else CONSTR_FLAG = OFF;
-      n_prev = n_cur;
-
-      quadrature_shrink_array(n_cur-1, q_temp);
-      quadrature_shrink_array(n_cur, q_new);
-
-      int n_elim = n_cur;
-      int n_merge = n_cur*(n_cur-1)/2;
-      double *distanceElim  = (double *)malloc(SIZE_DOUBLE(n_elim));
-      double *distanceMerge = (double *)malloc(SIZE_DOUBLE(n_merge));
-      int *arrayMergeNodeId = (int *)malloc(SIZE_INT(n_merge));
-
-      double start_time = get_cur_time();
-      RMatrix Z         = Predictor_Ptr(q_new, distanceElim);
-      RMatrix ZMerge    = PredictorMergeLapack(q_new, arrayMergeNodeId, distanceMerge);
-      PREDICTOR_TIME    += get_cur_time() - start_time;
-
-      int *arrayIndexCombined  = (int *)malloc(SIZE_INT(n_cur+n_merge));
-      double *distanceCombined = (double *)malloc(SIZE_DOUBLE(n_cur+n_merge));
-      for(int i = 0; i < n_cur+n_merge; ++i) arrayIndexCombined[i] = i;
-      for(int i = 0; i < n_cur; ++i)         distanceCombined[i] = distanceElim[i];
-      for(int i = 0; i < n_merge; ++i)       distanceCombined[n_cur+i] = distanceMerge[i];
-      InsertionSort(n_cur+n_merge, distanceCombined, arrayIndexCombined);
-
-      for(int i = 0; i < n_cur+n_merge; ++i)
+      if(SOL_FLAG == SOL_NOT_FOUND)
       {
-         SOL_FLAG = SOL_NOT_FOUND;
+         DistanceStruct *distance__1 = distance_init(n_cur);
+         RMatrix Z__1  = Predictor_Ptr(q_new, distance__1);
 
-         // store ith initial quadrature guess in q_temp
-         if(arrayIndexCombined[i] < n_cur)
-            ExtractFromPredictor(Z, arrayIndexCombined[i], q_temp);
-         else
-            ExtractFromPredictorMerge(ZMerge, arrayIndexCombined[i]-n_cur,
-                                      arrayMergeNodeId[arrayIndexCombined[i]-n_cur], q_temp);
-
-         if(V_InfNorm(q_temp->z) >= QUAD_HUGE)               continue;
-         if(!QuadInConstraint(q_temp) && CONSTR_FLAG == OFF) continue;
-
-         int its = 0;
-         SOL_FLAG = LeastSquaresNewton(CONSTR_FLAG, q_temp, &its);
-         // store nodes and weights if Newton's method succeeded, update history
-         if(SOL_FLAG == SOL_FOUND)
+         quadrature *qnewtemp__1 = quadrature_make_full_copy(q_new);
+         quadrature *qsearch__1  = quadrature_make_full_copy(q_new);
+         Vector dz__1 = Vector_init(n_cur*(dim+1));
+         int failCount__1 = 0;
+         for(int i = 0; i < n_cur; ++i)
          {
-            n_cur = q_temp->num_nodes;
-            efficiency = (double)n_opt/n_cur;
-            quadrature_realloc_array(q_temp->num_nodes, q_new);
-            quadrature_assign(q_temp, q_new);
+            quadrature_assign(q_new, qnewtemp__1);
+            ExtractFromPredictorFull(Z__1, distance__1[i].index, qsearch__1);
+            bool searchElimFlag__1 = SOL_NOT_FOUND;
 
-            if(arrayIndexCombined[i] < n_cur)
-               hist->hist_array[hist->total_elims].elim_type = ELIM;
-            else
-               hist->hist_array[hist->total_elims].elim_type = MERGE;
-            hist->hist_array[hist->total_elims].nodes_tot    = n_cur;
-            hist->hist_array[hist->total_elims].success_node = i;
-            hist->hist_array[hist->total_elims].success_its  = its;
-            ++hist->total_elims;
-            break; // break i loop
-         }
-         else if(SOL_FLAG == SOL_NOT_FOUND)
-            quadrature_realloc_array(n_cur-1, q_temp);
-      }// end i loop
+            // level 1 search
+            bool searchNewGuessFlag__1 = SOL_NOT_FOUND;
+            int sd;
+            for(sd = 0; sd < SEARCH_DIM; ++sd) {
+               VectorAddScale(1.0, qsearch__1->z, -1.0, qnewtemp__1->z, dz__1);
+               VectorAddScale(1.0, qnewtemp__1->z, shortParams.t[sd], dz__1, qsearch__1->z);
+               int itsLoc = 0;
+               searchNewGuessFlag__1 = LeastSquaresNewton(OFF, qsearch__1, &itsLoc);
+               if(searchNewGuessFlag__1)
+                  break; // break sd loop
+            }
 
-      RMatrix_free(Z);
-      RMatrix_free(ZMerge);
-      free(distanceElim);
-      free(distanceMerge);
-      free(distanceCombined);
-      free(arrayMergeNodeId);
-      free(arrayIndexCombined);
+            if(searchNewGuessFlag__1) {
+               searchElimFlag__1 = LsqSearch(ON, qsearch__1, hist);
 
-      if(SOL_FLAG == SOL_FOUND && CONSTR_FLAG == ON)
-         Print("Solution found using constraint");
+               // if eliminated a node, save solution and break all loops
+               if(searchElimFlag__1) {
+                  quadrature_assign_resize(qsearch__1, q_new);
+                  n_cur = q_new->num_nodes;
+                  SOL_FLAG = SOL_FOUND;
+                  printf("succeeded at %i th iteration, with shortening at depth level 1, and damping parameter %.4e\n", i, shortParams.t[sd]);
+                  break; // break i loop if new solution was found
+               }
+               // new initial guess was found, but node was not eliminated, take new initial guess to level 2
+               else if(!searchElimFlag__1)
+                  quadrature_assign(qsearch__1, qnewtemp__1);
+            }
+            else if(searchNewGuessFlag__1 == false) {
+               ++failCount__1;
+               continue; // go to next node
+            }
+
+            // level 2 search
+            // assumes searchNewGuessFlag__1 is true and searchElimFlag__1 false;
+            assert(searchNewGuessFlag__1  && !searchElimFlag__1);
+
+            quadrature *qsearch__2 = quadrature_make_full_copy(qnewtemp__1);
+            DistanceStruct *distance__2 = distance_init(n_cur);
+            Vector dz__2 = Vector_init(n_cur*(dim+1));
+            RMatrix Z__2  = Predictor_Ptr(qnewtemp__1, distance__2);
+
+            bool searchElimFlag__2  = SOL_NOT_FOUND;
+            int failCount__2 = 0;
+            for(int i2 = 0; i2 < n_cur; ++i2) {
+               ExtractFromPredictorFull(Z__2, distance__2[i].index, qsearch__2);
+               bool searchNewGuessFlag__2 = SOL_NOT_FOUND;
+
+               int sd2 = 0;
+               for(sd2 = 0; sd2 < SEARCH_DIM; ++sd2) {
+                  VectorAddScale(1.0, qsearch__2->z, -1.0, qnewtemp__1->z, dz__2);
+                  VectorAddScale(1.0, qnewtemp__1->z, shortParams.t[sd2], dz__2, qsearch__2->z);
+                  int itsLoc = 0;
+                  searchNewGuessFlag__2 = LeastSquaresNewton(OFF, qsearch__2, &itsLoc);
+                  if(searchNewGuessFlag__2)
+                     break; // break sd2 loop
+               }
+
+               if(searchNewGuessFlag__2) {
+                  searchElimFlag__2 = LsqSearch(ON, qsearch__2, hist);
+                  // if eliminated a node, save solution and break all loops
+                  if(searchElimFlag__2) {
+                     quadrature_assign_resize(qsearch__2, q_new);
+                     SOL_FLAG = SOL_FOUND;
+                     n_cur = q_new->num_nodes;
+                     printf("succeeded at %i->%i th iteration, with shortening at depth level 2, and damping parameter %.4e\n", i, i2, shortParams.t[sd]);
+                     break; // break i2 loop and later i loop
+                  }
+               }
+
+               if(++failCount__2 > MAX_FAILS_LEVEL_2)
+                  break;
+            }
+            quadrature_free(qsearch__2);
+            Vector_free(dz__2);
+            RMatrix_free(Z__2);
+            free(distance__2);
+
+            if(searchElimFlag__2)
+               break;
+
+            if(++failCount__1 >= MAX_FAILS_LEVEL_1) {
+               SOL_FLAG = SOL_NOT_FOUND;
+               break;
+            }
+
+         } // end i loop
+
+         RMatrix_free(Z__1);
+         quadrature_free(qnewtemp__1);
+         quadrature_free(qsearch__1);
+         Vector_free(dz__1);
+         free(distance__1);
+      }
+
+      efficiency = (double)n_opt/n_cur;
       if (SOL_FLAG == SOL_FOUND)
          PrintElimInfo(dim, n_cur, n_opt, efficiency);
-      else if( (SOL_FLAG == SOL_NOT_FOUND) && (CONSTR_FLAG != ON)  && (dim == MAX_DIM) )
-         Print("rerunning with constrained optimization");
-      // end NodeElimination if repeat flag is off and all iterations were unsuccessful
       else if(SOL_FLAG == SOL_NOT_FOUND) {
          Print("Last iteration did not converge");
          break; // break while loop
@@ -198,18 +265,90 @@ void NodeElimination(const quadrature *q_initial, quadrature *q_final, history *
    }// end while loop
 
    // save nodes and weights
-   q_final->num_nodes = n_cur;
-   quadrature_assign(q_new, q_final);
+   quadrature_assign_resize(q_new, q_final);
    res = QuadTestIntegral(q_final, orthogonal);
    PrintDouble(res, "Final orthogonal basis residual in NodeElimination"); printf("\n");
 
-   quadrature_free(q_temp);
    quadrature_free(q_new);
 
 }// end NodeElimination
 
 
-static RMatrix PredictorLapack(quadrature *q, double *distance)
+static bool LsqSearch(bool_enum CONSTR_FLAG, quadrature *q_new, history *hist)
+{
+   int n_cur = q_new->num_nodes;
+
+   RMatrix(*Predictor_Ptr)(quadrature *, DistanceStruct *);
+   #ifdef _OPENMP
+      if(PLASMA_CONDITION()) Predictor_Ptr = &PredictorPlasma;
+      else                   Predictor_Ptr = &PredictorLapack;
+   #else
+      Predictor_Ptr = &PredictorLapack;
+   #endif
+
+   DistanceStruct *distanceStr = (DistanceStruct *)malloc((n_cur)*sizeof(DistanceStruct));
+   for(int i = 0; i < n_cur; ++i)  distanceStr[i].index = i;
+   RMatrix Z  = Predictor_Ptr(q_new, distanceStr);
+
+   qsort(distanceStr, n_cur, sizeof(DistanceStruct), compareDouble);
+   ReorderWithBoundaryDist(Z, q_new, distanceStr);
+   quadrature *q_temp = quadrature_make_full_copy(q_new);
+
+   int failCount = 0;
+   for(int i = 0; i < n_cur; ++i)
+   {
+      bool SOL_FLAG = SOL_NOT_FOUND;
+
+      quadrature_realloc_array(n_cur-1, q_temp);
+      // store ith initial quadrature guess in q_temp
+      ExtractFromPredictor(Z, distanceStr[i].index, q_temp);
+
+      if(V_InfNorm(q_temp->z) >= QUAD_HUGE)               continue;
+      if(!QuadInConstraint(q_temp) && CONSTR_FLAG == OFF) continue;
+
+      int its = 0;
+      SOL_FLAG = LeastSquaresNewton(CONSTR_FLAG, q_temp, &its);
+      // store nodes and weights if Newton's method succeeded, update history
+      if(SOL_FLAG == SOL_FOUND)
+      {
+         n_cur = q_temp->num_nodes;
+         quadrature_assign_resize(q_temp, q_new);
+
+         if(distanceStr[i].index < n_cur)
+            hist->hist_array[hist->total_elims].elim_type = ELIM;
+         else
+            hist->hist_array[hist->total_elims].elim_type = MERGE;
+         hist->hist_array[hist->total_elims].nodes_tot    = n_cur;
+         hist->hist_array[hist->total_elims].success_node = failCount;
+         hist->hist_array[hist->total_elims].success_its  = its;
+         ++hist->total_elims;
+         free(distanceStr);
+         RMatrix_free(Z);
+         quadrature_free(q_temp);
+         return SOL_FOUND;
+      }
+      else if(SOL_FLAG == SOL_NOT_FOUND)
+      {
+         quadrature_realloc_array(n_cur-1, q_temp);
+         if(++failCount >= MAX_FAILS_ELIM)
+         {
+            free(distanceStr);
+            quadrature_free(q_temp);
+            RMatrix_free(Z);
+            return SOL_NOT_FOUND;
+         }
+      }
+   }
+
+   free(distanceStr);
+   quadrature_free(q_temp);
+   RMatrix_free(Z);
+   return SOL_NOT_FOUND;
+}
+
+
+// assumes distance indicies are initialized properly
+static RMatrix PredictorLapack(quadrature *q, DistanceStruct *distance)
 {
    const int numFuncs  = q->basis->numFuncs;
    const int dim       = q->dim;
@@ -218,8 +357,10 @@ static RMatrix PredictorLapack(quadrature *q, double *distance)
    const int ncols     = (dim+1) * n_cur;
    assert(nrows < ncols);
 
+
    CMatrix J = CMatrix_init(nrows, ncols);
    GetJacobian(q, J);
+   double start_time__1 = get_cur_time();
    CMatrix J_TR = CMatrix_Transpose(J);
 
    // construct QR factorization of transpose of the Jacobian
@@ -228,25 +369,26 @@ static RMatrix PredictorLapack(quadrature *q, double *distance)
    if(DGEQRF_LAPACK(J_TR, REFL) != 0)
       PRINT_ERR(STR_LAPACK_ERR, __LINE__, __FILE__);
 
-   RMatrix Z           = RMatrix_init(n_cur, n_cur*(dim+1));
-   RMatrix dZ          = RMatrix_init(n_cur, n_cur*(dim+1));
-   CMatrix QFull       = CMatrix_init(n_cur*(dim+1), n_cur*(dim+1));
-   CMatrix Q2          = CMatrix_init(n_cur*(dim+1), n_cur*(dim+1)-numFuncs);
-   CMatrix Q2Weight    = CMatrix_init(n_cur, n_cur*(dim+1)-numFuncs);
-   CMatrix Q2Mult      = CMatrix_init(n_cur*(dim+1), n_cur);
+   RMatrix Z        = RMatrix_init(n_cur, n_cur*(dim+1));                  // M x N
+   RMatrix dZ       = RMatrix_init(n_cur, n_cur*(dim+1));                  // M x N
+   CMatrix QFull    = CMatrix_init(n_cur*(dim+1), n_cur*(dim+1));          // N x N
+   CMatrix Q2       = CMatrix_init(n_cur*(dim+1), n_cur*(dim+1)-numFuncs); // N x (N-M)
+   CMatrix Q2Weight = CMatrix_init(n_cur, n_cur*(dim+1)-numFuncs);         // M x (N-M)
+   CMatrix Q2Mult   = CMatrix_init(n_cur*(dim+1), n_cur);                  // N x M
 
    // obtain Q(from J_TR) explicitly(multiply by identity)
    for(int i = 0; i < QFull.rows; ++i) C_ELEM_ID(QFull, i, i) = 1.0;
    if(DORMQR_LAPACK('L',  'N', REFL, J_TR, QFull) != 0)
       PRINT_ERR(STR_LAPACK_ERR, __LINE__, __FILE__);
 
+   // loop over columns for more efficient access(although marginal compared to QR)
    // extract Q2
-   for(int i = 0; i < Q2.rows; ++i)
-      for(int j = 0; j < Q2.cols; ++j)
+   for(int j = 0; j < Q2.cols; ++j)
+      for(int i = 0; i < Q2.rows; ++i)
          C_ELEM_ID(Q2, i, j) = C_ELEM_ID(QFull, i, j+numFuncs);
    // extract ith rows of Q2 corresponding to weights
-   for(int i = 0; i < Q2Weight.rows; ++i)
-      for(int j = 0; j < Q2Weight.cols; ++j)
+   for(int j = 0; j < Q2Weight.cols; ++j)
+      for(int i = 0; i < Q2Weight.rows; ++i)
          C_ELEM_ID(Q2Weight, i, j) = C_ELEM_ID(QFull, i, j+numFuncs);
 
    double *ith_row = (double *)malloc(Q2Weight.cols*sizeof(double));
@@ -259,7 +401,10 @@ static RMatrix PredictorLapack(quadrature *q, double *distance)
 
    // multiply Q2 by its weights rows, product goes to columns
    Q2Weight = CMatrix_Transpose(Q2Weight);
-   DGEMM_LAPACK(Q2, Q2Weight, Q2Mult);
+
+   int LA_FLAG;
+   if((LA_FLAG = DGEMM_LAPACK(Q2, Q2Weight, Q2Mult)) != 0)
+      PRINT_ERR(ERR_STRING(LA_FLAG), __LINE__, __FILE__);
 
    for(int i = 0; i < Q2Mult.cols; ++i)
       for(int j = 0; j < Q2Mult.rows; ++j)
@@ -270,7 +415,9 @@ static RMatrix PredictorLapack(quadrature *q, double *distance)
          Z.rid[i][j] = q->z.id[j] - dZ.rid[i][j];
 
    for(int i = 0; i < dZ.rows; ++i)
-      distance[i] = TwoNorm(ncols, dZ.rid[i]);
+      distance[i].d = TwoNorm(ncols, dZ.rid[i]);
+
+   qsort(distance, n_cur, sizeof(DistanceStruct), compareDouble);
 
    free(ith_row);
    free(norm_Q2_ROW);
@@ -282,11 +429,13 @@ static RMatrix PredictorLapack(quadrature *q, double *distance)
    CMatrix_free(Q2Weight);
    CMatrix_free(Q2Mult);
 
+   PREDICTOR_TIME += get_cur_time() - start_time__1;
    return Z;
 }
 
+
 #ifdef _OPENMP
-static RMatrix PredictorPlasma(quadrature *q, double *distance)
+static RMatrix PredictorPlasma(quadrature *q, DistanceStruct *distance)
 {
    const int numFuncs  = q->basis->numFuncs;
    const int dim       = q->dim;
@@ -296,20 +445,20 @@ static RMatrix PredictorPlasma(quadrature *q, double *distance)
    int INFO;
    assert(nrows < ncols);
 
-   RMatrix Z           = RMatrix_init(n_cur, n_cur*(dim+1));
-   RMatrix dZ          = RMatrix_init(n_cur, n_cur*(dim+1));
-   CMatrix QFull       = CMatrix_init(n_cur*(dim+1), n_cur*(dim+1));
-   CMatrix Q2          = CMatrix_init(n_cur*(dim+1), n_cur*(dim+1)-numFuncs);
-   CMatrix Q2Weight    = CMatrix_init(n_cur, n_cur*(dim+1)-numFuncs);
-   CMatrix Q2Mult      = CMatrix_init(n_cur*(dim+1), n_cur);
-   CMatrix J           = CMatrix_init(numFuncs, (dim+1)*n_cur);
-
-   plasma_init();
+   RMatrix Z        = RMatrix_init(n_cur, n_cur*(dim+1));
+   RMatrix dZ       = RMatrix_init(n_cur, n_cur*(dim+1));
+   CMatrix QFull    = CMatrix_init(n_cur*(dim+1), n_cur*(dim+1));
+   CMatrix Q2       = CMatrix_init(n_cur*(dim+1), n_cur*(dim+1)-numFuncs);
+   CMatrix Q2Weight = CMatrix_init(n_cur, n_cur*(dim+1)-numFuncs);
+   CMatrix Q2Mult   = CMatrix_init(n_cur*(dim+1), n_cur);
+   CMatrix J        = CMatrix_init(numFuncs, (dim+1)*n_cur);
 
    // construct QR factorization of transpose of the Jacobian
-   GetJacobian(q, J);
+   GetJacobianOmp(q, J);
+   double start_time__1 = get_cur_time();
    CMatrix J_TR = CMatrix_Transpose(J);
    int LDJ = J_TR.rows;
+   plasma_init();
    plasma_desc_t T;
    INFO = plasma_dgeqrf(J_TR.rows, J_TR.cols, J_TR.id, LDJ, &T);
    if(INFO != 0)
@@ -341,13 +490,13 @@ static RMatrix PredictorPlasma(quadrature *q, double *distance)
          ith_row[j] = C_ELEM_ID(Q2Weight, i, j);
       norm_Q2_ROW[i] = TwoNorm(Q2Weight.cols, ith_row);
    }
+   plasma_desc_destroy(&T);
+   plasma_finalize();
 
    // multiply Q2 by its weights rows, product goes to columns
    Q2Weight = CMatrix_Transpose(Q2Weight);
    DGEMM_PLASMA(Q2, Q2Weight, Q2Mult);
 
-   plasma_desc_destroy(&T);
-   plasma_finalize();
 
    for(int i = 0; i < Q2Mult.cols; ++i)
       for(int j = 0; j < Q2Mult.rows; ++j)
@@ -358,7 +507,9 @@ static RMatrix PredictorPlasma(quadrature *q, double *distance)
          Z.rid[i][j] = q->z.id[j] - dZ.rid[i][j];
 
    for(int i = 0; i < dZ.rows; ++i)
-      distance[i] = TwoNorm(ncols, dZ.rid[i]);
+      distance[i].d = TwoNorm(ncols, dZ.rid[i]);
+
+   qsort(distance, n_cur, sizeof(DistanceStruct), compareDouble);
 
    free(ith_row);
    free(norm_Q2_ROW);
@@ -369,118 +520,13 @@ static RMatrix PredictorPlasma(quadrature *q, double *distance)
    CMatrix_free(Q2Weight);
    CMatrix_free(Q2Mult);
 
+   PREDICTOR_TIME += get_cur_time() - start_time__1;
    return Z;
 }
 #endif
 
-static RMatrix PredictorMergeLapack(quadrature *q, int *arrayAssociate, double *distanceMerge)
-{
-   const int numFuncs  = q->basis->numFuncs;
-   const int dim       = q->dim;
-   const int n_cur     = q->num_nodes;
-   const int nrows     = numFuncs;
-   const int ncols     = (dim+1) * n_cur;
-   assert(nrows < ncols);
 
-   CMatrix J = CMatrix_init(nrows, ncols);
-   GetJacobian(q, J);
-   CMatrix J_TR = CMatrix_Transpose(J);
-   // construct QR factorization of transpose of the Jacobian
-   int N_REFL   = MIN(J_TR.rows, J_TR.cols);
-   Vector REFL = Vector_init(N_REFL);
-   if(DGEQRF_LAPACK(J_TR, REFL) != 0)
-      PRINT_ERR(STR_LAPACK_ERR, __LINE__, __FILE__);
-
-   CMatrix MergeMatrix_K  = CMatrix_init(dim, n_cur*(dim+1)-numFuncs);
-   CMatrix MergeMatrix_L  = CMatrix_init(dim, n_cur*(dim+1)-numFuncs);
-   CMatrix MergeMatrix_KL = CMatrix_init(dim, n_cur*(dim+1)-numFuncs);
-   Vector rhs             = Vector_init( MAX(dim, n_cur*(dim+1)-numFuncs) );
-   CMatrix Q2             = CMatrix_init(n_cur*(dim+1), n_cur*(dim+1)-numFuncs);
-   CMatrix FullQ          = CMatrix_init(n_cur*(dim+1), n_cur*(dim+1));
-   RMatrix Z              = RMatrix_init(n_cur*(n_cur-1)/2, n_cur*(dim+1));
-   RMatrix dZ             = RMatrix_init(n_cur*(n_cur-1)/2, n_cur*(dim+1));
-   double *distance       = (double *)malloc(SIZE_DOUBLE(n_cur*(n_cur-1)/2));
-   double *norm_Q2_ROW    = (double *)malloc(n_cur*(n_cur-1)/2*sizeof(double));
-   double *dz             = (double *)malloc(n_cur*(dim+1)*sizeof(double));
-
-   //extract full Q and Q2; it will be identical for all k and l
-   for(int i = 0; i < FullQ.rows; ++i) C_ELEM_ID(FullQ, i, i) = 1.0;
-   if(DORMQR_LAPACK('R',  'N', REFL, J_TR, FullQ) != 0)
-      PRINT_ERR(STR_LAPACK_ERR, __LINE__, __FILE__);
-   for(int i = 0; i < Q2.rows; ++i)
-      for(int j = 0; j < Q2.cols; ++j)
-         C_ELEM_ID(Q2, i, j) = C_ELEM_ID(FullQ, i, j+numFuncs);
-
-   int count = 0;
-   for(int k = 0; k < n_cur; ++k)
-   {
-      for(int l = k+1; l < n_cur; ++l)
-      {
-         // extract info for kth node
-         for(int j = 0; j < MergeMatrix_K.cols; ++j)
-            for(int i = 0; i < MergeMatrix_K.rows; ++i)
-               C_ELEM_ID(MergeMatrix_K, i, j) = C_ELEM_ID(Q2, n_cur+k*dim+i, j);
-
-         // extract info for lth node
-         for(int j = 0; j < MergeMatrix_L.cols; ++j)
-            for(int i = 0; i < MergeMatrix_L.rows; ++i)
-               C_ELEM_ID(MergeMatrix_L, i, j) = C_ELEM_ID(Q2, n_cur+l*dim+i, j);
-
-         // compute merge matrix for q_kl
-         for(int j = 0; j < MergeMatrix_KL.cols; ++j)
-            for(int i = 0; i < MergeMatrix_KL.rows; ++i)
-               C_ELEM_ID(MergeMatrix_KL, i, j) = C_ELEM_ID(MergeMatrix_K, i, j) - C_ELEM_ID(MergeMatrix_L, i, j);
-
-         // compute merge right-hand side for q_kl
-         double xkl[MergeMatrix_KL.rows];
-         for(int i = 0; i < MergeMatrix_KL.rows; ++i)
-            xkl[i] = q->x[dim*l+i] - q->x[dim*k+i];
-
-         //solve dz for q_kl
-         memset(rhs.id, 0, rhs.len*sizeof(double));
-         for(int i = 0; i < MergeMatrix_KL.rows; ++i)
-            rhs.id[i] = xkl[i];
-         DGELS_LAPACK(MergeMatrix_KL, rhs);
-
-         // Store new quadrature for q_kl in (kl) row of Z. Rows of Q2 are accessed in the order that
-         // corresponds to the order in which quadrature stores its nodes and weights.
-         memset(dz, 0, n_cur*(dim+1)*sizeof(double));
-         for(int j = 0; j < Q2.cols; ++j)
-            for(int i = 0; i < Q2.rows; ++i) {
-               dz[i] += C_ELEM_ID(Q2, i , j) * rhs.id[j];
-         }
-
-         for(int i = 0; i < q->z.len; ++i)
-            R_ELEM_ID(Z, count, i) = q->z.id[i];
-         for(int i = 0; i < q->z.len; ++i)
-            R_ELEM_ID(Z, count, i) += dz[i];
-
-         R_ELEM_ID(Z, count, k) += R_ELEM_ID(Z, count, l); // add lth weight to k-th weight
-
-         distanceMerge[count] = TwoNorm(ncols, dz);
-         arrayAssociate[count] = l;
-         ++count;
-      }
-   }
-
-   Vector_free(REFL);
-   CMatrix_free(J_TR);
-   CMatrix_free(MergeMatrix_K);
-   CMatrix_free(MergeMatrix_L);
-   CMatrix_free(MergeMatrix_KL);
-   Vector_free(rhs);
-   CMatrix_free(Q2);
-   CMatrix_free(FullQ);
-   RMatrix_free(dZ);
-   free(distance);
-   free(norm_Q2_ROW);
-   free(dz);
-
-   return Z;
-}
-
-
-static RMatrix PredictorSimple(quadrature *q, double *signifIndex)
+static RMatrix PredictorSimple(quadrature *q, DistanceStruct *distance)
 {
    const int dim = q->dim;
    const int n_cur = q->num_nodes;
@@ -498,7 +544,7 @@ static RMatrix PredictorSimple(quadrature *q, double *signifIndex)
          Z.rid[i][j] = q->z.id[j];
 
    for(int i = 0; i < Z.rows; ++i)
-      signifIndex[i] = 0.0;
+      distance[i].d = 0.0;
 
    double *x;
    double w;
@@ -509,123 +555,91 @@ static RMatrix PredictorSimple(quadrature *q, double *signifIndex)
       w = q->w[i];
       BasisMonomial(cubeBasis, x, cubeBasis->functions);
       for(int j = 0; j < cubeBasis->numFuncs; ++j)
-      signifIndex[i] += w*SQUARE(basisFuncs[j]);
+      distance[i].d += w*SQUARE(basisFuncs[j]);
    }
+
+   qsort(distance, n_cur, sizeof(DistanceStruct), compareDouble);
 
    BasisFree(cubeBasis);
    return Z;
 }
 
-static void ReorderWithBoundaryDist(RMatrix predictor, quadrature *q, int *arrayIndex)
+
+static void ReorderWithBoundaryDist(RMatrix predictor, quadrature *q, DistanceStruct *distance)
 {
    int numGuesses = predictor.rows;
    quadrature *q_temp = quadrature_make_full_copy(q);
-   int maxBound = 5;
+   int maxBound = 10;
 
-   int rowBoundOrder[numGuesses];
-   double boundIndex[numGuesses];
-   int rowRemainOrder[numGuesses];
+   double boundDistance[maxBound];
+   int boundRowIndex[maxBound];
+   int remainRowIndex[numGuesses];
+   memset(boundDistance, -1, maxBound*sizeof(double));
+   memset(boundRowIndex, -1, maxBound*sizeof(int));
+   memset(remainRowIndex, -1, maxBound*sizeof(int));
+
+   double tempDistances[numGuesses];
+   for(int i = 0; i < numGuesses; ++i)
+      tempDistances[i] = distance[i].d;
 
    int boundCount = 0;
    int remainCount = 0;
    for(int i = 0; i < numGuesses; ++i)
    {
-      ExtractFromPredictor(predictor, arrayIndex[i], q_temp);
+      ExtractFromPredictor(predictor, distance[i].index, q_temp);
       if(QuadInConstraint(q_temp) && boundCount < maxBound) {
-         rowBoundOrder[boundCount] = arrayIndex[i];
-         boundIndex[boundCount] = QuadMinDistFromTheBoundary(q_temp);
+         boundRowIndex[boundCount] = distance[i].index;
+         boundDistance[boundCount] = QuadMinDistFromTheBoundary(q_temp);
          ++boundCount;
       }
       else {
-         rowRemainOrder[remainCount] = arrayIndex[i];
+         remainRowIndex[remainCount] = distance[i].index;
          ++remainCount;
       }
    }
 
    int tempBoundReorder[numGuesses];
-   InsertionSort(boundCount, boundIndex, tempBoundReorder);
-   int boundDecreaseReorder[boundCount];
-   for(int i = 0; i < boundCount; ++i)
-      boundDecreaseReorder[i] = tempBoundReorder[boundCount-1-i];
-
-   for(int i = 0; i < boundCount; ++i)
-      arrayIndex[i] = rowBoundOrder[boundDecreaseReorder[i]];
-   for(int i = 0; i < remainCount; ++i)
-      arrayIndex[boundCount+i] = rowRemainOrder[i];
-
-   quadrature_free(q_temp);
-}
-
-static void ReorderWithBoundaryDistMerge(RMatrix predictor, quadrature *q, int *arrayIndex, int *arrayAssociate)
-{
-   int numGuesses = predictor.rows;
-   quadrature *q_temp = quadrature_make_full_copy(q);
-
-   int rowBoundOrder[numGuesses];
-   double boundIndex[numGuesses];
-   int rowRemainOrder[numGuesses];
-
-   int boundCount = 0;
-   int remainCount = 0;
    for(int i = 0; i < numGuesses; ++i)
-   {
-      ExtractFromPredictorMerge(predictor, arrayIndex[i], arrayAssociate[arrayIndex[i]], q_temp);
-      if(QuadInConstraint(q_temp)) {
-         rowBoundOrder[boundCount] = arrayIndex[i];
-         boundIndex[boundCount] = QuadMinDistFromTheBoundary(q_temp);
-         ++boundCount;
-      }
-      else {
-         rowRemainOrder[remainCount] = arrayIndex[i];
-         ++remainCount;
-      }
+      tempBoundReorder[i] = i;
+
+   InsertionSort(boundCount, boundDistance, tempBoundReorder);
+
+   int boundDecreaseReorder[boundCount];
+   double boundDistanceReorder[boundCount];
+   for(int i = 0; i < boundCount; ++i) {
+      boundDecreaseReorder[i] = tempBoundReorder[boundCount-1-i];
+      boundDistanceReorder[i] = boundDistance[boundCount-1-i];
    }
 
-   int tempBoundReorder[numGuesses];
-   InsertionSort(boundCount, boundIndex, tempBoundReorder);
-   int boundDecreaseReorder[boundCount];
-   for(int i = 0; i < boundCount; ++i)
-      boundDecreaseReorder[i] = tempBoundReorder[boundCount-1-i];
-
-   for(int i = 0; i < boundCount; ++i)
-      arrayIndex[i] = rowBoundOrder[boundDecreaseReorder[i]];
-   for(int i = 0; i < remainCount; ++i)
-      arrayIndex[boundCount+i] = rowRemainOrder[i];
-
+   for(int i = 0; i < boundCount; ++i) {
+      distance[i].index = boundRowIndex[boundDecreaseReorder[i]];
+      distance[i].d = boundDistanceReorder[i];
+   }
+   for(int i = 0; i < remainCount; ++i) {
+      distance[boundCount+i].index = remainRowIndex[i];
+      distance[boundCount+i].d = tempDistances[boundCount+i];
+   }
    quadrature_free(q_temp);
 }
 
-static void ExtractFromPredictor(RMatrix Z, int arrayIndex, quadrature *q)
+
+static VMin SolveEigenvalue(quadrature *q, Vector v)
 {
-   int count, j, d;
-   int dim = q->dim;
+   assert(v.len == q->num_nodes);
 
-   for(count = 0, j = 0; j < Z.cols/(dim+1); ++j)
-   {
-      if(j == arrayIndex) continue;
+   Vector eig = Vector_init(v.len);
+   for(int i = 0; i < v.len; ++i)
+      eig.id[i] = fabs((q->w[i] / v.id[i]));
+   VMin minEigAbs = VectorMin(eig);
+   Vector_free(eig);
 
-      q->w[count] = Z.rid[arrayIndex][j];
-      for(d = 0; d < dim; ++d)
-         q->x[count*dim+d] = Z.rid[arrayIndex][Z.cols/(dim+1)+j*dim+d];
-      ++count;
-   }
+   VMin minEig;
+   minEig.min_index = minEigAbs.min_index;
+   minEig.min_value = -q->w[minEigAbs.min_index] / v.id[minEigAbs.min_index];
+
+   return minEig;
 }
 
-static void ExtractFromPredictorMerge(RMatrix Z, int arrayIndex, int arrayAssociate, quadrature *q)
-{
-   int count, j, d;
-   int dim = q->dim;
-
-   for(count = 0, j = 0; j < Z.cols/(dim+1); ++j)
-   {
-      if(j == arrayAssociate) continue;
-
-      q->w[count] = Z.rid[arrayIndex][j];
-      for(d = 0; d < dim; ++d)
-         q->x[count*dim+d] = Z.rid[arrayIndex][Z.cols/(dim+1)+j*dim+d];
-      ++count;
-   }
-}
 
 static void InsertionSort(int num_entries, double *norms, int *arrayIndex)
 {
@@ -643,6 +657,54 @@ static void InsertionSort(int num_entries, double *norms, int *arrayIndex)
    }
 }
 
+
+// extracts quadrature that belongs to arrayIndex row, exluding the 0 weight
+static void ExtractFromPredictor(RMatrix Z, int arrayIndex, quadrature *q)
+{
+   int count, j, d;
+   int dim = q->dim;
+   int numNodes = Z.cols/(dim+1);
+
+   for(count = 0, j = 0; j < numNodes; ++j) {
+      if(j == arrayIndex) continue;
+      q->w[count] = Z.rid[arrayIndex][j];
+      ++count;
+   }
+
+   for(count = 0, j = 0; j < numNodes; ++j) {
+      if(j == arrayIndex) continue;
+      for(d = 0; d < dim; ++d)
+         q->x[count*dim+d] = Z.rid[arrayIndex][numNodes+j*dim+d];
+      ++count;
+   }
+}
+
+
+// extracts full quadrature that belongs to arrayIndex row, including the node that contains 0 weight
+static void ExtractFromPredictorFull(RMatrix Z, int arrayIndex, quadrature *q)
+{
+   int dim = q->dim;
+   int numNodes = Z.cols/(dim+1);
+
+   for(int j = 0; j < numNodes; ++j)
+      q->w[j] = Z.rid[arrayIndex][j];
+
+   for(int j = 0; j < numNodes*dim; ++j)
+      q->x[j] = Z.rid[arrayIndex][numNodes+j];
+}
+
+
+// comparison routine to be passed to qsort
+static int compareDouble(const void *a, const void *b)
+{
+   DistanceStruct *ad = (DistanceStruct *)a;
+   DistanceStruct *bd = (DistanceStruct *)b;
+   if(ad->d > bd->d)
+      return 1;
+   else return -1;
+}
+
+
 static double TwoNorm(int n, double *z)
 {
    assert(n >= 1);
@@ -654,6 +716,7 @@ static double TwoNorm(int n, double *z)
    norm = SQRT(norm);
    return norm;
 }
+
 
 // assumes Q has less rows than columns
 static bool TestQR(const CMatrix Q)
@@ -676,9 +739,7 @@ static bool TestQR(const CMatrix Q)
    {
       temp = fabs(Identity.id[i*rows+i]);
       diag = MAX(temp, diag);
-
-      for(int j = 0; j < rows; ++j)
-      {
+      for(int j = 0; j < rows; ++j) {
          if(j == i) continue;
          temp = fabs(Identity.id[i*rows+j]);
          non_diag = MAX(temp, non_diag);
@@ -698,6 +759,7 @@ static bool TestQR(const CMatrix Q)
 }
 
 
+// currently saves evolution of quadrature nodes on a 2-dimensional CUBE(square)
 static void QuadSavePlots(quadrature *q)
 {
    int dim = q->dim;
@@ -720,16 +782,17 @@ static void QuadSavePlots(quadrature *q)
       for (int i = 0; i < q->num_nodes; i++)
          fprintf(data, "%g %g\n", q->x[2*i], q->x[2*i+1]);
 
-      char * commandsForGnuplot[] = {
-                                     "filePath(n) = sprintf('../data/quadData%i.txt', n)",
-                                     "fileName(a, b, c) = sprintf('../data/data_cube_deg%i_dim%i_#%i.png',a, b, c)",
-                                     "set xrange[0:1]",
-                                     "set yrange [0:1]",
-                                     "set terminal png size 500, 500",
-                                     "set output fileName(deg, dim, plotNum)",
-                                     "set title sprintf('Quadrature on a SQUARE, degree %i, %i points', deg, numPoints)",
-                                     "plot filePath(plotNum) with points pointtype 13 notitle"
-                                     };
+      const char * commandsForGnuplot[] =
+      {
+         "filePath(n) = sprintf('../data/quadData%i.txt', n)",
+         "fileName(a, b, c) = sprintf('../data/data_cube_deg%i_dim%i_#%i.png',a, b, c)",
+         "set xrange[0:1]",
+         "set yrange [0:1]",
+         "set terminal png size 500, 500",
+         "set output fileName(deg, dim, plotNum)",
+         "set title sprintf('Quadrature on a SQUARE, degree %i, %i points', deg, numPoints)",
+         "plot filePath(plotNum) with points pointtype 13 notitle"
+      };
 
       for(int i = 0; i < num_commands; ++i)
          fprintf(gnuplot, "%s \n", commandsForGnuplot[i]);
@@ -739,4 +802,3 @@ static void QuadSavePlots(quadrature *q)
    }
    ++plotNum;
 }
-

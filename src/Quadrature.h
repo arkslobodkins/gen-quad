@@ -17,6 +17,7 @@ void quadrature_shrink_array(int n, quadrature *q);
 quadrature *quadrature_make_full_copy(const quadrature *q);
 quadrature *quadrature_without_element(quadrature *q, int i);
 void quadrature_assign(const quadrature *quad1, quadrature *quad2);
+void quadrature_assign_resize(const quadrature *q1, quadrature *q2);
 void quadrature_remove_element(int index, quadrature *quad);
 void quadrature_to_vector(const quadrature quad, Vector v);
 void quadrature_get_elem(const quadrature *q, int i, Vector v);

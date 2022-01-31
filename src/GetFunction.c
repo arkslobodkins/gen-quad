@@ -55,14 +55,11 @@ void GetFunctionOmp(quadrature *q, Vector f)
             curNode[i] = x[dim*j+i];
 
          BasisFuncs(basisLoc, curNode, basisFuncsLoc);
-         for(int i = 0; i < len; ++i)
-            fLoc[i] += basisFuncsLoc.id[i] * w[j];
+         double_daxpy(len, w[j], basisFuncsLoc.id, fLoc);
       }
       #pragma omp critical(UpdateFunction)
-      for(int i = 0; i < len; ++i)
-         f.id[i] += fLoc[i];
+      double_daxpy(len, 1.0, fLoc, f.id);
    } // end omp parallel
-
    FUNCTION_TIME += get_cur_time() - time_start;
 }
 #endif
@@ -92,8 +89,7 @@ void GetFunction(quadrature *q, Vector f)
    {
       const double *curNode = &x[dim*j];
       BasisFuncs(q->basis, curNode, functions);
-      for(int i = 0; i < functions.len; ++i)
-         f.id[i] += functions.id[i] * w[j];
+      Vector_daxpy(w[j], functions, f);
    }
    FUNCTION_TIME += get_cur_time() - time_start;
 }

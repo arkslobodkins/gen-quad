@@ -7,6 +7,9 @@
 extern "C" {
 #endif
 
+void dscal_(int *n, double *c, double *x, int *incx);
+void daxpy_(int *n, double *c, double *x, int *incx, double *y, int *incy);
+
 typedef struct
 {
    double *id;
@@ -31,6 +34,9 @@ void FreeVectorOmpData(Vector v);
 
 void VPrint(Vector V);
 double VDot(Vector a, Vector b);
+void VectorScale(double c, Vector V);
+void Vector_daxpy(double a, Vector x, Vector y);
+void double_daxpy(int len, double a, double *x, double *y);
 void VectorAddScale(double c1, Vector V1, double c2, Vector V2, Vector V3);
 VMin VectorMin(Vector v);
 void VectorRemoveElement(int index, Vector *z);

@@ -228,6 +228,14 @@ void quadrature_assign(const quadrature *q1, quadrature *q2)
 }
 
 
+void quadrature_assign_resize(const quadrature *q1, quadrature *q2)
+{
+   int resize = q1->num_nodes;
+   quadrature_realloc_array(resize, q2);
+   quadrature_assign(q1, q2);
+}
+
+
 void quadrature_remove_element(int index, quadrature *q)
 {
    assert(index <= q->num_nodes-1);
@@ -376,7 +384,7 @@ double QuadDistFromTheBoundaryElem(const quadrature *q, int elem)
    Vector b = q->constr->b;
    RMatrix A = q->constr->M;
 
-   double minDist;
+   double minDist = 0.0;
    for(int i = 0; i < A.rows; ++i)
    {
       double b_elem = 0.0;
@@ -576,7 +584,7 @@ double QuadTestIntegral(const quadrature *q, BASIS_TYPE btype)
    Vector IQuad   = Vector_init(numFuncs);
    Vector res_arr = Vector_init(numFuncs);
    Vector integrals = q->basis->integrals;
-   BasisFuncsPtr basisPtr;
+   BasisFuncsPtr basisPtr = NULL;
    switch(btype)
    {
       case orthogonal:
@@ -774,7 +782,7 @@ static inline int GetNumDims(DOMAIN_TYPE D)
       case SIMPLEX:            return ONE;
       case CUBESIMPLEX:        return TWO;
       case SIMPLEXSIMPLEX:     return TWO;
-      default:                 return -1;
+      default:                 return 0;
    }
 }
 

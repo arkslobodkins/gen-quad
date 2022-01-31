@@ -17,9 +17,9 @@ extern "C" {
 #endif
 
 #ifdef __GNUC__
-#define ATTR_UNUSED __attribute__ ((unused))
+#define __attribute__unused __attribute__ ((unused))
 #else
-#define ATTR_UNUSED
+#define __attribute__unused
 #endif
 
 #define GQ_TRUE 1
@@ -40,6 +40,8 @@ typedef int GQ_BOOL;
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 #define is_greater_than_zero(x) ((x) > 0 ? true : false)
+#define is_even(x) (x)%2 == 0 ? true : false
+#define is_odd(x) (x)%2 == 1 ? true : false
 #define SQUARE(x) ((x)*(x))
 #define SQRT(x) sqrt((double)(x))
 #define SIZE_INT(x) ((x)*sizeof(int))
@@ -51,11 +53,16 @@ typedef enum { orthogonal, monomial } BASIS_TYPE;
 typedef enum { INTERVAL, CUBE, SIMPLEX, CUBESIMPLEX, SIMPLEXSIMPLEX } DOMAIN_TYPE;
 typedef enum { NODE, WEIGHT, NONE } NODE_OR_WEIGHT;
 
+#define StaticVectorInit(vecName, __len)  \
+   Vector vecName;                        \
+   double __ ##vecName[__len];            \
+   vecName.len = __len;                   \
+   vecName.id = __##vecName;
+
 char *get_domain_string(DOMAIN_TYPE D);
 char *ElimToString(ElimType elimType);
 bool string_to_domain(const char *shape, DOMAIN_TYPE *D);
 int IntPower(int x, int power);
-double DoubleIntPower(double x, int power);
 int factorial(int n);
 int binomial(int k, int n);
 long double expIntegral1D(long double c);

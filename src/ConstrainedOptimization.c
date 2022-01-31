@@ -19,14 +19,8 @@ int ConstrainedProjection(const quadrature *q_prev, quadrature *q_next)
    int num_eqns = q_next->constr->M.rows;
    RMatrix M = q_next->constr->M;
 
-   // allocate vectors on the stack
-   Vector node_change; node_change.len = dim;
-   double node_change_id[dim]; node_change.id = node_change_id;
-   memset(node_change.id, 0, dim*sizeof(double));
-
-   Vector node_projected; node_projected.len = dim;
-   double node_projected_id[dim]; node_projected.id = node_projected_id;
-   memset(node_projected.id, 0, dim*sizeof(double));
+   StaticVectorInit(node_change, dim);
+   StaticVectorInit(node_projected, dim);
 
    for(i = 0; i < k; ++i)
    {
@@ -133,10 +127,8 @@ int ShortenVector(const quadrature *q_prev, const quadrature *q_next, ConstrVect
       cNodeDataArr[i] = ConstrNodeDataInit();
 
    // allocate vectors on the stack
-   Vector z_prev_node = {0}; z_prev_node.len = dim+1;
-   double z_prev_id[dim+1];  z_prev_node.id = z_prev_id;
-   Vector z_next_node = {0}; z_next_node.len = dim+1;
-   double z_next_id[dim+1];  z_next_node.id = z_next_id;
+   StaticVectorInit(z_prev_node, dim+1);
+   StaticVectorInit(z_next_node, dim+1);
 
    for(count = 0, i = 0; i < k; ++i)
    {
@@ -195,14 +187,12 @@ ConstrNodeData ShortenNode(const RMatrix A, const Vector b_bound, const Vector z
    int ncols = A.cols;
 
    // Allocate vectors on stack
-   Vector b_old, b_new, b_diff, t, dz;
-   b_old.len = nrows; b_new.len = nrows; b_diff.len = nrows; t.len = nrows; dz.len = ncols;
-   double b_old_id[nrows], b_new_id[nrows], b_diff_id[nrows], t_id[nrows], dz_id[ncols];
-   b_old.id = b_old_id; b_new.id = b_new_id; b_diff.id = b_diff_id; t.id = t_id; dz.id = dz_id;
-   memset(t.id, 0, nrows*sizeof(double));
-   memset(b_old.id, 0, nrows*sizeof(double));
-   memset(b_diff.id, 0, nrows*sizeof(double));
-   memset(b_new.id, 0, nrows*sizeof(double));
+   StaticVectorInit(b_old, nrows);
+   StaticVectorInit(b_new, nrows);
+   StaticVectorInit(b_diff, nrows);
+   StaticVectorInit(t, nrows);
+   StaticVectorInit(dz, ncols);
+
    int outEqn[nrows];
    memset(outEqn, -1, nrows*sizeof(int));
 
@@ -379,7 +369,7 @@ ConstrNodeData ConstrNodeDataInit()
    return cNodeData;
 }
 
-ATTR_UNUSED void ConstrNodeDataReset(ConstrNodeData *cNodeData)
+__attribute__unused void ConstrNodeDataReset(ConstrNodeData *cNodeData)
 {
    cNodeData->eqnId  = -1;
    cNodeData->tMin   =  1.0;

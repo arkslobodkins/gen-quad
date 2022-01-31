@@ -133,12 +133,13 @@ static void TimesToScreen(DOMAIN_TYPE D, int deg, int dim, double total_time)
    extern double JACOBIAN_TIME;
    extern double FUNCTION_TIME;
    extern double PREDICTOR_TIME;
-   extern double CONSTR_TIME;
+   double MAIN_ROUTINES_TIME = LSQ_TIME + JACOBIAN_TIME + FUNCTION_TIME + PREDICTOR_TIME;
    printf("wall clock time for least squares routine in LeastSquaresNewton = %le\n", LSQ_TIME);
    printf("wall clock time for GetJacobian routine = %le\n", JACOBIAN_TIME);
    printf("wall clock time for GetFunction routine = %le\n", FUNCTION_TIME);
    printf("wall clock time for predictor routine   = %le\n", PREDICTOR_TIME);
-   printf("wall clock time for constraint routines = %le\n", CONSTR_TIME);
+   printf("\n");
+   printf("main routines took %f percent of the total computation\n", 100.0*MAIN_ROUTINES_TIME/total_time);
    printf("total wall clock time = %le\n", total_time);
 }
 
@@ -154,12 +155,13 @@ static void TimesToFile(DOMAIN_TYPE D, int deg, int dim, double total_time)
    extern double JACOBIAN_TIME;
    extern double FUNCTION_TIME;
    extern double PREDICTOR_TIME;
-   extern double CONSTR_TIME;
+   double MAIN_ROUTINES_TIME = LSQ_TIME + JACOBIAN_TIME + FUNCTION_TIME + PREDICTOR_TIME;
    fprintf(file, "wall clock time for least squares routine in LeastSquaresNewton = %le\n", LSQ_TIME);
    fprintf(file, "wall clock time for GetJacobian routine = %le\n", JACOBIAN_TIME);
    fprintf(file, "wall clock time for GetFunction routine = %le\n", FUNCTION_TIME);
    fprintf(file, "wall clock time for predictor routines  = %le\n", PREDICTOR_TIME);
-   fprintf(file, "wall clock time for constraint routines = %le\n", CONSTR_TIME);
+   fprintf(file,"\n");
+   fprintf(file,"main routines took %f percent of the total computation\n", 100.0*MAIN_ROUTINES_TIME/total_time);
    fprintf(file, "total wall clock time = %le\n", total_time);
 
    fclose(file);

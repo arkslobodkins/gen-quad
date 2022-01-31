@@ -65,19 +65,19 @@ bool LeastSquaresNewton(const bool_enum CONSTR_OPT, quadrature *q_orig, int *its
 
    int (*leastsquares_ptr)(CMatrix A, Vector RHS_TO_X);
    void (*getFunc_ptr)(quadrature *q, Vector f);
-   void (*getJacobian_ptr)(quadrature *q, CMatrix JACOBIAN);
+   void (*getFunctionAndJacobian_ptr)(quadrature *q, Vector f, CMatrix JACOBIAN);
 #ifdef _OPENMP
    QuadAllocBasisOmp(q_next, omp_get_max_threads());
    QuadAllocBasisOmp(q_prev, omp_get_max_threads());
    AllocVectorOmpData(&RHS);
-   getFunc_ptr      = &GetFunctionOmp;
-   getJacobian_ptr  = &GetJacobianOmp;
+   getFunc_ptr = &GetFunctionOmp;
+   getFunctionAndJacobian_ptr = &GetFunctionAndJacobianOmp;
    if(PLASMA_CONDITION()) leastsquares_ptr = DGELS_PLASMA;
-   else                        leastsquares_ptr = DGELS_LAPACK;
+   else                   leastsquares_ptr = DGELS_LAPACK;
 #else
    leastsquares_ptr = &DGELS_LAPACK;
    getFunc_ptr      = &GetFunction;
-   getJacobian_ptr  = &GetJacobian;
+   getFunctionAndJacobian_ptr = &GetFunctionAndJacobian;
 #endif
 
    // return if input is a satisfactory quadrature
@@ -110,8 +110,7 @@ bool LeastSquaresNewton(const bool_enum CONSTR_OPT, quadrature *q_orig, int *its
          quadrature_remove_element(cVectData.boundaryNodeId, q_prev);
       }
 
-      getJacobian_ptr(q_prev, JACOBIAN);
-      getFunc_ptr(q_prev, RHS);
+      getFunctionAndJacobian_ptr(q_prev, RHS, JACOBIAN); // computes RHS at essentially zero cost
       for(int i = 0; i < SMALL_DIM; ++i)        LEAST_SQ_SOL.id[i] = RHS.id[i];
       for(int i = SMALL_DIM; i < LEAD_DIM; ++i) LEAST_SQ_SOL.id[i] = 0.0;
 
@@ -131,14 +130,17 @@ bool LeastSquaresNewton(const bool_enum CONSTR_OPT, quadrature *q_orig, int *its
          goto FREERETURN;
       }
 
-      if(CONSTR_OPT == ON) {
-         start_time = get_cur_time();
+      if(CONSTR_OPT == ON)
+      {
+         // Constrained optimization part 1: project onto the boundary
          int P_FLAG = ConstrainedProjection(q_prev, q_next);
          if(P_FLAG != CONSTR_SUCCESS) {
             COND_PRINT_ERR(P_FLAG);
             SOL_FLAG = SOL_NOT_FOUND;
             goto FREERETURN;
          }
+
+         // Constrained optimization part 2: shorten onto the boundary
          ConstrOptData *data = ConstrainedOptimizationInit(q_next);
          int C_FLAG = ConstrainedOptimization(data, q_prev, q_next, &cVectData);
          ConstrainedOptimizationFree(data);
@@ -147,17 +149,18 @@ bool LeastSquaresNewton(const bool_enum CONSTR_OPT, quadrature *q_orig, int *its
             SOL_FLAG = SOL_NOT_FOUND;
             goto FREERETURN;
          }
-         CONSTR_TIME += get_cur_time() - start_time;
       }
-      else {
+      else
+      {
          if(!QuadInConstraint(q_next) && itsLoc > 10) {
             SOL_FLAG = SOL_NOT_FOUND;
             goto FREERETURN;
          }
       }
-
       getFunc_ptr(q_next, RHS);
-      errorNormUpdate = V_InfNorm(RHS);
+      // if statement since norm might change after constrained optimization is applied
+      if(CONSTR_OPT == ON) errorNormUpdate = V_InfNorm(RHS);
+      else errorNormUpdate = errorNorm;
 
       quadrature_assign(q_next, q_prev);
       ++itsLoc;
@@ -170,8 +173,7 @@ bool LeastSquaresNewton(const bool_enum CONSTR_OPT, quadrature *q_orig, int *its
          && (errorNormUpdate <= q_tol)
          && QuadInConstraint(q_next) )
    {
-      quadrature_realloc_array(q_next->num_nodes, q_orig);
-      quadrature_assign(q_next, q_orig);
+      quadrature_assign_resize(q_next, q_orig);
       SOL_FLAG = SOL_FOUND;
    }
    else SOL_FLAG = SOL_NOT_FOUND;
@@ -198,7 +200,6 @@ FREERETURN:
 
 static int CheckForStop(int INFO, double errorNorm, double errorNormPrev, Vector least_sq_sol)
 {
-
    if(errorNorm > errorNormPrev+2)     // fail if method is not converging
       return NOT_CONVERGE;
 

@@ -81,6 +81,27 @@ double VDot(Vector a, Vector b)
    return dot;
 }
 
+void VectorScale(double c, Vector V)
+{
+   int spacing = 1;
+   dscal_(&V.len, &c, V.id, &spacing);
+}
+
+void Vector_daxpy(double a, Vector x, Vector y)
+{
+   assert(x.len == y.len);
+   int incx = 1;
+   int incy = 1;
+   daxpy_(&x.len, &a, x.id, &incx, y.id, &incy);
+}
+
+void double_daxpy(int len, double a, double *x, double *y)
+{
+   int incx = 1;
+   int incy = 1;
+   daxpy_(&len, &a, x, &incx, y, &incy);
+}
+
 void VectorAddScale(double c1, Vector V1, double c2, Vector V2, Vector V3)
 {
    assert(V1.len == V2.len && V2.len == V3.len && V3.len > 0);

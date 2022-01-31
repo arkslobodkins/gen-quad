@@ -5,8 +5,8 @@
 
 #include "GetJacobian.h"
 #include "Basis.h"
-#include <stdio.h>
 
+#include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 #include <omp.h>
@@ -30,17 +30,16 @@ void GetJacobianOmp(quadrature *q, CMatrix JACOBIAN)
    int cols = q->num_nodes;
    const double *w = q->w;
    const double *x = q->x;
+   Basis **basis = q->basisOmp;
 
    int num_dims = q->num_dims;
    int dims[num_dims];
    memcpy(dims, q->dims, num_dims*sizeof(int));
 
    int omp_condition = OMP_CONDITION(deg, dim);
-   Basis **basis = q->basisOmp;
-
    #pragma omp parallel default(shared) if(omp_condition) num_threads(omp_get_max_threads())
    {
-      Basis *basisLoc = basis[omp_get_thread_num()];
+      Basis *basisLoc      = basis[omp_get_thread_num()];
       Vector basisFuncsLoc = basisLoc->functions;
       Vector basisDerLoc   = basisLoc->derivatives;
       #pragma omp for schedule(static)
@@ -51,17 +50,73 @@ void GetJacobianOmp(quadrature *q, CMatrix JACOBIAN)
 
          BasisFuncs(basisLoc, curNode, basisFuncsLoc);
          BasisDer(basisLoc, curNode, basisDerLoc);
-         for(int i = 0; i < rows; ++i) {
-            JACOBIAN.cid[j][i] = basisFuncsLoc.id[i];
-            for(int d = 0; d < dim; ++d)
-               JACOBIAN.cid[j*dim+cols+d][i] = basisDerLoc.id[d*rows+i] * w[j];
-         }
+         VectorScale(w[j], basisDerLoc);
+
+         CMatrix_LoadColumn(j, basisFuncsLoc, JACOBIAN);
+         int colId = j*dim+cols;
+         for(int d = 0; d < dim; ++d)
+            CMatrix_LoadColumnDD(colId+d, rows, &basisDerLoc.id[d*rows], JACOBIAN);
       }
    } // end omp parallel
 
    JACOBIAN_TIME += get_cur_time() - time_start;
 }
+
+
+void GetFunctionAndJacobianOmp(quadrature *q, Vector f, CMatrix JACOBIAN)
+{
+   double time_start = get_cur_time();
+
+   int dim = q->dim;
+   int deg = q->deg;
+   int rows = q->basis->numFuncs;
+   int cols = q->num_nodes;
+   const double *w = q->w;
+   const double *x = q->x;
+   Basis **basis = q->basisOmp;
+
+   int num_dims = q->num_dims;
+   int dims[num_dims];
+   memcpy(dims, q->dims, num_dims*sizeof(int));
+
+   BasisIntegrals(basis[0], basis[0]->integrals);
+   int len = q->basis->numFuncs;
+   for(int i = 0; i < len; ++i)
+      f.id[i] = -1.0 * basis[0]->integrals.id[i];
+
+   int omp_condition = OMP_CONDITION(deg, dim);
+   #pragma omp parallel default(shared) if(omp_condition) num_threads(omp_get_max_threads())
+   {
+      double *fLoc = f.ompId[omp_get_thread_num()];
+      memset(fLoc, 0, SIZE_DOUBLE(len));
+      Basis *basisLoc      = basis[omp_get_thread_num()];
+      Vector basisFuncsLoc = basisLoc->functions;
+      Vector basisDerLoc   = basisLoc->derivatives;
+      #pragma omp for schedule(static)
+      for(int j = 0; j < cols; ++j)
+      {
+         double curNode[dim];
+         for(int i = 0; i < dim; ++i)
+            curNode[i] = x[dim*j+i];
+
+         BasisFuncs(basisLoc, curNode, basisFuncsLoc);
+         double_daxpy(len, w[j], basisFuncsLoc.id, fLoc);
+         BasisDer(basisLoc, curNode, basisDerLoc);
+         VectorScale(w[j], basisDerLoc);
+
+         CMatrix_LoadColumn(j, basisFuncsLoc, JACOBIAN);
+         int colId = j*dim+cols;
+         for(int d = 0; d < dim; ++d)
+            CMatrix_LoadColumnDD(colId+d, rows, &basisDerLoc.id[d*rows], JACOBIAN);
+      }
+      #pragma omp critical(UpdateFunction)
+      double_daxpy(len, 1.0, fLoc, f.id);
+   } // end omp parallel
+
+   JACOBIAN_TIME += get_cur_time() - time_start;
+}
 #endif
+
 
 void GetJacobian(quadrature *q, CMatrix JACOBIAN)
 {
@@ -74,21 +129,75 @@ void GetJacobian(quadrature *q, CMatrix JACOBIAN)
    const double *x = q->x;
 
    Basis *basis       = q->basis;
-   Vector functions = basis->functions;
-   Vector derivatives   = basis->derivatives;
+   Vector functions   = basis->functions;
+   Vector derivatives = basis->derivatives;
    for(int j = 0; j < cols; ++j)
    {
       const double *curNode = &x[dim*j];
       BasisFuncs(basis, curNode, functions);
       BasisDer(basis, curNode, derivatives);
+      VectorScale(w[j], derivatives);
 
-      for(int i = 0; i < rows; ++i) {
-         JACOBIAN.cid[j][i] = functions.id[i];
-         for(int d = 0; d < dim; ++d)
-            JACOBIAN.cid[j*dim+cols+d][i] = derivatives.id[d*rows+i] * w[j];
-      }
+      CMatrix_LoadColumn(j, functions, JACOBIAN);
+      int colId = j*dim+cols;
+      for(int d = 0; d < dim; ++d)
+         CMatrix_LoadColumnDD(colId+d, rows, &derivatives.id[d*rows], JACOBIAN);
    }
-
    JACOBIAN_TIME += get_cur_time() - time_start;
 }
 
+
+void GetFunctionAndJacobian(quadrature *q, Vector f, CMatrix JACOBIAN)
+{
+   double time_start = get_cur_time();
+   int dim = q->dim;
+   int rows = q->basis->numFuncs;
+   int cols = q->num_nodes;
+   const double *w = q->w;
+   const double *x = q->x;
+
+   Basis *basis       = q->basis;
+   Vector functions   = basis->functions;
+   Vector derivatives = basis->derivatives;
+   Vector integrals   = q->basis->integrals;
+
+   BasisIntegrals(q->basis, integrals);
+   for(int i = 0; i < integrals.len; ++i)
+      f.id[i] = -1.0 * integrals.id[i];
+
+   for(int j = 0; j < cols; ++j)
+   {
+      const double *curNode = &x[dim*j];
+      BasisFuncs(basis, curNode, functions);
+      Vector_daxpy(w[j], functions, f);
+      CMatrix_LoadColumn(j, functions, JACOBIAN);
+
+      BasisDer(basis, curNode, derivatives);
+      VectorScale(w[j], derivatives);
+      int colId = j*dim+cols;
+      for(int d = 0; d < dim; ++d)
+         CMatrix_LoadColumnDD(colId+d, rows, &derivatives.id[d*rows], JACOBIAN);
+   }
+   JACOBIAN_TIME += get_cur_time() - time_start;
+}
+
+
+void GetBasis(quadrature *q, CMatrix BasisMatrix)
+{
+   int dim = q->dim;
+   int rows = q->basis->numFuncs;
+   int cols = q->num_nodes;
+   const double *x = q->x;
+
+   assert(BasisMatrix.rows = rows);
+   assert(BasisMatrix.cols = cols);
+
+   Basis *basis = q->basis;
+   Vector functions = basis->functions;
+   for(int j = 0; j < cols; ++j)
+   {
+      const double *curNode = &x[dim*j];
+      BasisFuncs(basis, curNode, functions);
+      CMatrix_LoadColumn(j, functions, BasisMatrix);
+   }
+}

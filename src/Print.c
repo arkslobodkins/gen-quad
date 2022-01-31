@@ -82,6 +82,12 @@ void PrintInt(int x, const char *name)
    printf("%s = %i\n", name, x);
 }
 
+void PrintInts(int *x, int n, const char *name)
+{
+   for(int i = 0; i < n; ++i)
+      printf("%s[%i] = %i\n", name, i, x[i]);
+}
+
 void PrintBool(bool x, const char *name)
 {
    printf("%s = %d\n", name, x);

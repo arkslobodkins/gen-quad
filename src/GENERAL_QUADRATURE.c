@@ -46,19 +46,16 @@ char *ElimToString(ElimType elimType)
 
 int IntPower(int x, int power)
 {
-   int result = 1;
-   for(int i = 0; i < power; ++i)
-      result *= x;
-
-   return result;
-}
-
-double DoubleIntPower(double x, int power)
-{
-   double result = 1.0;
-   for(int i = 0; i < power; ++i)
-      result *= x;
-
+    int result = 1;
+    for (;;)
+    {
+        if (power & 1)
+            result *= x;
+        power >>= 1;
+        if (!power)
+            break;
+        x *= x;
+    }
    return result;
 }
 

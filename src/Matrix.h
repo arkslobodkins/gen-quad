@@ -38,9 +38,15 @@ CMatrix CMatrix_init(int nRows, int nCols);
 void CMatrix_realloc(int nRows, int nCols, CMatrix *M);
 void CMatrix_free(CMatrix M);
 void CMatrix_Assign(CMatrix A, CMatrix B);
+void CMatrix_LoadColumn(int col, Vector x, CMatrix M);
+void CMatrix_LoadColumnDD(int col, int len, double *x, CMatrix M);
+void CMatrix_GetRow(int row, CMatrix M, Vector x);
+void CMatrix_GetColumn(int col, CMatrix M, Vector x);
+void CMatrix_ColumnScale(int col, double c, CMatrix M);
 CMatrix CMatrix_Transpose(CMatrix A);
 void CMatVec(CMatrix M, Vector x, Vector y);
 void CMatrixPrint(CMatrix M);
+void CMatrixPrintToFile(CMatrix M, char *info);
 
 #ifdef __cplusplus
 }

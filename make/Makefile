@@ -1,15 +1,15 @@
 CC = gcc
-VERSION = -std=c99
+VERSION = -std=c11
 
 #uncomment "-DQUAD_DEBUG_OFF"   to disable debug mode
 #uncomment "-NDEBUG"            to disable assert statements
 #comment out -fopenmp           to disable OpenMP parallelism
-CFLAGS=-g  -Wall -fopenmp           \
-      #-DQUAD_DEBUG_OFF             \
+CFLAGS=-g  -Wall -fopenmp -O3    \
+      #-DQUAD_DEBUG_OFF          \
       #-DNDEBUG
 
-
-LIBSBLAS= -lblas -llapacke -llapack
+# alternatively, LIBSBLAS= -lopenblas -llapacke if openblas is available
+LIBSBLAS= -lblas -llapack -llapacke
 MATH= -lm
 RANLIB = ranlib
 VPATH= ../src:../src/Gauss_Lib

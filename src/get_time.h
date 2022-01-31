@@ -10,7 +10,7 @@ extern "C" {
 do {                                                                    \
    double start = get_cur_time();                                       \
    a;                                                                   \
-   printf("%s took: %f seconds\n", #a, get_cur_time - start);           \
+   printf("%s took: %.4e seconds\n", #a, get_cur_time() - start);       \
    } while (0)
 
 

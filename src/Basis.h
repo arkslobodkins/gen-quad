@@ -20,6 +20,11 @@ typedef struct SimplexSimplexBasis SimplexSimplexBasis;
 typedef struct MixedPolytopeBasis MixedPolytopeBasis;
 typedef struct MixedParams MixedParams;
 
+typedef struct
+{
+   int size[3];
+   double ***id;
+} Table3d;
 
 struct Basis
 {
@@ -33,6 +38,7 @@ struct Basis
    Vector functions;
    Vector derivatives;
    Vector integrals;
+   Table3d table;
 };
 
 typedef Basis*(*BasisInitPtr)(void *);
@@ -108,6 +114,7 @@ struct CubeBasis
    Vector functions;
    Vector derivatives;
    Vector integrals;
+   Table3d table;
 };
 
 typedef struct
@@ -130,6 +137,7 @@ struct SimplexBasis
    Vector functions;
    Vector derivatives;
    Vector integrals;
+   Table3d table;
 };
 
 typedef struct
@@ -154,6 +162,7 @@ struct CubeSimplexBasis
    Vector functions;
    Vector derivatives;
    Vector integrals;
+   Table3d table;
 };
 
 typedef struct
@@ -178,6 +187,7 @@ struct SimplexSimplexBasis
    Vector functions;
    Vector derivatives;
    Vector integrals;
+   Table3d table;
 };
 
 struct MixedPolytopeBasis
@@ -192,6 +202,7 @@ struct MixedPolytopeBasis
    Vector functions;
    Vector derivatives;
    Vector integrals;
+   Table3d table;
 };
 
 

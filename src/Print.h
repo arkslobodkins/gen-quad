@@ -20,6 +20,7 @@ void PrintQuadLSQInfo(int iters, double error_norm, const quadrature *q, const c
 void PrintElimInfo(int dim, int num_nodes, int opt, double opt_factor);
 
 void PrintInt(int x, const char *name);
+void PrintInts(int *x, int n, const char *name);
 void PrintBool(bool x, const char *name);
 void PrintFloat(float x, const char *name);
 void PrintDouble(double x, const char *name);

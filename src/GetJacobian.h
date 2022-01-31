@@ -9,8 +9,11 @@ extern "C" {
 
 #ifdef _OPENMP
 void GetJacobianOmp(quadrature *q, CMatrix);
+void GetFunctionAndJacobianOmp(quadrature *q, Vector f, CMatrix JACOBIAN);
 #endif
 void GetJacobian(quadrature *q, CMatrix);
+void GetFunctionAndJacobian(quadrature *q, Vector f, CMatrix JACOBIAN);
+void GetBasis(quadrature *q, CMatrix BasisMatrix);
 
 #ifdef __cplusplus
 }

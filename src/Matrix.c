@@ -4,6 +4,7 @@
  */
 
 #include "Matrix.h"
+#include "Print.h"
 
 #include <assert.h>
 #include <stdlib.h>
@@ -18,8 +19,12 @@ RMatrix RMatrix_init(int nRows, int nCols)
    M.rows = nRows;
    M.cols = nCols;
    M.len  = nRows*nCols;
+
    M.id   = (double *)calloc(nRows*nCols, sizeof(double));
+   if(M.id == NULL) PRINT_ERR(STR_ALLOC_FAIL, __LINE__, __FILE__);
+
    M.rid  = (double **)malloc(nRows*sizeof(double*));
+   if(M.rid == NULL) PRINT_ERR(STR_ALLOC_FAIL, __LINE__, __FILE__);
 
    for(int i = 0; i < nRows; ++i)
       M.rid[i] = &M.id[nCols*i];
@@ -34,12 +39,15 @@ void RMatrix_realloc(int nRows, int nCols, RMatrix *M)
    M->len  = nRows*nCols;
 
    M->rid = (double **)realloc(M->rid, nRows*sizeof(double*));
+   if(M->rid == NULL) PRINT_ERR(STR_ALLOC_FAIL, __LINE__, __FILE__);
+
    M->id  = (double *)realloc(M->id, nRows*nCols*sizeof(double));
+   if(M->id == NULL) PRINT_ERR(STR_ALLOC_FAIL, __LINE__, __FILE__);
+
    memset(M->id, 0, M->len*sizeof(double));
 
    for(int i = 0; i < nRows; ++i)
       M->rid[i] = &M->id[nCols*i];
-
 }
 
 void RMatrix_free(RMatrix M)
@@ -79,8 +87,12 @@ CMatrix CMatrix_init(int nRows, int nCols)
    M.rows = nRows;
    M.cols = nCols;
    M.len  = nRows*nCols;
-   M.id   = (double *)calloc(nRows*nCols, sizeof(double));
-   M.cid  = (double **)malloc(nCols*sizeof(double*));
+
+   M.id = (double *)calloc(nRows*nCols, sizeof(double));
+   if(M.id == NULL) PRINT_ERR(STR_ALLOC_FAIL, __LINE__, __FILE__);
+
+   M.cid = (double **)malloc(nCols*sizeof(double*));
+   if(M.cid == NULL) PRINT_ERR(STR_ALLOC_FAIL, __LINE__, __FILE__);
 
    for(int j = 0; j < nCols; ++j)
       M.cid[j] = &M.id[nRows*j];
@@ -93,8 +105,11 @@ void CMatrix_realloc(int nRows, int nCols, CMatrix *M)
    M->cols = nCols;
    M->len  = nRows*nCols;
 
-   M->id  = (double *)realloc(M->id, nRows*nCols*sizeof(double));
+   M->id = (double *)realloc(M->id, nRows*nCols*sizeof(double));
+   if(M->id == NULL) PRINT_ERR(STR_ALLOC_FAIL, __LINE__, __FILE__);
+
    M->cid = (double **)realloc(M->cid, nCols*sizeof(double*));
+   if(M->cid == NULL) PRINT_ERR(STR_ALLOC_FAIL, __LINE__, __FILE__);
    memset(M->id, 0, M->len*sizeof(double));
 
    for(int j = 0; j < nCols; ++j)
@@ -112,6 +127,41 @@ void CMatrix_Assign(CMatrix A, CMatrix B)
    assert(A.rows == B.rows);
    assert(A.cols == B.cols);
    memcpy(B.id, A.id, A.len*sizeof(double));
+}
+
+void CMatrix_LoadColumn(int col, Vector x, CMatrix M)
+{
+   assert(x.len == M.rows);
+   assert(col > -1);
+   memcpy(M.cid[col], x.id, SIZE_DOUBLE(M.rows));
+}
+
+void CMatrix_LoadColumnDD(int col, int len, double *x, CMatrix M)
+{
+   assert(len == M.rows);
+   assert(col > -1);
+   memcpy(M.cid[col], x, SIZE_DOUBLE(M.rows));
+}
+
+void CMatrix_GetRow(int row, CMatrix M, Vector x)
+{
+   assert(x.len == M.cols);
+   assert(row > -1);
+   for(int j = 0; j < M.cols; ++j)
+      x.id[j] = C_ELEM_ID(M, row, j);
+}
+
+void CMatrix_GetColumn(int col, CMatrix M, Vector x)
+{
+   assert(col > -1);
+   assert(x.len == M.rows);
+   memcpy(x.id, M.cid[col], SIZE_DOUBLE(M.rows));
+}
+
+void CMatrix_ColumnScale(int col, double c, CMatrix M)
+{
+   int spacing = 1;
+   dscal_(&M.rows, &c, M.cid[col], &spacing);
 }
 
 CMatrix CMatrix_Transpose(CMatrix A)
@@ -151,4 +201,20 @@ void CMatrixPrint(CMatrix M)
 
       printf("\n");
    }
+}
+
+void CMatrixPrintToFile(CMatrix M, char *info)
+{
+   FILE *file;
+   char str[80];
+   sprintf(str, "../results/Matrix_%ix%i_%s.txt", M.rows, M.cols, info);
+   file = fopen(str, "w");
+
+   for(int i = 0; i < M.rows; ++i)
+   {
+      for(int j = 0; j < M.cols; ++j)
+         fprintf(file, "%.10e ", C_ELEM_ID(M, i, j));
+      fprintf(file, "\n");
+   }
+   fclose(file);
 }

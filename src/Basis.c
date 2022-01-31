@@ -8,15 +8,36 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <omp.h>
 
 static void BasisIndices(int deg, int dim, INT_8 *f);
 static int BasisSize(int deg, int dim);
-static void LegendrePoly(int order, double x, double *p, double *dp);
-static void JacobiPoly(int order, double x, double alpha, double beta, double *p);
+
+static Table3d Table3dCreate(int deg, int dim);
+static void Table3dFree(Table3d table);
+static void ComputeTable(Table3d table);
+
+static void LegendrePoly(int order, double x, double *p);
+static void LegendrePolyAndPrime(int order, double x, double *p, double *dp);
+static void JacobiPolyBetaZero(int order, double x, int alpha, double *p);
+static void JacobiPolyWithTable(int order, double x, int alpha, double *p, Table3d table);
+
 static void IntegralsCubePolyhedralMonomial(MixedPolytopeBasis *basis, Vector v);
 static void IntegralsSimplexPolyhedralMonomialOne(MixedPolytopeBasis *basis, Vector v);
 static void IntegralsSimplexPolyhedralMonomialTwo(MixedPolytopeBasis *basis, Vector v);
+
+static inline double DoubleIntPower(double x, int power)
+{
+    double result = 1.0;
+    for (;;) {
+        if (power & 1)
+            result *= x;
+        power >>= 1;
+        if (!power)
+            break;
+        x *= x;
+    }
+    return result;
+}
 
 Basis* BasisInit(void *params, BasisInterface *interface)
 {
@@ -73,7 +94,6 @@ void BasisFree(Basis *basis)
       interface = NULL;
    }
 }
-
 
 void BasisMonomial(Basis *basis, const double *x, Vector phi)
 {
@@ -132,16 +152,14 @@ void ComputeCubeBasisFuncs(CubeBasis *basis, const double *x, Vector v)
    INT_8 *basisId = basis->indices;
    double *phi    = v.id;
 
-   double legendre[(deg+1)*dim];
-   double dxlegendre[(deg+1)*dim];
-
-   for(int d = 0; d < dim; ++d)
-      LegendrePoly(deg+1, 2*x[d]-1, &legendre[d*(deg+1)], &dxlegendre[d*(deg+1)]);
-
    for(int k = 0; k < numFuncs; ++k) phi[k] = 1.0;
-   for(int k = 0; k < numFuncs; ++k)
-      for(int d = 0; d < dim; ++d)
-         phi[k] *= legendre[basisId[k*dim+d] + d*(deg+1)];
+
+   for(int d = 0; d < dim; ++d) {
+      double legendre[deg+1];
+      LegendrePoly(deg+1, 2*x[d]-1, legendre);
+      for(int k = 0; k < numFuncs; ++k)
+         phi[k] *= legendre[basisId[k*dim+d]];
+   }
 }
 
 
@@ -158,7 +176,7 @@ void ComputeCubeBasisDer(CubeBasis *basis, const double *x, Vector v)
    double dxlegendre[degPlus1*dim];
 
    for(int d = 0; d < dim; ++d)
-      LegendrePoly(degPlus1, 2*x[d]-1, &legendre[d*degPlus1], &dxlegendre[d*degPlus1]);
+      LegendrePolyAndPrime(degPlus1, 2*x[d]-1, &legendre[d*degPlus1], &dxlegendre[d*degPlus1]);
 
    for(int k = 0; k < numFuncs*dim; ++k) phiPrime[k] = 1.0;
 
@@ -263,63 +281,55 @@ SimplexBasis* SimplexBasisInit(SimplexParams *simplexParams)
    addData->phi_backw1 = Vector_init(numFuncs);
    addData->phi_forw1  = Vector_init(numFuncs);
    addData->phi_forw2  = Vector_init(numFuncs);
+
+   basis->table = Table3dCreate(deg, dim);
+   ComputeTable(basis->table);
    return basis;
 }
 
 
 void SimplexBasisFuncs(SimplexBasis *basis, const double *x, Vector v)
 {
-   int i, j, k, d;
    int deg        = basis->deg;
    int dim        = basis->dim;
    int numFuncs   = basis->numFuncs;
    int degPlus1   = deg+1;
    double legendre[degPlus1];
-   double dxlegendre[degPlus1];
    double jacobi[SQUARE(degPlus1)*(dim-1)];
 
    INT_8 *basisId = basis->indices;
-   double *phi    = v.id;
-   for(int k = 0; k < numFuncs; ++k) phi[k] = 1.0;
 
-   LegendrePoly(degPlus1, (2.0*x[dim-1]-x[dim-2])/x[dim-2], legendre, dxlegendre);
+   LegendrePoly(degPlus1, (2.0*x[dim-1]-x[dim-2])/x[dim-2], legendre);
    double xCoord[dim-1];
-   for(d = 0; d < dim-1; ++d) xCoord[d] = 1.0;
-   for(d = 0; d < dim-2; ++d) xCoord[d] = x[dim-d-2]/x[dim-d-3];
+   for(int d = 0; d < dim-2; ++d) xCoord[d] = x[dim-d-2]/x[dim-d-3];
    xCoord[dim-2] = x[0];
 
-   for(d = 1; d < dim; ++d)
-   {
-      int dimCur = d-1;
-      double jCoord = 1.0;
-      if(d < dim-1) {
-         jCoord /= x[dim-d-2];
-         jCoord = 1.0-2.0*x[dim-d-1] * jCoord;
-      }
-      else if(d == dim-1) {
-         jCoord *= x[0];
-         jCoord = 1.0-2.0*jCoord;
-      }
-      for(j = 0; j < degPlus1; ++j) {
-         double alpha = 2*j+d;
-         JacobiPoly(degPlus1, jCoord, alpha, 0.0, &jacobi[degPlus1*dimCur*deg+degPlus1*j]);
+   double jCoord[dim];
+   for(int d = 1; d < dim-1; ++d)
+      jCoord[d] = 1.0-2.0*x[dim-d-1]/x[dim-d-2];
+   jCoord[dim-1] = 1.0-2.0*x[0];
+
+   for(int d = 1; d < dim; ++d) {
+      int nextDim = (deg+1)*(d-1)*deg;
+      for(int j = 0; j < degPlus1; ++j) {
+         int nextAlpha = (deg+1)*j;
+         JacobiPolyWithTable(deg+1, jCoord[d], 2*j+d, &jacobi[nextDim+nextAlpha], basis->table);
       }
    }
 
-   for(d = 1; d < dim; ++d)
+   double *phi = v.id;
+   for(int k = 0; k < numFuncs; ++k) phi[k] = legendre[basisId[k*dim]];
+   for(int d = 1; d < dim; ++d)
    {
-      for(k = 0; k < numFuncs; ++k) {
+      double coordLoc = xCoord[d-1];
+      for(int k = 0; k < numFuncs; ++k)
+      {
          const INT_8 *index = &basisId[k*dim];
-         int xPower = 0; for(i = 0; i < d; ++i) xPower += *(index+i);
-         double xFactor = DoubleIntPower(xCoord[d-1], xPower);
+         int xPower = 0; for(int i = 0; i < d; ++i) xPower += *(index+i);
+         double xFactor = DoubleIntPower(coordLoc, xPower);
          double phiTemp = jacobi[*(index+d) + degPlus1*(d-1)*deg + degPlus1*xPower] * xFactor;
          phi[k] *= phiTemp;
       }
-   }
-
-   for(k = 0; k < numFuncs; ++k) {
-      const INT_8 *index = &basisId[k*dim];
-      phi[k] *= legendre[*index];
    }
 }
 
@@ -410,6 +420,7 @@ void SimplexBasisFree(SimplexBasis *basis)
    Vector_free(basis->addData->phi_backw2);
    Vector_free(basis->addData->phi_forw1);
    Vector_free(basis->addData->phi_forw2);
+   Table3dFree(basis->table);
    if(basis->params) {
       free(basis->params);
       basis->params = NULL;
@@ -478,10 +489,9 @@ void CubeSimplexBasisFuncs(CubeSimplexBasis *basis, const double *x, Vector v)
    INT_8 *basisId = basis->indices;
 
    double legendre[degPlus1*dim1];
-   double dxlegendre[degPlus1*dim1];
 
    for(int d = 0; d < dim1; ++d)
-      LegendrePoly(degPlus1, 2*x[d]-1, &legendre[d*degPlus1], &dxlegendre[d*degPlus1]);
+      LegendrePoly(degPlus1, 2*x[d]-1, &legendre[d*degPlus1]);
 
    for(int k = 0; k < numFuncs; ++k) phi[k] = 1.0;
    for(int k = 0; k < numFuncs; ++k)
@@ -509,7 +519,7 @@ void CubeSimplexBasisDer(CubeSimplexBasis *basis, const double *x, Vector v)
    double dxlegendre[degPlus1*dim1];
 
    for(int d = 0; d < dim1; ++d)
-      LegendrePoly(degPlus1, 2*x[d]-1, &legendre[d*degPlus1], &dxlegendre[d*degPlus1]);
+      LegendrePolyAndPrime(degPlus1, 2*x[d]-1, &legendre[d*degPlus1], &dxlegendre[d*degPlus1]);
 
    for(int k = 0; k < numFuncs*dim; ++k) phiPrime[k] = 1.0;
 
@@ -819,56 +829,103 @@ void SimplexSimplexBasisFree(SimplexSimplexBasis *basis)
 }
 
 
-static void LegendrePoly(int order, double x, double *p, double *dp)
+static void LegendrePoly(int order, double x, double *p)
 {
-   int k;
-   double fac1 = 0.0, fac2 = 0.0;
-
    p[0] = 1.0;
-   dp[0] = 0.0;
    p[1] = x;
+
+   for(int  k = 1; k < order-1; ++k) {
+      double fac1 = (2.0*k+1.0)/(k+1.0);
+      double fac2 = k/(k+1.0);
+      p[k+1] = fac1*x*p[k] - fac2*p[k-1];
+   }
+}
+
+
+static void LegendrePolyAndPrime(int order, double x, double *p, double *dp)
+{
+   p[0] = 1.0;
+   p[1] = x;
+   dp[0] = 0.0;
    dp[1] = 1.0;
 
-   for( k = 1; k < order-1; ++k)
-   {
-      fac1 = (2.0*k+1.0)/(k+1.0);
-      fac2 = k/(k+1.0);
+   for(int  k = 1; k < order-1; ++k) {
+      double fac1 = (2.0*k+1.0)/(k+1.0);
+      double fac2 = k/(k+1.0);
       p[k+1] = fac1*x*p[k] - fac2*p[k-1];
       dp[k+1] = fac1*(p[k] + x*dp[k]) - fac2*dp[k-1];
    }
 }
 
 
-#define ADD(x, y) (x)+(y)
-#define SUB(x, y) (x)-(y)
-static void JacobiPoly(int order, double x, double alpha, double beta, double *p)
+static Table3d Table3dCreate(int deg, int dim)
 {
-   double fac1, fac2, fac3;
-   fac1 = fac2 = fac3 = 0.0;
+   Table3d table;
+   if(dim >= 3)
+      table.size[0] = 2*deg+2+dim-1;
+   else if(dim == 2)
+      table.size[0] = 2*deg+2;
+   table.size[1] = deg+2;
+   table.size[2] = 3;
+   table.id = (double ***)malloc(table.size[0]*sizeof(double **));
+   for(int i = 0; i < table.size[0]; ++i)
+      table.id[i] = (double **)malloc(table.size[1]*sizeof(double *));
+   for(int i = 0; i < table.size[0]; ++i)
+      for(int j = 0; j < table.size[1]; ++j)
+         table.id[i][j] = (double *)malloc(table.size[2]*sizeof(double));
+   return table;
+}
 
-   // compute some constants to be used inside a for loop to avoid redundant computations,
-   // whereas some are computed repeatedly inside the loop(tuned)
-   double a_plus_b               = ADD(alpha, beta);
-   double a_plus_b_minus_1       = SUB(a_plus_b, 1.0);
-   double a_plus_b_minus_2       = SUB(a_plus_b, 2.0);
 
+static void Table3dFree(Table3d table)
+{
+   for(int i = 0; i < table.size[0]; ++i)
+      for(int j = 0; j < table.size[1]; ++j)
+         free(table.id[i][j]);
+   for(int i = 0; i < table.size[0]; ++i)
+      free(table.id[i]);
+   free(table.id);
+}
+
+
+static void ComputeTable(Table3d table)
+{
+   for(int alpha = 1; alpha < table.size[0]; ++alpha) {
+      for (int k = 1; k < table.size[1]; ++k) {
+         double fac1Part0 = (alpha+2.0*k+1.0) * (alpha+2.0*k+2.0) * (alpha+2.0*k);
+         double fac1Part1 = (alpha+2.0*k+1.0) * (alpha*alpha);                      //excludes multiplication by x
+         double fac2 = -2.0 * (alpha+k) * k * (alpha+2.0*k+2.0);
+         double fac3 = 1.0 / (2.0*(k+1.0)*(alpha+k+1.0) * (alpha+2.0*k));
+         table.id[alpha][k][0] = fac3 * fac1Part0;
+         table.id[alpha][k][1] = fac3 * fac1Part1;
+         table.id[alpha][k][2] = fac3 * fac2;
+      }
+   }
+}
+
+
+// asumes order is at least 2 or greater, i.e. polynomial degree is at least 1
+static void JacobiPolyBetaZero(int order, double x, int alpha, double *p)
+{
    p[0] = 1.0;
-   if(order > 1)
-      p[1] = 0.5*(x-1.0) * (alpha+beta+2.0) + alpha+1.0;
-
-   for (int k = 1; k < order-1; ++k)
-   {
-      double two_n_plus_a_plus_b = ADD(2.0*(k+1.0), a_plus_b);
-      fac1 = (2.0*(k+1)+a_plus_b_minus_1) * (
-          (2.0*(k+1.0)+alpha+beta) * (2.0*(k+1.0)+alpha+beta-2.0) * x + (alpha*alpha-beta*beta)
-          );
-      fac2 = -2.0 * (k+1.0+alpha-1.0) * (k+1.0+beta-1.0) * two_n_plus_a_plus_b;
-      fac3 = 1.0 / (2*(k+1.0)*(k+1.0+a_plus_b) * (2*(k+1.0)+a_plus_b_minus_2));
+   p[1] = 0.5*(x-1.0) * (alpha+2.0) + alpha+1.0;
+   for (int k = 1; k < order-1; ++k) {
+      double fac1 = (alpha+2.0*k+1.0) * ( (alpha+2.0*k+2.0) * (alpha+2.0*k) * x + (alpha*alpha) );
+      double fac2 = -2.0 * (alpha+k) * k * (alpha+2.0*k+2.0);
+      double fac3 = 1.0 / (2.0*(k+1.0)*(alpha+k+1.0) * (alpha+2.0*k));
       p[k+1] = fac3 * (fac1*p[k] + fac2*p[k-1]);
    }
 }
-#undef ADD
-#undef SUB
+
+
+// asumes order is at least 2 or greater, i.e. polynomial degree is at least 1
+static void JacobiPolyWithTable(int order, double x, int alpha, double *p, Table3d table)
+{
+   p[0] = 1.0;
+   p[1] = 0.5*(x-1.0) * (alpha+2.0) + alpha+1.0;
+   for(int k = 1; k < order-1; ++k)
+      p[k+1] = (table.id[alpha][k][0]*x + table.id[alpha][k][1])*p[k] + table.id[alpha][k][2]*p[k-1];
+}
 
 
 static void IntegralsCubePolyhedralMonomial(MixedPolytopeBasis *basis, Vector v)
@@ -880,8 +937,7 @@ static void IntegralsCubePolyhedralMonomial(MixedPolytopeBasis *basis, Vector v)
    INT_8* indices = basis->indices;
 
    for(int i = 0; i < numFuncs; ++i)
-   {
-      double val = 1.0;
+   { double val = 1.0;
       for(int d = 0; d < dimCube; ++d)
          val = val/(indices[i*dim+d] + 1);
       integrals.id[i] = val;
@@ -947,11 +1003,10 @@ void SimplexFuncsPolytopicOne(MixedPolytopeBasis *basis, const double *x, Vector
    double *phi    = v.id;
 
    double legendre[degPlus1];
-   double dxlegendre[degPlus1];
    double jacobi[SQUARE(degPlus1)*(dim1-1)];
    for(k = 0; k < numFuncs; ++k) phi[k] = 1.0;
 
-   LegendrePoly(degPlus1, (2.0*x[dim1-1]-x[dim1-2])/x[dim1-2], legendre, dxlegendre);
+   LegendrePoly(degPlus1, (2.0*x[dim1-1]-x[dim1-2])/x[dim1-2], legendre);
    double xCoord[dim1-1];
    xCoord[dim1-2] = x[0];
    for(d = 0; d < dim1-2; ++d) xCoord[d] = x[dim1-d-2]/x[dim1-d-3];
@@ -971,7 +1026,7 @@ void SimplexFuncsPolytopicOne(MixedPolytopeBasis *basis, const double *x, Vector
 
       for(j = 0; j < deg+1; ++j) {
          double alpha = 2*j+d;
-         JacobiPoly(degPlus1, jCoord[dimCur], alpha, 0.0, &jacobi[degPlus1*(d-1)*deg+degPlus1*j]);
+         JacobiPolyBetaZero(degPlus1, jCoord[dimCur], alpha, &jacobi[degPlus1*(d-1)*deg+degPlus1*j]);
       }
    }
 
@@ -1003,11 +1058,10 @@ void SimplexFuncsPolytopicTwo(MixedPolytopeBasis *basis, const double *x, Vector
    INT_8 *basisId = basis->indices;
 
    double legendre[degPlus1];
-   double dxlegendre[degPlus1];
    double jacobi[SQUARE(degPlus1)*(dim2-1)];
    for(int k = 0; k < numFuncs; ++k) phi[k] = 1.0;
 
-   LegendrePoly(degPlus1, (2.0*x[dimTwo-1]-x[dimTwo-2])/x[dimTwo-2], legendre, dxlegendre);
+   LegendrePoly(degPlus1, (2.0*x[dimTwo-1]-x[dimTwo-2])/x[dimTwo-2], legendre);
    double xCoord[dim2-1];
    xCoord[dim2-2] = x[dim1];
    for(d = 0; d < dim2-2; ++d) xCoord[d] = x[dimTwo-d-2]/x[dimTwo-d-3];
@@ -1026,7 +1080,7 @@ void SimplexFuncsPolytopicTwo(MixedPolytopeBasis *basis, const double *x, Vector
       }
       for(j = 0; j < deg+1; ++j) {
          double alpha = 2*j+d;
-         JacobiPoly(degPlus1, jCoord[dimCur], alpha, 0.0, &jacobi[degPlus1*(d-1)*deg+degPlus1*j]);
+         JacobiPolyBetaZero(degPlus1, jCoord[dimCur], alpha, &jacobi[degPlus1*(d-1)*deg+degPlus1*j]);
       }
    }
 

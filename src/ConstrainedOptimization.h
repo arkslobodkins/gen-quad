@@ -35,7 +35,7 @@ typedef struct
 ConstrVectData ConstrVectDataInit();
 void ConstrVectDataReset(ConstrVectData *cVectData);
 ConstrNodeData ConstrNodeDataInit();
-ATTR_UNUSED void ConstrNodeDataReset(ConstrNodeData *cNodeData);
+__attribute__unused void ConstrNodeDataReset(ConstrNodeData *cNodeData);
 int ConstrainedProjection(const quadrature *q_prev, quadrature *q_next);
 
 typedef struct
