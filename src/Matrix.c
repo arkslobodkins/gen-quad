@@ -29,6 +29,10 @@ RMatrix RMatrix_init(int nRows, int nCols)
    for(int i = 0; i < nRows; ++i)
       M.rid[i] = &M.id[nCols*i];
 
+   M.vecFormat.len = M.len;
+   M.vecFormat.id = &M.id[0];
+   M.vecFormat.ompId = NULL;
+
    return M;
 }
 
@@ -48,6 +52,10 @@ void RMatrix_realloc(int nRows, int nCols, RMatrix *M)
 
    for(int i = 0; i < nRows; ++i)
       M->rid[i] = &M->id[nCols*i];
+
+   M->vecFormat.len = M->len;
+   M->vecFormat.id = &M->id[0];
+   M->vecFormat.ompId = NULL;
 }
 
 void RMatrix_free(RMatrix M)

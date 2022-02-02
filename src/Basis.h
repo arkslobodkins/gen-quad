@@ -106,7 +106,7 @@ struct CubeBasis
 {
    const BasisInterface *interface;
    CubeParams *params;
-   double *addData;
+   long double *addData;
    int deg;
    int dim;
    int numFuncs;
@@ -120,9 +120,9 @@ struct CubeBasis
 typedef struct
 {
    Vector phi_backw1;
-   Vector phi_backw2;
    Vector phi_forw1;
-   Vector phi_forw2;
+   int* xPower;
+   RMatrix xFactor;
 } AddDataSimplex;
 
 struct SimplexBasis
@@ -144,9 +144,7 @@ typedef struct
 {
    Vector basis_polytopic;
    Vector phi_backw1;
-   Vector phi_backw2;
    Vector phi_forw1;
-   Vector phi_forw2;
 } AddDataCubeSimplex;
 
 
@@ -169,9 +167,7 @@ typedef struct
 {
    Vector basis_polytopic;
    Vector phi_backw1;
-   Vector phi_backw2;
    Vector phi_forw1;
-   Vector phi_forw2;
 } AddDataSimplexSimplex;
 
 
@@ -237,8 +233,8 @@ void SimplexSimplexBasisFree(SimplexSimplexBasis *basis);
 void SimplexFuncsPolytopicOne(MixedPolytopeBasis *basis, const double *x, Vector v);
 void SimplexFuncsPolytopicTwo(MixedPolytopeBasis *basis, const double *x, Vector v);
 
-void orthogonal_simplex_basis_test(int deg, int dim);
-void orthogonal_cube_basis_test(int deg, int dim);
+double orthogonal_simplex_basis_test(int deg, int dim);
+double orthogonal_cube_basis_test(int deg, int dim);
 
 #ifdef __cplusplus
 }

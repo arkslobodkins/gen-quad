@@ -38,8 +38,8 @@ char *ElimToString(ElimType elimType)
 {
    switch(elimType)
    {
-      case(ELIM):  return (char *)"elimination";
-      case(MERGE): return (char *)"merging";
+      case(ELIM):  return (char *)"elim";
+      case(SVD):   return (char *)"svd";
       default:     return (char *)"0";
    }
 }

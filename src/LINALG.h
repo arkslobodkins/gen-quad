@@ -41,7 +41,7 @@ int DGEQR2_LAPACK(CMatrix A, Vector TAU);
 int DGEQRF_LAPACK(CMatrix A, Vector TAU);
 int DORMQR_LAPACK(char SIDE, char TRANS, Vector TAU, CMatrix Q, CMatrix A);
 int DORGQR_LAPACK(CMatrix Q, Vector TAU);
-int DGESVD_LAPACK(CMatrix A, Vector *VMin);
+int DGESVD_LAPACK(CMatrix A, Vector VMin);
 int DGELS_LAPACK(CMatrix A, Vector RHS_TO_X);
 
 #ifdef _OPENMP

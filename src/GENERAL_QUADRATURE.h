@@ -47,7 +47,7 @@ typedef int GQ_BOOL;
 #define SIZE_INT(x) ((x)*sizeof(int))
 #define SIZE_DOUBLE(x) ((x)*sizeof(double))
 
-typedef enum { MERGE, ELIM } ElimType;
+typedef enum { SVD, ELIM } ElimType;
 typedef enum { ON, OFF } bool_enum;
 typedef enum { orthogonal, monomial } BASIS_TYPE;
 typedef enum { INTERVAL, CUBE, SIMPLEX, CUBESIMPLEX, SIMPLEXSIMPLEX } DOMAIN_TYPE;

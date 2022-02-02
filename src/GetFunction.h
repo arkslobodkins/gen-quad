@@ -11,6 +11,7 @@ extern "C" {
 void GetFunctionOmp(quadrature *q, Vector f);
 #endif
 void GetFunction(quadrature *q, Vector f);
+void TestResidual(quadrature *q, const char* str);
 
 #ifdef __cplusplus
 }

@@ -44,6 +44,16 @@ if(TEST_QR == FAILED)                                                          \
 #define COND_PRINT_ERR(flag) \
 if(flag != GQ_SUCCESS) PRINT_ERR(ERR_STRING(flag), __LINE__, __FILE__);
 
+#define COND_TEST_5                                                           \
+double __norm = 0.0;                                                          \
+for(int i = 0; i < n; ++i) __norm += SQUARE(q->w[i]-q_guess->w[i]);           \
+__norm = sqrt(__norm);                                                        \
+if( __norm - fabs(min_value) > POW_DOUBLE(10.0, -13) )                        \
+   PRINT_ERR("TEST 5: failed norm comparison", __LINE__, __FILE__);           \
+if( !QuadPosWeightsEps(q_guess) )                                             \
+   PRINT_ERR("TEST 5: failed positivity of weights", __LINE__, __FILE__);     \
+if( fabs(V_TwoNorm(MinV) - 1.0) > POW_DOUBLE(10.0, -13) )                     \
+   PRINT_ERR("TEST 5: failed orthogonality test for eigenvector", __LINE__, __FILE__);
 
 #else // QUAD_DEBUG_OFF
 
@@ -51,6 +61,7 @@ if(flag != GQ_SUCCESS) PRINT_ERR(ERR_STRING(flag), __LINE__, __FILE__);
 #define COND_TEST_2
 #define COND_TEST_3
 #define COND_TEST_4
+#define COND_TEST_5
 #define COND_PRINT_ERR
 
 #endif

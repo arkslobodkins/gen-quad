@@ -11,6 +11,7 @@
 #include "NodeElimination.h"
 #include "Quadrature.h"
 #include "Output.h"
+#include "Print.h"
 
 #include <assert.h>
 #include <stdlib.h>
@@ -47,15 +48,20 @@ void ComputeInterval(int deg)
 // quadrature rules obtained in lower dimensions. More specifically,
 // it computes the tensor product of (d-1)-dimensional quadrature
 // rule over the unit cube and interval to obtain the initial guess for
-// quadrature over the d-dimensional unit cube. When Node Elimination
-// for the dimension assigned by a user is finalized, the final quadrature
-// and history are printed to results directory.
+// quadrature over the d-dimensional unit cube.
 void ComputeCube(int deg, int dim)
 {
    assert(deg > 0);
    assert(dim > 1);
 
-   orthogonal_cube_basis_test(deg, dim);
+#ifdef QUAD_DEBUG_ON
+   double basisRes = orthogonal_cube_basis_test(deg, dim);
+   if(basisRes > POW_DOUBLE(10.0, -13))
+   {
+      PRINT_ERR("Residual of orthogonal cube basis functions is too", __LINE__, __FILE__);
+      return;
+   }
+#endif
 
    MAX_DIM = dim;
    int hist_dims = dim-1;
@@ -126,15 +132,20 @@ void ComputeCube(int deg, int dim)
 // it computes the tensor product of (d-1)-dimensional quadrature
 // rule over the unit simplex and interval and uses variant of Duffy
 // Transformation to obtain the initial guess for quadrature over the
-// d-dimensional unit simplex. When Node Elimination for the dimension
-// assigned by a user is finalized, the final quadrature and history
-// are printed to results directory.
+// d-dimensional unit simplex.
 void ComputeSimplex(int deg, int dim)
 {
    assert(deg > 0);
    assert(dim > 1);
 
-   orthogonal_simplex_basis_test(deg, dim);
+#ifdef QUAD_DEBUG_ON
+   double basisRes = orthogonal_simplex_basis_test(deg, dim);
+   if(basisRes > POW_DOUBLE(10.0, -13))
+   {
+      PRINT_ERR("Residual of orthogonal simplex basis functions is too", __LINE__, __FILE__);
+      return;
+   }
+#endif
 
    MAX_DIM = dim;
    history **hist_simplex = (history **)malloc((dim-1)*sizeof(history *));
@@ -171,8 +182,7 @@ void ComputeSimplex(int deg, int dim)
 // Transformation to obtain the initial guess for quadrature over the
 // d-dimensional unit simplex. Later on, it computes tensor product of
 // (d-1)-dimensional CUBESIMPLEX and interval to obtain initial guess for quadrature
-// over d-dimensional CUBESIMPLEX. When Node Elimination for the dimensions
-// assigned by a user is finalized, the final quadrature and history are printed to results directory.
+// over d-dimensional CUBESIMPLEX.
 void ComputeCubeSimplex(int deg, int dim1, int dim2)
 {
    assert(deg > 0);
@@ -307,8 +317,7 @@ void ComputeCubeSimplex(int deg, int dim1, int dim2)
 // to obtain the initial guess for quadrature over the d-dimensional unit simplex.
 // When quadrature for dim1-dimensional simplex and dim2-dimensional simplices
 // are computed by Node Elimination, the tensor product of dim1 and dim2 simplices
-// is used as the final initial guess for SIMPLEXSIMPLEX. When Node Elimination for the dimensions assigned by a user
-// is finalized, the final quadrature and history are printed to results directory.
+// is used as the final initial guess for SIMPLEXSIMPLEX.
 void ComputeSimplexSimplex(int deg, int dim1, int dim2)
 {
    assert(deg > 0);

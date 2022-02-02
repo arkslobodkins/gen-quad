@@ -138,34 +138,23 @@ void VectorRemoveElement(int index, Vector *z)
 double V_ScaledTwoNorm(Vector z)
 {
    assert(z.len > 0);
-
-   double norm = 0.0;
-   for(int i = 0; i < z.len; ++i)
-      norm += z.id[i]*z.id[i];
-
-   return sqrt(norm/z.len);
+   int incz = 1;
+   return dnrm2_(&z.len, z.id, &incz)/sqrt(z.len);
 }
 
 double V_TwoNorm(Vector z)
 {
    assert(z.len > 0);
-
-   double norm = 0.0;
-   for(int i = 0; i < z.len; ++i)
-      norm += z.id[i]*z.id[i];
-
-   return sqrt(norm);
+   int incz = 1;
+   return dnrm2_(&z.len, z.id, &incz);
 }
 
 double V_InfNorm(Vector z)
 {
    assert(z.len > 0);
-
-   double norm = 0.0;
-   for(int i = 0; i < z.len; ++i)
-      norm = max_double(fabs(z.id[i]), norm);
-
-   return norm;
+   int incz = 1;
+   int maxIndex = idamax_(&z.len, z.id, &incz)-1; // subtract 1 (converting from FORTRAN)
+   return fabs(z.id[maxIndex]);
 }
 
 bool V_CheckNan(Vector z)
@@ -188,6 +177,12 @@ bool V_CheckInf(Vector z)
          return true;
 
    return false;
+}
+
+void double_dcopy(int n, double *x, double *y)
+{
+   int incx = 1, incy = 1;
+   dcopy_(&n, x, &incx, y, &incy);
 }
 
 

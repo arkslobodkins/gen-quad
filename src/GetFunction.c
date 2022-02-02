@@ -6,6 +6,7 @@
 #include "GetFunction.h"
 #include "Quadrature.h"
 #include "Basis.h"
+#include "Print.h"
 
 #include <assert.h>
 #include <stdlib.h>
@@ -64,6 +65,7 @@ void GetFunctionOmp(quadrature *q, Vector f)
 }
 #endif
 
+
 // Computes an evaluates function f = F(X)*W - b for Newton's method.
 void GetFunction(quadrature *q, Vector f)
 {
@@ -92,4 +94,14 @@ void GetFunction(quadrature *q, Vector f)
       Vector_daxpy(w[j], functions, f);
    }
    FUNCTION_TIME += get_cur_time() - time_start;
+}
+
+
+void TestResidual(quadrature *q, const char* str)
+{
+   Vector f = Vector_init(q->basis->numFuncs);
+   GetFunction(q, f);
+   double norm = V_InfNorm(f);
+   PrintDouble(norm, str);
+   Vector_free(f);
 }

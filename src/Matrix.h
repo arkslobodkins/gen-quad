@@ -17,6 +17,7 @@ typedef struct
    int len;
    double *id;
    double **rid;
+   Vector vecFormat;
 } RMatrix;
 
 typedef struct CMatrix

@@ -606,7 +606,7 @@ double QuadTestIntegral(const quadrature *q, BASIS_TYPE btype)
    }
 
    for(int j = 0; j < numFuncs; ++j) res_arr.id[j] = fabs(IQuad.id[j]-integrals.id[j]);
-   double res = V_ScaledTwoNorm(res_arr);
+   double res = V_InfNorm(res_arr);
 
    Vector_free(IQuad);
    Vector_free(res_arr);

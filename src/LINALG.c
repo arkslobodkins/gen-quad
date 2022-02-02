@@ -78,7 +78,7 @@ int DORGQR_LAPACK(CMatrix Q, Vector TAU)
    return INFO;
 }
 
-int DGESVD_LAPACK(CMatrix A, Vector *VMin)
+int DGESVD_LAPACK(CMatrix A, Vector VMin)
 {
    char JOBU  = 'N'; // U is not computed
    char JOBVT = 'S'; //  return MIN(M, N) rows of V^T, i.e. right singular vectors
@@ -103,8 +103,7 @@ int DGESVD_LAPACK(CMatrix A, Vector *VMin)
            SINGV.id, U, &LDU, VT.id, &LDVT,
            WORK.id, &LWORK, &INFO);
 //   printf("minimum singular value = %.12e\n", SINGV.id[MIN(M, N)-1]);
-   *VMin = Vector_init(VT.cols);
-   CMatrix_GetRow(MIN(M, N)-1, VT, *VMin); // get last row of VT;
+   CMatrix_GetRow(MIN(M, N)-1, VT, VMin); // get last row of VT;
 
    Vector_free(SINGV);
    Vector_free(WORK);

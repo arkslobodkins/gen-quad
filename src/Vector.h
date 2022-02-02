@@ -7,8 +7,11 @@
 extern "C" {
 #endif
 
+void dcopy_(int *N, double *DX, int *INCX, double *DY, int *INCY);
 void dscal_(int *n, double *c, double *x, int *incx);
 void daxpy_(int *n, double *c, double *x, int *incx, double *y, int *incy);
+double dnrm2_(int *n, double *x, int *incx);
+int idamax_(int *n, double *x, int *incx);
 
 typedef struct
 {
@@ -16,7 +19,6 @@ typedef struct
    double **ompId;
    int len;
 } Vector;
-
 typedef struct
 {
    int min_index;
@@ -45,6 +47,7 @@ double V_TwoNorm(Vector z);
 double V_InfNorm(Vector z);
 bool V_CheckNan(Vector z);
 bool V_CheckInf(Vector z);
+void double_dcopy(int n, double *x, double *y);
 
 #ifdef __cplusplus
 }

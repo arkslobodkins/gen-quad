@@ -9,6 +9,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define id2(i, j, N) (i)*(N)+(j)
+
 static void BasisIndices(int deg, int dim, INT_8 *f);
 static int BasisSize(int deg, int dim);
 
@@ -47,8 +49,6 @@ Basis* BasisInit(void *params, BasisInterface *interface)
 
    int numFuncs = basis->numFuncs;
    int dim = basis->dim;
-   basis->indices = (INT_8 *) malloc(numFuncs*dim*sizeof(INT_8));
-   BasisIndices(basis->deg, basis->dim, basis->indices);
    basis->functions   = Vector_init(numFuncs);
    basis->derivatives = Vector_init(numFuncs*dim);
    basis->integrals   = Vector_init(numFuncs);
@@ -83,10 +83,6 @@ void BasisFree(Basis *basis)
    Vector_free(basis->integrals);
    Vector_free(basis->derivatives);
    Vector_free(basis->functions);
-   if(basis->indices) {
-      free(basis->indices);
-      basis->indices = NULL;
-   }
 
    basis->interface->basisFree(basis);
    if(interface) {
@@ -140,6 +136,8 @@ CubeBasis* CubeBasisInit(CubeParams *cubeParams)
    basis->dim         = dim;
    basis->numFuncs    = BasisSize(deg, dim);
    basis->addData     = NULL;
+   basis->indices = (INT_8 *) malloc(basis->numFuncs*dim*sizeof(INT_8));
+   BasisIndices(basis->deg, basis->dim, basis->indices);
    return basis;
 }
 
@@ -152,13 +150,34 @@ void ComputeCubeBasisFuncs(CubeBasis *basis, const double *x, Vector v)
    INT_8 *basisId = basis->indices;
    double *phi    = v.id;
 
-   for(int k = 0; k < numFuncs; ++k) phi[k] = 1.0;
+   const int rmIndex = 4*(numFuncs/4);
 
-   for(int d = 0; d < dim; ++d) {
+   double legendre[deg+1];
+   LegendrePoly(deg+1, 2*x[0]-1, legendre);
+   for(int k = 0; k < numFuncs/4; ++k)
+   {
+      phi[4*k] = legendre[basisId[4*k*dim]];
+      phi[4*k+1] = legendre[basisId[(4*k+1)*dim]];
+      phi[4*k+2] = legendre[basisId[(4*k+2)*dim]];
+      phi[4*k+3] = legendre[basisId[(4*k+3)*dim]];
+   }
+   for(int k = 0; k < numFuncs%4; ++k)
+      phi[rmIndex+k] = legendre[basisId[(rmIndex+k)*dim]];
+
+
+   for(int d = 1; d < dim; ++d)
+   {
       double legendre[deg+1];
       LegendrePoly(deg+1, 2*x[d]-1, legendre);
-      for(int k = 0; k < numFuncs; ++k)
-         phi[k] *= legendre[basisId[k*dim+d]];
+      for(int k = 0; k < numFuncs/4; ++k)
+      {
+         phi[4*k] *= legendre[basisId[4*k*dim+d]];
+         phi[4*k+1] *= legendre[basisId[(4*k+1)*dim+d]];
+         phi[4*k+2] *= legendre[basisId[(4*k+2)*dim+d]];
+         phi[4*k+3] *= legendre[basisId[(4*k+3)*dim+d]];
+      }
+      for(int k = 0; k < numFuncs%4; ++k)
+         phi[rmIndex+k] *= legendre[basisId[(rmIndex+k)*dim+d]];
    }
 }
 
@@ -241,6 +260,10 @@ void CubeBasisFree(CubeBasis *basis)
       free(basis->addData);
       basis->addData = NULL;
    }
+   if(basis->indices) {
+      free(basis->indices);
+      basis->indices = NULL;
+   }
    free(basis); basis = NULL;
 }
 
@@ -274,13 +297,26 @@ SimplexBasis* SimplexBasisInit(SimplexParams *simplexParams)
    basis->dim          = dim;
    basis->numFuncs     = BasisSize(deg, dim);
 
+   basis->indices = (INT_8 *) malloc(basis->numFuncs*dim*sizeof(INT_8));
+   BasisIndices(basis->deg, basis->dim, basis->indices);
+
    basis->addData = (AddDataSimplex *)malloc(sizeof(AddDataSimplex));
    int numFuncs = basis->numFuncs;
    AddDataSimplex *addData = basis->addData;
-   addData->phi_backw2 = Vector_init(numFuncs);
    addData->phi_backw1 = Vector_init(numFuncs);
    addData->phi_forw1  = Vector_init(numFuncs);
-   addData->phi_forw2  = Vector_init(numFuncs);
+
+   addData->xPower  = (int *)malloc(dim*numFuncs*sizeof(int));
+   addData->xFactor = RMatrix_init(dim, numFuncs);
+
+   int* xPower = addData->xPower;
+   for(int d = 0; d < dim; ++d)
+      for(int k = 0; k < numFuncs; ++k)
+         xPower[id2(d, k, numFuncs)] = 0.0;
+   for(int d = 1; d < dim; ++d)
+      for(int k = 0; k < numFuncs; ++k)
+         for(int i = 0; i < d; ++i)
+            xPower[id2(d, k, numFuncs)] += basis->indices[k*dim+i];
 
    basis->table = Table3dCreate(deg, dim);
    ComputeTable(basis->table);
@@ -317,19 +353,38 @@ void SimplexBasisFuncs(SimplexBasis *basis, const double *x, Vector v)
       }
    }
 
+   const int rmIndex = 4*(numFuncs/4);
    double *phi = v.id;
-   for(int k = 0; k < numFuncs; ++k) phi[k] = legendre[basisId[k*dim]];
+   for(int k = 0; k < numFuncs/4; ++k)
+   {
+      phi[4*k] = legendre[basisId[4*k*dim]];
+      phi[4*k+1] = legendre[basisId[(4*k+1)*dim]];
+      phi[4*k+2] = legendre[basisId[(4*k+2)*dim]];
+      phi[4*k+3] = legendre[basisId[(4*k+3)*dim]];
+   }
+   for(int k = 0; k < numFuncs%4; ++k)
+      phi[rmIndex+k] = legendre[basisId[(rmIndex+k)*dim]];
+
+   RMatrix xFactor = basis->addData->xFactor;
+   int* xPower = basis->addData->xPower;
+   for(int d = 1; d < dim; ++d)
+      for(int k = 0; k < numFuncs; ++k)
+            xFactor.rid[d][k] = DoubleIntPower(xCoord[d-1], xPower[id2(d, k, numFuncs)]);
+
    for(int d = 1; d < dim; ++d)
    {
-      double coordLoc = xCoord[d-1];
-      for(int k = 0; k < numFuncs; ++k)
+      int nextDim = (deg+1)*deg*(d-1);
+      for(int k = 0; k < numFuncs/4; ++k)
       {
-         const INT_8 *index = &basisId[k*dim];
-         int xPower = 0; for(int i = 0; i < d; ++i) xPower += *(index+i);
-         double xFactor = DoubleIntPower(coordLoc, xPower);
-         double phiTemp = jacobi[*(index+d) + degPlus1*(d-1)*deg + degPlus1*xPower] * xFactor;
-         phi[k] *= phiTemp;
+         phi[4*k]   *= jacobi[basisId[4*k*dim+d] + nextDim + (deg+1)*xPower[id2(d, 4*k, numFuncs)]] * xFactor.rid[d][4*k];
+         phi[4*k+1] *= jacobi[basisId[(4*k+1)*dim+d] + nextDim + (deg+1)*xPower[id2(d, 4*k+1, numFuncs)]] * xFactor.rid[d][4*k+1];
+         phi[4*k+2] *= jacobi[basisId[(4*k+2)*dim+d] + nextDim + (deg+1)*xPower[id2(d, 4*k+2, numFuncs)]] * xFactor.rid[d][4*k+2];
+         phi[4*k+3] *= jacobi[basisId[(4*k+3)*dim+d] + nextDim + (deg+1)*xPower[id2(d, 4*k+3, numFuncs)]] * xFactor.rid[d][4*k+3];
       }
+      for(int k = 0; k < numFuncs%4; ++k)
+         phi[rmIndex+k]   *= jacobi[ basisId[(rmIndex+k)*dim+d] + nextDim +
+                                    (deg+1)*xPower[id2(d, rmIndex+k, numFuncs)] ] *
+                                    xFactor.rid[d][rmIndex+k];
    }
 }
 
@@ -338,41 +393,31 @@ void SimplexBasisDer(SimplexBasis *basis, const double *x, Vector v)
 {
    int dim = basis->params->dim;
    int numFuncs = basis->numFuncs;
-   double h = POW_DOUBLE(10, -5)*5.0;
+   double h = POW_DOUBLE(10, -6);
 
    double x_backw1[dim];
-   double x_backw2[dim];
    double x_forw1[dim];
-   double x_forw2[dim];
 
    double *basisDer = v.id;
-   Vector phi_backw2 = basis->addData->phi_backw2;
    Vector phi_backw1 = basis->addData->phi_backw1;
    Vector phi_forw1  = basis->addData->phi_forw1;
-   Vector phi_forw2  = basis->addData->phi_forw2;
 
    for(int d = 0; d < dim; ++d)
    {
       for(int d_t = 0; d_t < dim; ++d_t)
       {
          x_backw1[d_t] = x[d_t];
-         x_backw2[d_t] = x[d_t];
          x_forw1[d_t]  = x[d_t];
-         x_forw2[d_t]  = x[d_t];
       }
-      x_backw2[d] = x_backw2[d] - 2.0*h;
       x_backw1[d] = x_backw1[d] - h;
       x_forw1[d]  = x_forw1[d] + h;
-      x_forw2[d]  = x_forw2[d] + 2.0*h;
 
-      SimplexBasisFuncs(basis, x_backw2, phi_backw2);
       SimplexBasisFuncs(basis, x_backw1, phi_backw1);
       SimplexBasisFuncs(basis, x_forw1, phi_forw1);
-      SimplexBasisFuncs(basis, x_forw2, phi_forw2);
       for(int k = 0; k < numFuncs; ++k)
-         basisDer[d*numFuncs+k] = ( 1.0/12.0*phi_backw2.id[k] - 2.0/3.0*phi_backw1.id[k] +
-                                    2.0/3.0*phi_forw1.id[k]-1.0/12.0*phi_forw2.id[k] ) / h;
+         basisDer[d*numFuncs+k] = phi_forw1.id[k] - phi_backw1.id[k];
    }
+   VectorScale(1.0/(2.0*h), v);
 }
 
 
@@ -417,17 +462,21 @@ void SimplexBasisFree(SimplexBasis *basis)
    if(basis == NULL) return;
 
    Vector_free(basis->addData->phi_backw1);
-   Vector_free(basis->addData->phi_backw2);
    Vector_free(basis->addData->phi_forw1);
-   Vector_free(basis->addData->phi_forw2);
    Table3dFree(basis->table);
    if(basis->params) {
       free(basis->params);
       basis->params = NULL;
    }
    if(basis->addData) {
+      RMatrix_free(basis->addData->xFactor);
+      free(basis->addData->xPower);
       free(basis->addData);
       basis->addData = NULL;
+   }
+   if(basis->indices) {
+      free(basis->indices);
+      basis->indices = NULL;
    }
    free(basis); basis = NULL;
 }
@@ -465,13 +514,14 @@ CubeSimplexBasis* CubeSimplexBasisInit(CubeSimplexParams *csParams)
    basis->dim                 = dim;
    basis->numFuncs            = BasisSize(deg, dim);
 
+   basis->indices = (INT_8 *) malloc(basis->numFuncs*dim*sizeof(INT_8));
+   BasisIndices(basis->deg, basis->dim, basis->indices);
+
    basis->addData = (AddDataCubeSimplex *)malloc(sizeof(AddDataCubeSimplex));
    int numFuncs = basis->numFuncs;
    AddDataCubeSimplex *addData = basis->addData;
-   addData->phi_backw2 = Vector_init(numFuncs);
    addData->phi_backw1 = Vector_init(numFuncs);
    addData->phi_forw1  = Vector_init(numFuncs);
-   addData->phi_forw2  = Vector_init(numFuncs);
    addData->basis_polytopic = Vector_init(numFuncs);
 
    return basis;
@@ -525,7 +575,8 @@ void CubeSimplexBasisDer(CubeSimplexBasis *basis, const double *x, Vector v)
 
    for(int d = 0; d < dim; ++d)
    {
-      for(int j = 0; j < dim1; ++j) {
+      for(int j = 0; j < dim1; ++j)
+      {
          if(j != d)
             for(int k = 0; k < numFuncs; ++k)
                phiPrime[k+d*numFuncs] *= legendre[basisId[k*dim+j]+degPlus1*j];
@@ -535,15 +586,12 @@ void CubeSimplexBasisDer(CubeSimplexBasis *basis, const double *x, Vector v)
       }
    }
 
-   double h = POW_DOUBLE(10, -5)*5.0;
+   double h = POW_DOUBLE(10, -6);
+   double diffFact = 1.0/(2.0*h);
    double x_backw1[dim];
-   double x_backw2[dim];
    double x_forw1[dim];
-   double x_forw2[dim];
-   Vector phi_backw2 = basis->addData->phi_backw2;
    Vector phi_backw1 = basis->addData->phi_backw1;
    Vector phi_forw1  = basis->addData->phi_forw1;
-   Vector phi_forw2  = basis->addData->phi_forw2;
    Vector basis_polytopic = basis->addData->basis_polytopic;
 
    SimplexFuncsPolytopicTwo((MixedPolytopeBasis *)basis, x, basis_polytopic);
@@ -557,23 +605,16 @@ void CubeSimplexBasisDer(CubeSimplexBasis *basis, const double *x, Vector v)
       for(int d_t = 0; d_t < dim; ++d_t)
       {
          x_backw1[d_t] = x[d_t];
-         x_backw2[d_t] = x[d_t];
          x_forw1[d_t]  = x[d_t];
-         x_forw2[d_t]  = x[d_t];
       }
-      x_backw2[d+dim1] = x_backw2[d+dim1] - 2.0*h;
       x_backw1[d+dim1] = x_backw1[d+dim1] - h;
       x_forw1[d+dim1]  = x_forw1[d+dim1] + h;
-      x_forw2[d+dim1]  = x_forw2[d+dim1] + 2.0*h;
 
       SimplexFuncsPolytopicTwo((MixedPolytopeBasis *)basis, x_backw1, phi_backw1);
-      SimplexFuncsPolytopicTwo((MixedPolytopeBasis *)basis, x_backw2, phi_backw2);
       SimplexFuncsPolytopicTwo((MixedPolytopeBasis *)basis, x_forw1, phi_forw1);
-      SimplexFuncsPolytopicTwo((MixedPolytopeBasis *)basis, x_forw2, phi_forw2);
 
       for(int k = 0; k < numFuncs; ++k)
-         phiPrime[(d+dim1)*numFuncs+k] *= ( 1.0/12.0*phi_backw2.id[k] - 2.0/3.0*phi_backw1.id[k] +
-                                            2.0/3.0*phi_forw1.id[k] - 1.0/12.0*phi_forw2.id[k] ) / h;
+         phiPrime[(d+dim1)*numFuncs+k] *= (phi_forw1.id[k] - phi_backw1.id[k])*diffFact;
    }
 }
 
@@ -615,9 +656,7 @@ void CubeSimplexBasisFree(CubeSimplexBasis *basis)
 
    Vector_free(basis->addData->basis_polytopic);
    Vector_free(basis->addData->phi_backw1);
-   Vector_free(basis->addData->phi_backw2);
    Vector_free(basis->addData->phi_forw1);
-   Vector_free(basis->addData->phi_forw2);
    if(basis->params) {
       free(basis->params);
       basis->params = NULL;
@@ -625,6 +664,10 @@ void CubeSimplexBasisFree(CubeSimplexBasis *basis)
    if(basis->addData) {
       free(basis->addData);
       basis->addData = NULL;
+   }
+   if(basis->indices) {
+      free(basis->indices);
+      basis->indices = NULL;
    }
    free(basis); basis = NULL;
 }
@@ -662,13 +705,14 @@ SimplexSimplexBasis* SimplexSimplexBasisInit(SimplexSimplexParams *ssParams)
    basis->dim                 = dim;
    basis->numFuncs            = BasisSize(deg, dim);
 
+   basis->indices = (INT_8 *) malloc(basis->numFuncs*dim*sizeof(INT_8));
+   BasisIndices(basis->deg, basis->dim, basis->indices);
+
    basis->addData = (AddDataSimplexSimplex *)malloc(sizeof(AddDataSimplexSimplex));
    int numFuncs = basis->numFuncs;
    AddDataSimplexSimplex *addData = basis->addData;
-   addData->phi_backw2 = Vector_init(numFuncs);
    addData->phi_backw1 = Vector_init(numFuncs);
    addData->phi_forw1  = Vector_init(numFuncs);
-   addData->phi_forw2  = Vector_init(numFuncs);
    addData->basis_polytopic = Vector_init(numFuncs);
 
    return basis;
@@ -701,17 +745,14 @@ void SimplexSimplexBasisDer(SimplexSimplexBasis *basis, const double *x, Vector 
    int numFuncs      = basis->numFuncs;
    Vector phiPrime   = v;
 
-   double h = POW_DOUBLE(10, -5)*5.0;
-   Vector phi_backw2 = basis->addData->phi_backw2;
+   double h = POW_DOUBLE(10, -6)*5.0;
+   double diffFact = 1.0/(2.0*h);
    Vector phi_backw1 = basis->addData->phi_backw1;
    Vector phi_forw1  = basis->addData->phi_forw1;
-   Vector phi_forw2  = basis->addData->phi_forw2;
    Vector basis_polytopic = basis->addData->basis_polytopic;
 
    double x_backw1[dim];
-   double x_backw2[dim];
    double x_forw1[dim];
-   double x_forw2[dim];
 
    for(int k = 0; k < phiPrime.len; ++k) phiPrime.id[k] = 1.0;
    SimplexFuncsPolytopicTwo((MixedPolytopeBasis *)basis, x, basis_polytopic);
@@ -727,48 +768,36 @@ void SimplexSimplexBasisDer(SimplexSimplexBasis *basis, const double *x, Vector 
 
    for(int d = 0; d < dim2; ++d)
    {
-      for(int d_t = 0; d_t < dim; ++d_t) {
+      for(int d_t = 0; d_t < dim; ++d_t)
+      {
          x_backw1[d_t] = x[d_t];
-         x_backw2[d_t] = x[d_t];
          x_forw1[d_t]  = x[d_t];
-         x_forw2[d_t]  = x[d_t];
       }
-      x_backw2[d+dim1] = x_backw2[d+dim1] - 2.0*h;
       x_backw1[d+dim1] = x_backw1[d+dim1] - h;
       x_forw1[d+dim1]  = x_forw1[d+dim1] + h;
-      x_forw2[d+dim1]  = x_forw2[d+dim1] + 2.0*h;
 
       SimplexFuncsPolytopicTwo((MixedPolytopeBasis *)basis, x_backw1, phi_backw1);
-      SimplexFuncsPolytopicTwo((MixedPolytopeBasis *)basis, x_backw2, phi_backw2);
       SimplexFuncsPolytopicTwo((MixedPolytopeBasis *)basis, x_forw1, phi_forw1);
-      SimplexFuncsPolytopicTwo((MixedPolytopeBasis *)basis, x_forw2, phi_forw2);
 
       for(int k = 0; k < numFuncs; ++k)
-         phiPrime.id[(d+dim1)*numFuncs+k] *= ( 1.0/12.0*phi_backw2.id[k] - 2.0/3.0*phi_backw1.id[k] +
-                                               2.0/3.0*phi_forw1.id[k] - 1.0/12.0*phi_forw2.id[k] ) / h;
+         phiPrime.id[(d+dim1)*numFuncs+k] *= ( phi_forw1.id[k] - phi_backw1.id[k] ) * diffFact;
    }
 
    for(int d = 0; d < dim1; ++d)
    {
-      for(int d_t = 0; d_t < dim; ++d_t) {
+      for(int d_t = 0; d_t < dim; ++d_t)
+      {
          x_backw1[d_t] = x[d_t];
-         x_backw2[d_t] = x[d_t];
          x_forw1[d_t] = x[d_t];
-         x_forw2[d_t] = x[d_t];
       }
-      x_backw2[d] = x_backw2[d] - 2.0*h;
       x_backw1[d] = x_backw1[d] - h;
       x_forw1[d] = x_forw1[d] + h;
-      x_forw2[d] = x_forw2[d] + 2.0*h;
 
       SimplexFuncsPolytopicOne((MixedPolytopeBasis *)basis, x_backw1, phi_backw1);
-      SimplexFuncsPolytopicOne((MixedPolytopeBasis *)basis, x_backw2, phi_backw2);
       SimplexFuncsPolytopicOne((MixedPolytopeBasis *)basis, x_forw1, phi_forw1);
-      SimplexFuncsPolytopicOne((MixedPolytopeBasis *)basis, x_forw2, phi_forw2);
 
       for(int k = 0; k < numFuncs; ++k)
-         phiPrime.id[d*numFuncs+k] *= ( 1.0/12.0*phi_backw2.id[k] - 2.0/3.0*phi_backw1.id[k] +
-                                        2.0/3.0*phi_forw1.id[k] -1.0/12.0*phi_forw2.id[k] ) / h;
+         phiPrime.id[(d*numFuncs+k)] *= ( phi_forw1.id[k] - phi_backw1.id[k] ) * diffFact;
    }
 }
 
@@ -814,9 +843,7 @@ void SimplexSimplexBasisFree(SimplexSimplexBasis *basis)
 
    Vector_free(basis->addData->basis_polytopic);
    Vector_free(basis->addData->phi_backw1);
-   Vector_free(basis->addData->phi_backw2);
    Vector_free(basis->addData->phi_forw1);
-   Vector_free(basis->addData->phi_forw2);
    if(basis->params) {
       free(basis->params);
       basis->params = NULL;
@@ -824,6 +851,10 @@ void SimplexSimplexBasisFree(SimplexSimplexBasis *basis)
    if(basis->addData) {
       free(basis->addData);
       basis->addData = NULL;
+   }
+   if(basis->indices) {
+      free(basis->indices);
+      basis->indices = NULL;
    }
    free(basis); basis = NULL;
 }
@@ -1148,7 +1179,7 @@ static int BasisSize(int deg, int dim)
 }
 
 
-void orthogonal_cube_basis_test(int deg, int dim)
+double orthogonal_cube_basis_test(int deg, int dim)
 {
    int numFuncs = BasisSize(deg, dim);
    int n = ceil( (deg+1)/2.0 )+1; // make n large enough to get exact quadrature
@@ -1182,10 +1213,12 @@ void orthogonal_cube_basis_test(int deg, int dim)
    free(quad_integrals); quad_integrals = NULL;
    quadrature_free(quad_1D);
    quadrature_free(quad_C);
+
+   return max_res;
 }
 
 
-void orthogonal_simplex_basis_test(int deg, int dim)
+double orthogonal_simplex_basis_test(int deg, int dim)
 {
    int numFuncs = BasisSize(deg, dim);
    int n = ceil( (deg+dim)/2.0 )+2; // make n large enough to get exact quadrature
@@ -1220,6 +1253,7 @@ void orthogonal_simplex_basis_test(int deg, int dim)
    free(quad_integrals); quad_integrals = NULL;
    quadrature_free(quad_1D);
    quadrature_free(quad_S);
+   return max_res;
 }
 
 
