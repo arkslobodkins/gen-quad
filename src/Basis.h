@@ -102,11 +102,16 @@ void BasisIntegralsMonomial(Basis *basis, Vector v);
 void BasisMonomial(Basis *basis, const double *x, Vector phi);
 void BasisFree(Basis *basis);
 
+typedef struct
+{
+   INT_8 *idMap;
+} AddDataCube;
+
 struct CubeBasis
 {
    const BasisInterface *interface;
    CubeParams *params;
-   long double *addData;
+   AddDataCube *addData;
    int deg;
    int dim;
    int numFuncs;
@@ -123,6 +128,7 @@ typedef struct
    Vector phi_forw1;
    int* xPower;
    RMatrix xFactor;
+   INT_8 *idMap;
 } AddDataSimplex;
 
 struct SimplexBasis
@@ -147,7 +153,6 @@ typedef struct
    Vector phi_forw1;
 } AddDataCubeSimplex;
 
-
 struct CubeSimplexBasis
 {
    const BasisInterface *interface;
@@ -169,7 +174,6 @@ typedef struct
    Vector phi_backw1;
    Vector phi_forw1;
 } AddDataSimplexSimplex;
-
 
 struct SimplexSimplexBasis
 {
@@ -200,7 +204,6 @@ struct MixedPolytopeBasis
    Vector integrals;
    Table3d table;
 };
-
 
 CubeBasis* CubeBasisInit(CubeParams *params);
 void ComputeCubeBasisFuncs(CubeBasis *basis, const double *x, Vector v);
@@ -235,6 +238,7 @@ void SimplexFuncsPolytopicTwo(MixedPolytopeBasis *basis, const double *x, Vector
 
 double orthogonal_simplex_basis_test(int deg, int dim);
 double orthogonal_cube_basis_test(int deg, int dim);
+void PrintBasisIndices(Basis *basis);
 
 #ifdef __cplusplus
 }

@@ -134,7 +134,7 @@ bool LeastSquaresNewton(const bool_enum CONSTR_OPT, quadrature *q_orig, int *its
       {
          // Constrained optimization part 1: project onto the boundary
          int P_FLAG = ConstrainedProjection(q_prev, q_next);
-         if(P_FLAG != CONSTR_SUCCESS) {
+         if(P_FLAG < 0) {
             COND_PRINT_ERR(P_FLAG);
             SOL_FLAG = SOL_NOT_FOUND;
             goto FREERETURN;

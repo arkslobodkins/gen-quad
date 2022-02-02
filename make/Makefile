@@ -4,7 +4,7 @@ VERSION = -std=c11
 #uncomment "-DQUAD_DEBUG_OFF"   to disable debug mode
 #uncomment "-NDEBUG"            to disable assert statements
 #comment out -fopenmp           to disable OpenMP parallelism
-CFLAGS=-g  -Wall -fopenmp -O3    \
+CFLAGS=-g  -Wall -fopenmp -O3 -fsanitize=address    \
       #-DQUAD_DEBUG_OFF          \
       #-DNDEBUG
 

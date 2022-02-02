@@ -136,8 +136,18 @@ CubeBasis* CubeBasisInit(CubeParams *cubeParams)
    basis->dim         = dim;
    basis->numFuncs    = BasisSize(deg, dim);
    basis->addData     = NULL;
-   basis->indices = (INT_8 *) malloc(basis->numFuncs*dim*sizeof(INT_8));
+
+   int numFuncs = basis->numFuncs;
+   basis->indices = (INT_8 *) malloc(numFuncs*dim*sizeof(INT_8));
    BasisIndices(basis->deg, basis->dim, basis->indices);
+
+   basis->addData = (AddDataCube *)malloc(sizeof(AddDataCube));
+   basis->addData->idMap = (INT_8 *)malloc(dim*numFuncs*sizeof(INT_8));
+   INT_8 *idMap = basis->addData->idMap;
+   INT_8 *idBasis = basis->indices;
+   for(int i = 0; i < numFuncs; ++i)
+      for(int j = 0; j < dim; ++j)
+         idMap[(id2(j, i, numFuncs))] = idBasis[id2(i, j, dim)];
    return basis;
 }
 
@@ -147,37 +157,36 @@ void ComputeCubeBasisFuncs(CubeBasis *basis, const double *x, Vector v)
    int deg        = basis->deg;
    int dim        = basis->dim;
    int numFuncs   = basis->numFuncs;
-   INT_8 *basisId = basis->indices;
+   INT_8 *idMap   = basis->addData->idMap;
    double *phi    = v.id;
 
    const int rmIndex = 4*(numFuncs/4);
 
    double legendre[deg+1];
    LegendrePoly(deg+1, 2*x[0]-1, legendre);
-   for(int k = 0; k < numFuncs/4; ++k)
-   {
-      phi[4*k] = legendre[basisId[4*k*dim]];
-      phi[4*k+1] = legendre[basisId[(4*k+1)*dim]];
-      phi[4*k+2] = legendre[basisId[(4*k+2)*dim]];
-      phi[4*k+3] = legendre[basisId[(4*k+3)*dim]];
+   for(int k = 0; k < numFuncs/4; ++k) {
+      phi[4*k]   = legendre[idMap[4*k]];
+      phi[4*k+1] = legendre[idMap[4*k+1]];
+      phi[4*k+2] = legendre[idMap[4*k+2]];
+      phi[4*k+3] = legendre[idMap[4*k+3]];
    }
    for(int k = 0; k < numFuncs%4; ++k)
-      phi[rmIndex+k] = legendre[basisId[(rmIndex+k)*dim]];
-
+      phi[rmIndex+k] = legendre[idMap[rmIndex+k]];
 
    for(int d = 1; d < dim; ++d)
    {
       double legendre[deg+1];
       LegendrePoly(deg+1, 2*x[d]-1, legendre);
+      int nextDim = d*numFuncs;
       for(int k = 0; k < numFuncs/4; ++k)
       {
-         phi[4*k] *= legendre[basisId[4*k*dim+d]];
-         phi[4*k+1] *= legendre[basisId[(4*k+1)*dim+d]];
-         phi[4*k+2] *= legendre[basisId[(4*k+2)*dim+d]];
-         phi[4*k+3] *= legendre[basisId[(4*k+3)*dim+d]];
+         phi[4*k]   *= legendre[idMap[nextDim+4*k]];
+         phi[4*k+1] *= legendre[idMap[nextDim+4*k+1]];
+         phi[4*k+2] *= legendre[idMap[nextDim+4*k+2]];
+         phi[4*k+3] *= legendre[idMap[nextDim+4*k+3]];
       }
       for(int k = 0; k < numFuncs%4; ++k)
-         phi[rmIndex+k] *= legendre[basisId[(rmIndex+k)*dim+d]];
+         phi[rmIndex+k] *= legendre[idMap[nextDim+rmIndex+k]];
    }
 }
 
@@ -187,36 +196,58 @@ void ComputeCubeBasisDer(CubeBasis *basis, const double *x, Vector v)
    int deg          = basis->deg;
    int dim          = basis->dim;
    int numFuncs     = basis->numFuncs;
-   int degPlus1     = deg+1;
-   INT_8 *basisId   = basis->indices;
+   INT_8 *idMap   = basis->addData->idMap;
    double *phiPrime = v.id;
 
-   double legendre[degPlus1*dim];
-   double dxlegendre[degPlus1*dim];
+   double legendre[(deg+1)*dim];
+   double dxlegendre[(deg+1)*dim];
 
    for(int d = 0; d < dim; ++d)
-      LegendrePolyAndPrime(degPlus1, 2*x[d]-1, &legendre[d*degPlus1], &dxlegendre[d*degPlus1]);
+      LegendrePolyAndPrime(deg+1, 2*x[d]-1, &legendre[d*(deg+1)], &dxlegendre[d*(deg+1)]);
 
-   for(int k = 0; k < numFuncs*dim; ++k) phiPrime[k] = 1.0;
+   #pragma omp simd simdlen(4)
+   for(int k = 0; k < numFuncs*dim; ++k)
+      phiPrime[k] = 1.0;
 
    for(int d = 0; d < dim; ++d)
    {
       // dimension < d
       for(int j = 0; j < d; ++j) {
-         double *legendre_ptr = &legendre[degPlus1*j];
-         for(int k = 0; k < numFuncs; ++k)
-            phiPrime[d*numFuncs+k] *= legendre_ptr[basisId[dim*k+j]];
+         double *legendre_ptr = &legendre[(deg+1)*j];
+         for(int k = 0; k < numFuncs/4; k++)
+         {
+            phiPrime[d*numFuncs+4*k]   *= legendre_ptr[idMap[j*numFuncs+4*k]];
+            phiPrime[d*numFuncs+4*k+1] *= legendre_ptr[idMap[j*numFuncs+4*k+1]];
+            phiPrime[d*numFuncs+4*k+2] *= legendre_ptr[idMap[j*numFuncs+4*k+2]];
+            phiPrime[d*numFuncs+4*k+3] *= legendre_ptr[idMap[j*numFuncs+4*k+3]];
+         }
+         for(int k = 0; k < numFuncs%4; k++)
+            phiPrime[d*numFuncs+4*(numFuncs/4)+k] *= legendre_ptr[idMap[j*numFuncs+4*(numFuncs/4)+k]];
       }
       // dimension = d
-      double *dxlegendre_ptr = &dxlegendre[degPlus1*d];
-      for(int k = 0; k < numFuncs; ++k)
-         phiPrime[d*numFuncs+k] *= 2.0 * dxlegendre_ptr[basisId[dim*k+d]];
+      double *dxlegendre_ptr = &dxlegendre[(deg+1)*d];
+      for(int k = 0; k < numFuncs/4; ++k)
+      {
+         phiPrime[d*numFuncs+4*k]   *= 2.0 * dxlegendre_ptr[idMap[d*numFuncs+4*k]];
+         phiPrime[d*numFuncs+4*k+1] *= 2.0 * dxlegendre_ptr[idMap[d*numFuncs+4*k+1]];
+         phiPrime[d*numFuncs+4*k+2] *= 2.0 * dxlegendre_ptr[idMap[d*numFuncs+4*k+2]];
+         phiPrime[d*numFuncs+4*k+3] *= 2.0 * dxlegendre_ptr[idMap[d*numFuncs+4*k+3]];
+      }
+      for(int k = 0; k < numFuncs%4; k++)
+         phiPrime[d*numFuncs+4*(numFuncs/4)+k] *= 2.0 * dxlegendre_ptr[idMap[d*numFuncs+4*(numFuncs/4)+k]];
 
       // dimension > d
       for(int j = d+1; j < dim; ++j) {
-         double *legendre_ptr = &legendre[degPlus1*j];
-         for(int k = 0; k < numFuncs; ++k)
-            phiPrime[d*numFuncs+k] *= legendre_ptr[basisId[dim*k+j]];
+         double *legendre_ptr = &legendre[(deg+1)*j];
+         for(int k = 0; k < numFuncs/4; k++)
+         {
+            phiPrime[d*numFuncs+4*k]   *= legendre_ptr[idMap[j*numFuncs+4*k]];
+            phiPrime[d*numFuncs+4*k+1] *= legendre_ptr[idMap[j*numFuncs+4*k+1]];
+            phiPrime[d*numFuncs+4*k+2] *= legendre_ptr[idMap[j*numFuncs+4*k+2]];
+            phiPrime[d*numFuncs+4*k+3] *= legendre_ptr[idMap[j*numFuncs+4*k+3]];
+         }
+         for(int k = 0; k < numFuncs%4; k++)
+            phiPrime[d*numFuncs+4*(numFuncs/4)+k] *= legendre_ptr[idMap[j*numFuncs+4*(numFuncs/4)+k]];
       }
    }
 }
@@ -257,6 +288,7 @@ void CubeBasisFree(CubeBasis *basis)
       basis->params = NULL;
    }
    if(basis->addData) {
+      free(basis->addData->idMap);
       free(basis->addData);
       basis->addData = NULL;
    }
@@ -303,6 +335,15 @@ SimplexBasis* SimplexBasisInit(SimplexParams *simplexParams)
    basis->addData = (AddDataSimplex *)malloc(sizeof(AddDataSimplex));
    int numFuncs = basis->numFuncs;
    AddDataSimplex *addData = basis->addData;
+
+   addData->idMap = (INT_8 *)malloc(dim*numFuncs*sizeof(INT_8));
+   INT_8 *idMap   = addData->idMap;
+   INT_8 *idBasis = basis->indices;
+   for(int i = 0; i < numFuncs; ++i)
+      for(int j = 0; j < dim; ++j)
+         idMap[id2(j, i, numFuncs)] = idBasis[id2(i, j, dim)];
+
+
    addData->phi_backw1 = Vector_init(numFuncs);
    addData->phi_forw1  = Vector_init(numFuncs);
 
@@ -318,6 +359,7 @@ SimplexBasis* SimplexBasisInit(SimplexParams *simplexParams)
          for(int i = 0; i < d; ++i)
             xPower[id2(d, k, numFuncs)] += basis->indices[k*dim+i];
 
+
    basis->table = Table3dCreate(deg, dim);
    ComputeTable(basis->table);
    return basis;
@@ -329,13 +371,13 @@ void SimplexBasisFuncs(SimplexBasis *basis, const double *x, Vector v)
    int deg        = basis->deg;
    int dim        = basis->dim;
    int numFuncs   = basis->numFuncs;
-   int degPlus1   = deg+1;
-   double legendre[degPlus1];
-   double jacobi[SQUARE(degPlus1)*(dim-1)];
+   double legendre[(deg+1)];
+   double jacobi[SQUARE(deg+1)*(dim-1)];
 
-   INT_8 *basisId = basis->indices;
+   INT_8 *idMap       = basis->addData->idMap;
+   INT_8 *basisId       = basis->indices;
 
-   LegendrePoly(degPlus1, (2.0*x[dim-1]-x[dim-2])/x[dim-2], legendre);
+   LegendrePoly(deg+1, (2.0*x[dim-1]-x[dim-2])/x[dim-2], legendre);
    double xCoord[dim-1];
    for(int d = 0; d < dim-2; ++d) xCoord[d] = x[dim-d-2]/x[dim-d-3];
    xCoord[dim-2] = x[0];
@@ -347,23 +389,21 @@ void SimplexBasisFuncs(SimplexBasis *basis, const double *x, Vector v)
 
    for(int d = 1; d < dim; ++d) {
       int nextDim = (deg+1)*(d-1)*deg;
-      for(int j = 0; j < degPlus1; ++j) {
+      for(int j = 0; j < deg+1; ++j) {
          int nextAlpha = (deg+1)*j;
          JacobiPolyWithTable(deg+1, jCoord[d], 2*j+d, &jacobi[nextDim+nextAlpha], basis->table);
       }
    }
 
-   const int rmIndex = 4*(numFuncs/4);
+   const int rmIndex = 2*(numFuncs/2);
    double *phi = v.id;
-   for(int k = 0; k < numFuncs/4; ++k)
+   for(int k = 0; k < numFuncs/2; ++k)
    {
-      phi[4*k] = legendre[basisId[4*k*dim]];
-      phi[4*k+1] = legendre[basisId[(4*k+1)*dim]];
-      phi[4*k+2] = legendre[basisId[(4*k+2)*dim]];
-      phi[4*k+3] = legendre[basisId[(4*k+3)*dim]];
+      phi[2*k]   = legendre[idMap[2*k]];
+      phi[2*k+1] = legendre[idMap[2*k+1]];
    }
-   for(int k = 0; k < numFuncs%4; ++k)
-      phi[rmIndex+k] = legendre[basisId[(rmIndex+k)*dim]];
+   for(int k = 0; k < numFuncs%2; ++k)
+      phi[rmIndex+k] = legendre[idMap[rmIndex+k]];
 
    RMatrix xFactor = basis->addData->xFactor;
    int* xPower = basis->addData->xPower;
@@ -374,18 +414,17 @@ void SimplexBasisFuncs(SimplexBasis *basis, const double *x, Vector v)
    for(int d = 1; d < dim; ++d)
    {
       int nextDim = (deg+1)*deg*(d-1);
-      for(int k = 0; k < numFuncs/4; ++k)
+      for(int k = 0; k < numFuncs/2; ++k)
       {
-         phi[4*k]   *= jacobi[basisId[4*k*dim+d] + nextDim + (deg+1)*xPower[id2(d, 4*k, numFuncs)]] * xFactor.rid[d][4*k];
-         phi[4*k+1] *= jacobi[basisId[(4*k+1)*dim+d] + nextDim + (deg+1)*xPower[id2(d, 4*k+1, numFuncs)]] * xFactor.rid[d][4*k+1];
-         phi[4*k+2] *= jacobi[basisId[(4*k+2)*dim+d] + nextDim + (deg+1)*xPower[id2(d, 4*k+2, numFuncs)]] * xFactor.rid[d][4*k+2];
-         phi[4*k+3] *= jacobi[basisId[(4*k+3)*dim+d] + nextDim + (deg+1)*xPower[id2(d, 4*k+3, numFuncs)]] * xFactor.rid[d][4*k+3];
+         phi[2*k]   *= jacobi[basisId[2*k*dim+d] + nextDim + (deg+1)*xPower[id2(d, 2*k, numFuncs)]] * xFactor.rid[d][2*k];
+         phi[2*k+1] *= jacobi[basisId[(2*k+1)*dim+d] + nextDim + (deg+1)*xPower[id2(d, 2*k+1, numFuncs)]] * xFactor.rid[d][2*k+1];
       }
-      for(int k = 0; k < numFuncs%4; ++k)
-         phi[rmIndex+k]   *= jacobi[ basisId[(rmIndex+k)*dim+d] + nextDim +
+      for(int k = 0; k < numFuncs%2; ++k)
+         phi[rmIndex+k] *= jacobi[ basisId[(rmIndex+k)*dim+d] + nextDim +
                                     (deg+1)*xPower[id2(d, rmIndex+k, numFuncs)] ] *
                                     xFactor.rid[d][rmIndex+k];
    }
+
 }
 
 
@@ -469,6 +508,7 @@ void SimplexBasisFree(SimplexBasis *basis)
       basis->params = NULL;
    }
    if(basis->addData) {
+      free(basis->addData->idMap);
       RMatrix_free(basis->addData->xFactor);
       free(basis->addData->xPower);
       free(basis->addData);
@@ -534,19 +574,18 @@ void CubeSimplexBasisFuncs(CubeSimplexBasis *basis, const double *x, Vector v)
    int dim        = basis->dim;
    int dim1       = basis->params->dims[0];
    int numFuncs   = basis->numFuncs;
-   int degPlus1   = deg+1;
    double *phi    = v.id;
    INT_8 *basisId = basis->indices;
 
-   double legendre[degPlus1*dim1];
+   double legendre[(deg+1)*dim1];
 
    for(int d = 0; d < dim1; ++d)
-      LegendrePoly(degPlus1, 2*x[d]-1, &legendre[d*degPlus1]);
+      LegendrePoly(deg+1, 2*x[d]-1, &legendre[d*(deg+1)]);
 
    for(int k = 0; k < numFuncs; ++k) phi[k] = 1.0;
    for(int k = 0; k < numFuncs; ++k)
       for(int d = 0; d < dim1; ++d)
-         phi[k] *= legendre[basisId[k*dim+d]+degPlus1*d];
+         phi[k] *= legendre[basisId[k*dim+d]+(deg+1)*d];
 
    SimplexFuncsPolytopicTwo((MixedPolytopeBasis *)basis, x, basis->addData->basis_polytopic);
    for(int k = 0; k < numFuncs; ++k)
@@ -561,15 +600,14 @@ void CubeSimplexBasisDer(CubeSimplexBasis *basis, const double *x, Vector v)
    int dim1         = basis->params->dims[0];
    int dim2         = basis->params->dims[1];
    int numFuncs     = basis->numFuncs;
-   int degPlus1     = deg+1;
    double *phiPrime = v.id;
    INT_8 *basisId = basis->indices;
 
-   double legendre[degPlus1*dim1];
-   double dxlegendre[degPlus1*dim1];
+   double legendre[(deg+1)*dim1];
+   double dxlegendre[(deg+1)*dim1];
 
    for(int d = 0; d < dim1; ++d)
-      LegendrePolyAndPrime(degPlus1, 2*x[d]-1, &legendre[d*degPlus1], &dxlegendre[d*degPlus1]);
+      LegendrePolyAndPrime(deg+1, 2*x[d]-1, &legendre[d*(deg+1)], &dxlegendre[d*(deg+1)]);
 
    for(int k = 0; k < numFuncs*dim; ++k) phiPrime[k] = 1.0;
 
@@ -579,10 +617,10 @@ void CubeSimplexBasisDer(CubeSimplexBasis *basis, const double *x, Vector v)
       {
          if(j != d)
             for(int k = 0; k < numFuncs; ++k)
-               phiPrime[k+d*numFuncs] *= legendre[basisId[k*dim+j]+degPlus1*j];
+               phiPrime[k+d*numFuncs] *= legendre[basisId[k*dim+j]+(deg+1)*j];
          if(j == d)
             for(int k = 0; k < numFuncs; ++k)
-               phiPrime[k+d*numFuncs] *= 2.0 * dxlegendre[basisId[k*dim+j]+degPlus1*j];
+               phiPrime[k+d*numFuncs] *= 2.0 * dxlegendre[basisId[k*dim+j]+(deg+1)*j];
       }
    }
 
@@ -1029,15 +1067,14 @@ void SimplexFuncsPolytopicOne(MixedPolytopeBasis *basis, const double *x, Vector
    int dim        = basis->dim;
    int dim1       = basis->params->dims[0];
    int numFuncs   = basis->numFuncs;
-   int degPlus1   = deg+1;
    INT_8 *basisId = basis->indices;
    double *phi    = v.id;
 
-   double legendre[degPlus1];
-   double jacobi[SQUARE(degPlus1)*(dim1-1)];
+   double legendre[(deg+1)];
+   double jacobi[SQUARE(deg+1)*(dim1-1)];
    for(k = 0; k < numFuncs; ++k) phi[k] = 1.0;
 
-   LegendrePoly(degPlus1, (2.0*x[dim1-1]-x[dim1-2])/x[dim1-2], legendre);
+   LegendrePoly(deg+1, (2.0*x[dim1-1]-x[dim1-2])/x[dim1-2], legendre);
    double xCoord[dim1-1];
    xCoord[dim1-2] = x[0];
    for(d = 0; d < dim1-2; ++d) xCoord[d] = x[dim1-d-2]/x[dim1-d-3];
@@ -1057,7 +1094,7 @@ void SimplexFuncsPolytopicOne(MixedPolytopeBasis *basis, const double *x, Vector
 
       for(j = 0; j < deg+1; ++j) {
          double alpha = 2*j+d;
-         JacobiPolyBetaZero(degPlus1, jCoord[dimCur], alpha, &jacobi[degPlus1*(d-1)*deg+degPlus1*j]);
+         JacobiPolyBetaZero(deg+1, jCoord[dimCur], alpha, &jacobi[(deg+1)*(d-1)*deg+(deg+1)*j]);
       }
    }
 
@@ -1068,7 +1105,7 @@ void SimplexFuncsPolytopicOne(MixedPolytopeBasis *basis, const double *x, Vector
       for(d = 1; d < dim1; ++d) {
          int xPower = 0; for(i = 0; i < d; ++i) xPower += *(index+i);
          double xFactor = 1.0; for(i = 0; i < xPower; ++i) xFactor *= xCoord[d-1];
-         phiTemp *= jacobi[*(index+d) + degPlus1*(d-1)*deg + degPlus1*xPower] * xFactor;
+         phiTemp *= jacobi[*(index+d) + (deg+1)*(d-1)*deg + (deg+1)*xPower] * xFactor;
       }
       phi[k] *= phiTemp*legendre[*index];
    }
@@ -1084,15 +1121,14 @@ void SimplexFuncsPolytopicTwo(MixedPolytopeBasis *basis, const double *x, Vector
    int dim2       = basis->params->dims[1];
    int dimTwo     = dim1+dim2;
    int numFuncs   = basis->numFuncs;
-   int degPlus1   = deg+1;
    double *phi    = v.id;
    INT_8 *basisId = basis->indices;
 
-   double legendre[degPlus1];
-   double jacobi[SQUARE(degPlus1)*(dim2-1)];
+   double legendre[deg+1];
+   double jacobi[SQUARE(deg+1)*(dim2-1)];
    for(int k = 0; k < numFuncs; ++k) phi[k] = 1.0;
 
-   LegendrePoly(degPlus1, (2.0*x[dimTwo-1]-x[dimTwo-2])/x[dimTwo-2], legendre);
+   LegendrePoly(deg+1, (2.0*x[dimTwo-1]-x[dimTwo-2])/x[dimTwo-2], legendre);
    double xCoord[dim2-1];
    xCoord[dim2-2] = x[dim1];
    for(d = 0; d < dim2-2; ++d) xCoord[d] = x[dimTwo-d-2]/x[dimTwo-d-3];
@@ -1111,7 +1147,7 @@ void SimplexFuncsPolytopicTwo(MixedPolytopeBasis *basis, const double *x, Vector
       }
       for(j = 0; j < deg+1; ++j) {
          double alpha = 2*j+d;
-         JacobiPolyBetaZero(degPlus1, jCoord[dimCur], alpha, &jacobi[degPlus1*(d-1)*deg+degPlus1*j]);
+         JacobiPolyBetaZero(deg+1, jCoord[dimCur], alpha, &jacobi[(deg+1)*(d-1)*deg+(deg+1)*j]);
       }
    }
 
@@ -1122,7 +1158,7 @@ void SimplexFuncsPolytopicTwo(MixedPolytopeBasis *basis, const double *x, Vector
       for(d = 1; d < dim2; ++d) {
          int xPower = 0; for(i = 0; i < d; ++i) xPower += *(index+i);
          double xFactor = 1.0; for(i = 0; i < xPower; ++i) xFactor *= xCoord[d-1];
-         phiTemp *= jacobi[*(index+d) + degPlus1*(d-1)*deg + degPlus1*xPower] * xFactor;
+         phiTemp *= jacobi[*(index+d) + (deg+1)*(d-1)*deg + (deg+1)*xPower] * xFactor;
       }
       phi[k] *= phiTemp*legendre[*index];
    }
@@ -1256,4 +1292,14 @@ double orthogonal_simplex_basis_test(int deg, int dim)
    return max_res;
 }
 
+
+void PrintBasisIndices(Basis *basis)
+{
+   INT_8 *indices = basis->indices;
+   for(int i = 0; i < basis->numFuncs; ++i) {
+      for(int j = 0; j < basis->dim; ++j)
+         printf("%i    ", indices[i*basis->dim+j]);
+      printf("\n");
+   }
+}
 

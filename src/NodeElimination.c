@@ -174,49 +174,11 @@ static bool LsqSearch(bool_enum CONSTR_FLAG, quadrature *q_new, history *hist)
    RMatrix Z  = Predictor_Ptr(q_new, distanceWeight);
    qsort(distanceWeight, n_cur, sizeof(DistanceStruct), compareDouble);
 
-   ReorderWithBoundaryDist(Z, q_new, distanceWeight);
-   quadrature *q_temp = quadrature_make_full_copy(q_new);
-   int failCount = 0;
-   for(int i = 0; i < n_cur; ++i)
+   DistanceStruct *distanceSVD = distance_init(1);
+   quadrature *q_svd = svdPredictorLapack(q_new, distanceSVD);
+
+   if(distanceSVD[0].d < distanceWeight[0].d)
    {
-      quadrature_realloc_array(n_cur-1, q_temp);
-      // store ith initial quadrature guess in q_temp
-      ExtractFromPredictor(Z, distanceWeight[i].index, q_temp);
-
-      if(V_InfNorm(q_temp->z) >= QUAD_HUGE)               continue;
-      if(!QuadInConstraint(q_temp) && CONSTR_FLAG == OFF) continue;
-
-      int its = 0;
-      SOL_FLAG = LeastSquaresNewton(CONSTR_FLAG, q_temp, &its);
-      // store nodes and weights if Newton's method succeeded, update history
-      if(SOL_FLAG == SOL_FOUND)
-      {
-         n_cur = q_temp->num_nodes;
-         quadrature_assign_resize(q_temp, q_new);
-
-         hist->hist_array[hist->total_elims].elim_type    = ELIM;
-         hist->hist_array[hist->total_elims].nodes_tot    = n_cur;
-         hist->hist_array[hist->total_elims].success_node = failCount;
-         hist->hist_array[hist->total_elims].success_its  = its;
-         ++hist->total_elims;
-         break;
-      }
-      else if(SOL_FLAG == SOL_NOT_FOUND)
-      {
-         quadrature_realloc_array(n_cur-1, q_temp);
-         if(++failCount >= MAX_FAILS_ELIM)
-            break;
-      }
-   }
-   free(distanceWeight);
-   quadrature_free(q_temp);
-   RMatrix_free(Z);
-
-
-   if(SOL_FLAG == SOL_NOT_FOUND)
-   {
-      DistanceStruct *distanceSVD = distance_init(1);
-      quadrature *q_svd = svdPredictorLapack(q_new, distanceSVD);
       int its = 0;
       SOL_FLAG = LeastSquaresNewton(CONSTR_FLAG, q_svd, &its);
       if(SOL_FLAG == SOL_FOUND)
@@ -224,16 +186,76 @@ static bool LsqSearch(bool_enum CONSTR_FLAG, quadrature *q_new, history *hist)
          n_cur = q_svd->num_nodes;
          quadrature_assign_resize(q_svd, q_new);
 
-         printf("\neliminated using SVD\n");
+         hist->hist_array[hist->total_elims].elim_type    = SVD;
+         hist->hist_array[hist->total_elims].nodes_tot    = n_cur;
+         hist->hist_array[hist->total_elims].success_node = 0;
+         hist->hist_array[hist->total_elims].success_its  = its;
+         ++hist->total_elims;
+      }
+   }
+
+   int failCount = 0;
+   if(SOL_FLAG == SOL_NOT_FOUND)
+   {
+      quadrature *q_temp = quadrature_make_full_copy(q_new);
+      ReorderWithBoundaryDist(Z, q_new, distanceWeight);
+      for(int i = 0; i < n_cur; ++i)
+      {
+         quadrature_realloc_array(n_cur-1, q_temp);
+         // store ith initial quadrature guess in q_temp
+         ExtractFromPredictor(Z, distanceWeight[i].index, q_temp);
+
+         if(V_InfNorm(q_temp->z) >= QUAD_HUGE)               continue;
+         if(!QuadInConstraint(q_temp) && CONSTR_FLAG == OFF) continue;
+
+         int its = 0;
+         SOL_FLAG = LeastSquaresNewton(CONSTR_FLAG, q_temp, &its);
+         // store nodes and weights if Newton's method succeeded, update history
+         if(SOL_FLAG == SOL_FOUND)
+         {
+            n_cur = q_temp->num_nodes;
+            quadrature_assign_resize(q_temp, q_new);
+
+            hist->hist_array[hist->total_elims].elim_type    = ELIM;
+            hist->hist_array[hist->total_elims].nodes_tot    = n_cur;
+            hist->hist_array[hist->total_elims].success_node = failCount;
+            hist->hist_array[hist->total_elims].success_its  = its;
+            ++hist->total_elims;
+            break;
+         }
+         else if(SOL_FLAG == SOL_NOT_FOUND)
+         {
+            quadrature_realloc_array(n_cur-1, q_temp);
+            if(++failCount >= MAX_FAILS_ELIM)
+               break;
+         }
+      }
+      quadrature_free(q_temp);
+   }
+   free(distanceWeight);
+   RMatrix_free(Z);
+
+   if(SOL_FLAG == SOL_NOT_FOUND)
+   {
+      int its = 0;
+      SOL_FLAG = LeastSquaresNewton(CONSTR_FLAG, q_svd, &its);
+      if(SOL_FLAG == SOL_FOUND)
+      {
+         n_cur = q_svd->num_nodes;
+         quadrature_assign_resize(q_svd, q_new);
+
+         printf("\neliminated additional node using SVD\n");
          hist->hist_array[hist->total_elims].elim_type    = SVD;
          hist->hist_array[hist->total_elims].nodes_tot    = n_cur;
          hist->hist_array[hist->total_elims].success_node = failCount;
          hist->hist_array[hist->total_elims].success_its  = its;
          ++hist->total_elims;
       }
-      free(distanceSVD);
-      quadrature_free(q_svd);
    }
+   free(distanceSVD);
+   quadrature_free(q_svd);
+
+
 
    return SOL_FLAG;
 }
@@ -629,7 +651,7 @@ static void ReorderWithBoundaryDist(RMatrix predictor, quadrature *q, DistanceSt
    int remainRowIndex[numGuesses];
    memset(boundDistance, -1, maxBound*sizeof(double));
    memset(boundRowIndex, -1, maxBound*sizeof(int));
-   memset(remainRowIndex, -1, maxBound*sizeof(int));
+   memset(remainRowIndex, -1, numGuesses*sizeof(int));
 
    double tempDistances[numGuesses];
    for(int i = 0; i < numGuesses; ++i)
