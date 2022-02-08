@@ -42,6 +42,7 @@ struct Basis
 };
 
 typedef Basis*(*BasisInitPtr)(void *);
+typedef Basis*(*MakeBasisCopy)(void *);
 typedef void(*IndicesPtr)(int deg, int dim);
 typedef void(*BasisFuncsPtr)(Basis *basis, const double *x, Vector v);
 typedef void(*BasisDerPtr)(Basis *basis, const double *x, Vector v);
@@ -52,6 +53,7 @@ typedef void(*BasisFreePtr)(Basis *basis);
 struct BasisInterface
 {
    BasisInitPtr basisInit;
+   MakeBasisCopy makeBasisCopy;
    BasisFuncsPtr computeFuncs;
    BasisDerPtr computeDer;
    BasisIntegralsPtr computeIntegrals;
@@ -109,7 +111,7 @@ typedef struct
 
 struct CubeBasis
 {
-   const BasisInterface *interface;
+   BasisInterface *interface;
    CubeParams *params;
    AddDataCube *addData;
    int deg;
@@ -133,7 +135,7 @@ typedef struct
 
 struct SimplexBasis
 {
-   const BasisInterface *interface;
+   BasisInterface *interface;
    SimplexParams *params;
    AddDataSimplex *addData;
    int deg;
@@ -151,11 +153,14 @@ typedef struct
    Vector basis_polytopic;
    Vector phi_backw1;
    Vector phi_forw1;
+   int* xPower[2];
+   RMatrix xFactor[2];
+   INT_8 *idMap;
 } AddDataCubeSimplex;
 
 struct CubeSimplexBasis
 {
-   const BasisInterface *interface;
+   BasisInterface *interface;
    CubeSimplexParams *params;
    AddDataCubeSimplex *addData;
    int deg;
@@ -173,11 +178,14 @@ typedef struct
    Vector basis_polytopic;
    Vector phi_backw1;
    Vector phi_forw1;
+   int* xPower[2];
+   RMatrix xFactor[2];
+   INT_8 *idMap;
 } AddDataSimplexSimplex;
 
 struct SimplexSimplexBasis
 {
-   const BasisInterface *interface;
+   BasisInterface *interface;
    SimplexSimplexParams *params;
    AddDataSimplexSimplex *addData;
    int deg;
@@ -190,11 +198,21 @@ struct SimplexSimplexBasis
    Table3d table;
 };
 
+typedef struct
+{
+   Vector basis_polytopic;
+   Vector phi_backw1;
+   Vector phi_forw1;
+   int* xPower[2];
+   RMatrix xFactor[2];
+   INT_8 *idMap;
+} MixedPolyTopeData;
+
 struct MixedPolytopeBasis
 {
-   const BasisInterface *interface;
+   BasisInterface *interface;
    MixedParams *params;
-   void *addData;
+   MixedPolyTopeData *addData;
    int deg;
    int dim;
    int numFuncs;
@@ -206,6 +224,7 @@ struct MixedPolytopeBasis
 };
 
 CubeBasis* CubeBasisInit(CubeParams *params);
+CubeBasis* MakeCubeCopy(CubeBasis *basis);
 void ComputeCubeBasisFuncs(CubeBasis *basis, const double *x, Vector v);
 void ComputeCubeBasisDer(CubeBasis *basis, const double *x, Vector v);
 void CubeBasisIntegrals(CubeBasis *basis, Vector v);
@@ -213,6 +232,7 @@ void CubeBasisIntegralsMonomial(CubeBasis *basis, Vector v);
 void CubeBasisFree(CubeBasis *basis);
 
 SimplexBasis* SimplexBasisInit(SimplexParams *params);
+SimplexBasis* MakeSimplexCopy(SimplexBasis *basis);
 void SimplexBasisFuncs(SimplexBasis *basis, const double *x, Vector v);
 void SimplexBasisDer(SimplexBasis *basis, const double *x, Vector v);
 void SimplexBasisIntegrals(SimplexBasis *basis, Vector v);
@@ -220,6 +240,7 @@ void SimplexBasisIntegralsMonomial(SimplexBasis *basis, Vector v);
 void SimplexBasisFree(SimplexBasis *basis);
 
 CubeSimplexBasis* CubeSimplexBasisInit(CubeSimplexParams *params);
+CubeSimplexBasis* MakeCubeSimplexCopy(CubeSimplexBasis *basis);
 void CubeSimplexBasisFuncs(CubeSimplexBasis *basis, const double *x, Vector v);
 void CubeSimplexBasisDer(CubeSimplexBasis *basis, const double *x, Vector v);
 void CubeSimplexBasisIntegrals(CubeSimplexBasis *basis, Vector v);
@@ -227,6 +248,7 @@ void CubeSimplexBasisIntegralsMonomial(CubeSimplexBasis *basis, Vector v);
 void CubeSimplexBasisFree(CubeSimplexBasis *basis);
 
 SimplexSimplexBasis* SimplexSimplexBasisInit(SimplexSimplexParams *params);
+SimplexSimplexBasis* MakeSimplexSimplexCopy(SimplexSimplexBasis *basis);
 void SimplexSimplexBasisFuncs(SimplexSimplexBasis *basis, const double *x, Vector v);
 void SimplexSimplexBasisDer(SimplexSimplexBasis *basis, const double *x, Vector v);
 void SimplexSimplexBasisIntegrals(SimplexSimplexBasis *basis, Vector v);

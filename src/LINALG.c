@@ -26,7 +26,7 @@ int DGEMM_LAPACK(CMatrix A, CMatrix B, CMatrix C)
 
 int DGEQR2_LAPACK(CMatrix A, Vector TAU)
 {
-   assert(TAU.len = MIN(A.rows, A.cols));
+   assert(TAU.len == MIN(A.rows, A.cols));
 
    int INFO;
    int LDA = A.rows;
@@ -39,7 +39,7 @@ int DGEQR2_LAPACK(CMatrix A, Vector TAU)
 
 int DGEQRF_LAPACK(CMatrix A, Vector TAU)
 {
-   assert(TAU.len = MIN(A.rows, A.cols));
+   assert(TAU.len == MIN(A.rows, A.cols));
 
    int INFO;
    int LDA = A.rows;

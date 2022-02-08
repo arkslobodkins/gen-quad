@@ -21,7 +21,7 @@ double FUNCTION_TIME = 0.0;
 #ifdef _OPENMP
 void GetFunctionOmp(quadrature *q, Vector f)
 {
-   assert(f.len = q->basis->numFuncs);
+   assert(f.len == q->basis->numFuncs);
    double time_start = get_cur_time();
 
    int dim = q->dim;
@@ -69,7 +69,7 @@ void GetFunctionOmp(quadrature *q, Vector f)
 // Computes an evaluates function f = F(X)*W - b for Newton's method.
 void GetFunction(quadrature *q, Vector f)
 {
-   assert(f.len = q->basis->numFuncs);
+   assert(f.len == q->basis->numFuncs);
    double time_start = get_cur_time();
 
    int dim = q->dim;

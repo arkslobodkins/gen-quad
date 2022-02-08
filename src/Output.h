@@ -9,6 +9,7 @@ extern "C" {
 
 void HistoryToFile(const quadrature *q, int arr_size, history **hist_arr);
 void QuadratureToFile(const quadrature *quad);
+void BoundaryCubeStats(const quadrature *quad);
 
 #ifdef __cplusplus
 }

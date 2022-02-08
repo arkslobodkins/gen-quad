@@ -7,6 +7,8 @@
 extern "C" {
 #endif
 
+void ComputeCubeFull(int deg, int dim);
+
 void ComputeInterval(int degree);
 void ComputeCube(int degree, int dim);
 void ComputeSimplex(int degree, int dim);

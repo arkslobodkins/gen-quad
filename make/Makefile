@@ -4,9 +4,11 @@ VERSION = -std=c11
 #uncomment "-DQUAD_DEBUG_OFF"   to disable debug mode
 #uncomment "-NDEBUG"            to disable assert statements
 #comment out -fopenmp           to disable OpenMP parallelism
-CFLAGS=-g  -Wall -fopenmp -O3 -fsanitize=address    \
-      #-DQUAD_DEBUG_OFF          \
-      #-DNDEBUG
+CFLAGS= -g -Wall -fopenmp -O3 -march=x86-64
+      #-fsanitize=address              \
+      #-DQUAD_DEBUG_OFF                \
+      #-DNDEBUG                        \
+		#-fopt-info                      \
 
 # alternatively, LIBSBLAS= -lopenblas -llapacke if openblas is available
 LIBSBLAS= -lblas -llapack -llapacke

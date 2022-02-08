@@ -42,6 +42,36 @@ void ComputeInterval(int deg)
 }
 
 
+void ComputeCubeFull(int deg, int dim)
+{
+   MAX_DIM = dim;
+   quadrature *q_init = NULL;
+   quadrature *q_new  = NULL;
+
+   int n = ceil( (deg+1)/2.0 );
+   int d_gauss[1] = {1};
+   quadrature *q_gauss = quadrature_init_basic(n, 1, d_gauss, deg, INTERVAL);
+   double p1 = 0.0, p2 = 0.0;
+   Jacobi(q_gauss->num_nodes, p1, p2, q_gauss->x, q_gauss->w);
+
+   int nNodes = POW_INT(n, dim);
+   int d_init[1] = {dim};
+   q_init = quadrature_init_full(nNodes, dim, d_init, deg, CUBE);
+   q_new = quadrature_make_full_copy(q_init);
+   GeneralizedNodesTensor(q_gauss, q_init);
+   GeneralizedWeightsTensor(q_gauss, q_init);
+
+   history *hist_cube = (history *)malloc(sizeof(history));
+   hist_cube = hist_create(q_new->num_nodes);
+   NodeElimination(q_init, q_new, hist_cube);
+
+   quadrature_free(q_gauss);
+   quadrature_free(q_init);
+   quadrature_free(q_new);
+   hist_free(hist_cube);
+}
+
+
 // ComputeCube
 // Sets up the initial guess for the Node Elimination algorithm.
 // Initial guess is computed via recursive scheme that reuses
@@ -114,6 +144,7 @@ void ComputeCube(int deg, int dim)
 
    HistoryToFile(q_new, dim-1, hist_cube);
    QuadratureToFile(q_new);
+   BoundaryCubeStats(q_new);
 
    quadrature_free(q_gauss);
    quadrature_free(q_init);

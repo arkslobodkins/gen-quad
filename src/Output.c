@@ -5,6 +5,7 @@
 
 #include "Output.h"
 #include <stdio.h>
+#include <assert.h>
 
 // Prints history and quadrature parameters to a file.
 void HistoryToFile(const quadrature *q, int arr_size, history **hist)
@@ -63,6 +64,53 @@ void QuadratureToFile(const quadrature *quad)
       fprintf(FID, "%.16e\n", quad->w[i]);
    }
 
+   fclose(FID);
+}
+
+
+// Prints how many nodes contain coordinates < 0.1 and > 0.9, and how many coordinates per node
+void BoundaryCubeStats(const quadrature *quad)
+{
+   assert(quad->D == CUBE);
+
+   int i,j;
+   char str[80] = "0";
+   int dim = quad->dim;
+   int deg = quad->deg;
+   const char *shape = get_domain_string(quad->D);
+
+   sprintf(str, "../results/BoundaryStats_%s_dim%i_deg%i.txt", shape, dim, deg);
+   FILE *FID = fopen(str, "w");
+   fprintf(FID, "*********************************************************\n\n");
+   fprintf(FID, "dimension                   = %i\n", quad->dim);
+   fprintf(FID, "degree of precision         = %i\n", quad->deg);
+   fprintf(FID, "number of nodes             = %i\n", quad->num_nodes);
+
+   int totalCount = 0;
+
+   int countsPerNode[quad->num_nodes];
+   for(int i = 0; i < quad->num_nodes; ++i)
+      countsPerNode[i] = 0;
+
+   for(i = 0; i < quad->num_nodes; ++i) {
+      bool outsideFlag = false;
+      for(j = 0; j < dim; ++j) {
+         if(quad->x[dim*i+j] < 0.1) {
+            ++countsPerNode[i];
+            outsideFlag = true;
+         }
+         else if(quad->x[dim*i+j] > 0.9) {
+            ++countsPerNode[i];
+            outsideFlag = true;
+         }
+      }
+      if(outsideFlag)
+         ++totalCount;
+   }
+   fprintf(FID, "close to the boundary count = %i\n", totalCount);
+   for(i = 0; i < quad->num_nodes; ++i)
+      if(countsPerNode[i] > 0)
+         fprintf(FID, "node %i contains %i coordinates on the boundary\n", i, countsPerNode[i]);
    fclose(FID);
 }
 

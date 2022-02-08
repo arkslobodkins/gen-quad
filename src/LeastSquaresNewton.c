@@ -21,8 +21,14 @@
 #include <string.h>
 #include <assert.h>
 
+typedef struct
+{
+   bool succeeded;
+   int errors[4];
+} errInfo;
 
-static int CheckForStop(int INFO, double errorNorm, double errorNormPrev, Vector least_sq_sol);
+
+static errInfo CheckForStop(int INFO, double errorNorm, double errorNormPrev, Vector least_sq_sol);
 
 // LeastSquaresNewton
 // Receives initial quadrature guess. Primarily solves
@@ -124,8 +130,8 @@ bool LeastSquaresNewton(const bool_enum CONSTR_OPT, quadrature *q_orig, int *its
       errorNormPrev = errorNorm;
       getFunc_ptr(q_next, RHS);
       errorNorm = V_InfNorm(RHS);
-      int check_values = CheckForStop(INFO, errorNorm, errorNormPrev, LEAST_SQ_SOL);
-      if(check_values != GQ_SUCCESS) {
+      errInfo check_values = CheckForStop(INFO, errorNorm, errorNormPrev, LEAST_SQ_SOL);
+      if(check_values.succeeded != true) {
          SOL_FLAG = SOL_NOT_FOUND;
          goto FREERETURN;
       }
@@ -198,23 +204,37 @@ FREERETURN:
 
 
 
-static int CheckForStop(int INFO, double errorNorm, double errorNormPrev, Vector least_sq_sol)
+static errInfo CheckForStop(int INFO, double errorNorm, double errorNormPrev, Vector least_sq_sol)
 {
-   if(errorNorm > errorNormPrev+2)     // fail if method is not converging
-      return NOT_CONVERGE;
+   errInfo info;
+   info.succeeded = true;
+   info.errors[0] = GQ_SUCCESS;
+   info.errors[1] = GQ_SUCCESS;
+   info.errors[2] = GQ_SUCCESS;
+   info.errors[3] = GQ_SUCCESS;
 
-   if(V_InfNorm(least_sq_sol) > 100)   // fail if solution is exploding
-      return DIVERGE_ERR;
+   if(INFO != 0) {                       // fail if LAPACK routine has failed
+      info.succeeded = false;
+      info.errors[0] = LAPACK_ERR;
+   }
+   if(errorNorm > errorNormPrev+2) {     // fail if method is not converging
+      info.succeeded = false;
+      info.errors[1] =  NOT_CONVERGE;
+   }
+   if(V_InfNorm(least_sq_sol) > 100) {   // fail if solution is exploding
+      info.succeeded = false;
+      info.errors[2] = DIVERGE_ERR;
+   }
 
-   else if(INFO != 0)                  // fail if LAPACK routine has failed
-      return LAPACK_ERR;
+   if(V_CheckInf(least_sq_sol)) {
+      info.succeeded = false;
+      info.errors[3] = INF_VAL;
+   }
+   if(V_CheckNan(least_sq_sol)) {
+      info.succeeded = false;
+      info.errors[3] = NAN_VAL;
+   }
 
-   else if(V_CheckInf(least_sq_sol))
-      return INF_VAL;
-
-   else if(V_CheckNan(least_sq_sol))
-      return NAN_VAL;
-
-   else return GQ_SUCCESS;
+   return info;
 }
 

@@ -15,6 +15,7 @@
 static inline int GetNumDims(DOMAIN_TYPE D);
 static inline bool QuadPosWeightsElem(const quadrature *q, int elem);
 
+static void CopyBasis(const quadrature *q1, quadrature *q2);
 static void SetIntervalFuncs(quadrature *q);
 static void SetCubeFuncs(quadrature *q);
 static void SetSimplexFuncs(quadrature *q);
@@ -23,6 +24,17 @@ static void SetSimplexSimplexFuncs(quadrature *q);
 static void quadrature_free_basic(quadrature *q);
 static void quadrature_free_full(quadrature *q);
 
+static void SetCubeBasis(quadrature *q);
+static void SetCubeConstr(quadrature *q);
+
+static void SetSimplexBasis(quadrature *q);
+static void SetSimplexConstr(quadrature *q);
+
+static void SetCubeSimplexBasis(quadrature *q);
+static void SetCubeSimplexConstr(quadrature *q);
+
+static void SetSimplexSimplexBasis(quadrature *q);
+static void SetSimplexSimplexConstr(quadrature *q);
 
 quadrature *quadrature_init_basic(int n, int dim, int *dims, int deg, DOMAIN_TYPE D)
 {
@@ -84,15 +96,23 @@ quadrature *quadrature_init_basic(int n, int dim, int *dims, int deg, DOMAIN_TYP
          break;
       case CUBE:
          q->setBasisAndConstr = SetCubeFuncs;
+         q->setBasis          = SetCubeBasis;
+         q->setConstr         = SetCubeConstr;
          break;
       case SIMPLEX:
          q->setBasisAndConstr = SetSimplexFuncs;
+         q->setBasis          = SetSimplexBasis;
+         q->setConstr         = SetSimplexConstr;
          break;
       case CUBESIMPLEX:
          q->setBasisAndConstr = SetCubeSimplexFuncs;
+         q->setBasis          = SetCubeSimplexBasis;
+         q->setConstr         = SetCubeSimplexConstr;
          break;
       case SIMPLEXSIMPLEX:
          q->setBasisAndConstr = SetSimplexSimplexFuncs;
+         q->setBasis          = SetSimplexSimplexBasis;
+         q->setConstr         = SetSimplexSimplexConstr;
          break;
    }
    q->constr           = NULL;
@@ -189,10 +209,18 @@ quadrature *quadrature_make_full_copy(const quadrature *q)
    DOMAIN_TYPE D = q->D;
 
    int dims[q->num_dims];
+   #pragma GCC ivdep
    for(int d = 0; d < q->num_dims; ++d)
       dims[d] = q->dims[d];
 
-   quadrature *q_copy = quadrature_init_full(k, dim, dims, deg, D);
+   quadrature *q_copy = quadrature_init_basic(k, dim, dims, deg, D);
+   CopyBasis(q, q_copy);
+   q->setConstr(q_copy);
+
+   q_copy->expIntegralExact = q->expIntegralExact;
+   q_copy->free_ptr = &quadrature_free_full;
+   q_copy->isFullyInitialized = GQ_TRUE;
+
    quadrature_assign(q, q_copy);
    return q_copy;
 }
@@ -208,6 +236,7 @@ quadrature *quadrature_without_element(quadrature *q, int i)
    for(count = 0, j = 0; j < num_nodes; ++j) {
       if(j == i) continue;
       q_without->w[count] = q->w[j];
+      #pragma GCC ivdep
       for(d = 0; d < dim; ++d)
          q_without->x[count*dim+d] = q->x[j*dim+d];
       ++count;
@@ -248,6 +277,7 @@ void quadrature_remove_element(int index, quadrature *q)
    for(int i = index; i < k-1; ++i)
       w[i] = w[i+1];
 
+   #pragma GCC ivdep
    for(int i = index; i < k-1; ++i)
       for(int d = 0; d < dim; ++d)
          x[i*dim+d] = x[(i+1)*dim+d];
@@ -268,7 +298,7 @@ void quadrature_to_vector(const quadrature q, Vector v)
 
 void quadrature_get_elem(const quadrature *q, int i, Vector v)
 {
-   assert(v.len = q->dim);
+   assert(v.len == q->dim+1);
    int dim = q->dim;
    memcpy( &v.id[0], &q->w[i], SIZE_DOUBLE(1) );
    memcpy( &v.id[1], &q->x[i*dim], SIZE_DOUBLE(dim) );
@@ -601,10 +631,12 @@ double QuadTestIntegral(const quadrature *q, BASIS_TYPE btype)
    for(int i = 0; i < k; ++i)
    {
       basisPtr(q->basis, &x[dim*i], functions);
+      #pragma GCC ivdep
       for(int j = 0; j < numFuncs; ++j)
          IQuad.id[j] += functions.id[j] * w[i];
    }
 
+   #pragma GCC ivdep
    for(int j = 0; j < numFuncs; ++j) res_arr.id[j] = fabs(IQuad.id[j]-integrals.id[j]);
    double res = V_InfNorm(res_arr);
 
@@ -658,6 +690,13 @@ bool QuadEqnOnTheBoundary(const quadrature *q, int elem, int eqn)
 }
 
 
+static void CopyBasis(const quadrature *q1, quadrature *q2)
+{
+   assert(q1->D == q2->D);
+   q2->basis = q1->basis->interface->makeBasisCopy(q1->basis);
+}
+
+
 static double ExpIntegralExactCube(const quadrature *q)
 {
    return expIntegralNDimCube(q->dim);
@@ -682,7 +721,6 @@ static double ExpIntegralExactSimplexSimplex(const quadrature *q)
 /*****************************************************************
 \* Implementation of polymorphic behaviour for quadrature object \*
 *****************************************************************/
-
 static void SetIntervalFuncs(quadrature *q)
 {
    dimParamsInterval params;
@@ -691,15 +729,46 @@ static void SetIntervalFuncs(quadrature *q)
    constraints_get(q->constr);
 }
 
+
 static void SetCubeFuncs(quadrature *q)
 {
+   assert(q->D == CUBE);
    q->expIntegralExact = &ExpIntegralExactCube;
+   SetCubeBasis(q);
+   SetCubeConstr(q);
+}
 
-   dimParamsCube dimCube = {q->dim};
-   constrInterface constrinterface = SetCubeConstrInterface();
-   q->constr = constraints_init((void *)&dimCube, &constrinterface);
-   constraints_get(q->constr);
 
+static void SetSimplexFuncs(quadrature *q)
+{
+   assert(q->D == SIMPLEX);
+   q->expIntegralExact = &ExpIntegralExactSimplex;
+   SetSimplexBasis(q);
+   SetSimplexConstr(q);
+}
+
+
+static void SetCubeSimplexFuncs(quadrature *q)
+{
+   assert(q->D == CUBESIMPLEX);
+   q->expIntegralExact = &ExpIntegralExactCubeSimplex;
+   SetCubeSimplexBasis(q);
+   SetCubeSimplexConstr(q);
+}
+
+
+static void SetSimplexSimplexFuncs(quadrature *q)
+{
+   assert(q->D == SIMPLEXSIMPLEX);
+   q->expIntegralExact = &ExpIntegralExactSimplexSimplex;
+   SetSimplexSimplexBasis(q);
+   SetSimplexSimplexConstr(q);
+}
+
+
+static void SetCubeBasis(quadrature *q)
+{
+   assert(q->D == CUBE);
    CubeParams cubeParams;
    cubeParams.deg = q->deg;
    cubeParams.dim = q->dim;
@@ -710,15 +779,19 @@ static void SetCubeFuncs(quadrature *q)
 }
 
 
-static void SetSimplexFuncs(quadrature *q)
+static void SetCubeConstr(quadrature *q)
 {
-   q->expIntegralExact = &ExpIntegralExactSimplex;
-
-   dimParamsSimplex dimSimplex = {q->dim};
-   constrInterface constrinterface = SetSimplexConstrInterface();
-   q->constr = constraints_init((void *)&dimSimplex, &constrinterface);
+   assert(q->D == CUBE);
+   dimParamsCube dimCube = {q->dim};
+   constrInterface constrinterface = SetCubeConstrInterface();
+   q->constr = constraints_init((void *)&dimCube, &constrinterface);
    constraints_get(q->constr);
+}
 
+
+static void SetSimplexBasis(quadrature *q)
+{
+   assert(q->D == SIMPLEX);
    SimplexParams simplexParams;
    simplexParams.deg = q->deg;
    simplexParams.dim = q->dim;
@@ -729,17 +802,19 @@ static void SetSimplexFuncs(quadrature *q)
 }
 
 
-static void SetCubeSimplexFuncs(quadrature *q)
+static void SetSimplexConstr(quadrature *q)
 {
-   q->expIntegralExact = &ExpIntegralExactCubeSimplex;
-
-   dimParamsCubeSimplex dimsCubeSimplex;
-   dimsCubeSimplex.dims[0] = q->dims[0];
-   dimsCubeSimplex.dims[1] = q->dims[1];
-   constrInterface constrinterface = SetCubeSimplexConstrInterface();
-   q->constr = constraints_init((void *)&dimsCubeSimplex, &constrinterface);
+   assert(q->D == SIMPLEX);
+   dimParamsSimplex dimSimplex = {q->dim};
+   constrInterface constrinterface = SetSimplexConstrInterface();
+   q->constr = constraints_init((void *)&dimSimplex, &constrinterface);
    constraints_get(q->constr);
+}
 
+
+static void SetCubeSimplexBasis(quadrature *q)
+{
+   assert(q->D == CUBESIMPLEX);
    CubeSimplexParams csParams;
    csParams.deg = q->deg;
    csParams.dims[0] = q->dims[0];
@@ -751,17 +826,21 @@ static void SetCubeSimplexFuncs(quadrature *q)
 }
 
 
-static void SetSimplexSimplexFuncs(quadrature *q)
+static void SetCubeSimplexConstr(quadrature *q)
 {
-   q->expIntegralExact = &ExpIntegralExactSimplexSimplex;
-
-   dimParamsSimplexSimplex dimsSimplexSimplex;
-   dimsSimplexSimplex.dims[0] = q->dims[0];
-   dimsSimplexSimplex.dims[1] = q->dims[1];
-   constrInterface constrinterface = SetSimplexSimplexConstrInterface();
-   q->constr = constraints_init((void *)&dimsSimplexSimplex, &constrinterface);
+   assert(q->D == CUBESIMPLEX);
+   dimParamsCubeSimplex dimsCubeSimplex;
+   dimsCubeSimplex.dims[0] = q->dims[0];
+   dimsCubeSimplex.dims[1] = q->dims[1];
+   constrInterface constrinterface = SetCubeSimplexConstrInterface();
+   q->constr = constraints_init((void *)&dimsCubeSimplex, &constrinterface);
    constraints_get(q->constr);
+}
 
+
+static void SetSimplexSimplexBasis(quadrature *q)
+{
+   assert(q->D == SIMPLEXSIMPLEX);
    SimplexSimplexParams ssParams;
    ssParams.deg = q->deg;
    ssParams.dims[0] = q->dims[0];
@@ -770,6 +849,18 @@ static void SetSimplexSimplexFuncs(quadrature *q)
    BasisInterface interface = SetSimplexSimplexBasisInterface();
    Basis *simplexsimplex = BasisInit((void *)params, &interface);
    q->basis = simplexsimplex;
+}
+
+
+static void SetSimplexSimplexConstr(quadrature *q)
+{
+   assert(q->D == SIMPLEXSIMPLEX);
+   dimParamsSimplexSimplex dimsSimplexSimplex;
+   dimsSimplexSimplex.dims[0] = q->dims[0];
+   dimsSimplexSimplex.dims[1] = q->dims[1];
+   constrInterface constrinterface = SetSimplexSimplexConstrInterface();
+   q->constr = constraints_init((void *)&dimsSimplexSimplex, &constrinterface);
+   constraints_get(q->constr);
 }
 
 

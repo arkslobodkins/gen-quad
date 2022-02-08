@@ -189,8 +189,8 @@ void GetBasis(quadrature *q, CMatrix BasisMatrix)
    int cols = q->num_nodes;
    const double *x = q->x;
 
-   assert(BasisMatrix.rows = rows);
-   assert(BasisMatrix.cols = cols);
+   assert(BasisMatrix.rows == rows);
+   assert(BasisMatrix.cols == cols);
 
    Basis *basis = q->basis;
    Vector functions = basis->functions;

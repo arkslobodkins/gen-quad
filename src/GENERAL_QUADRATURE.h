@@ -18,6 +18,8 @@ extern "C" {
 
 #ifdef __GNUC__
 #define __attribute__unused __attribute__ ((unused))
+#elif defined __INTEL_COMPILER
+#define __attribute__unused #pragma unused
 #else
 #define __attribute__unused
 #endif
@@ -96,7 +98,9 @@ typedef struct
 } history;
 
 typedef struct quadrature quadrature;
-typedef void(*setBasisAndConstr)(quadrature *q);
+typedef void(*SetBasisAndConstr)(quadrature *q);
+typedef void(*SetBasis)(quadrature *q);
+typedef void(*SetConstr)(quadrature *q);
 typedef double(*ExpIntegralExact)(const quadrature *q);
 typedef void(*FreePtr)(quadrature *quad);
 
@@ -114,7 +118,9 @@ struct quadrature
    Vector z;
 
    int isFullyInitialized;
-   setBasisAndConstr setBasisAndConstr;
+   SetBasisAndConstr setBasisAndConstr;
+   SetBasis setBasis;
+   SetConstr setConstr;
 
    struct constraints *constr;
    struct Basis *basis;

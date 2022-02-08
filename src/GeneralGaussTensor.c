@@ -47,7 +47,7 @@ void GeneralizedNodesTensor(const quadrature *quad_1D, quadrature *quad_gen)
 {
    assert(quad_1D->dim == 1);
    assert(quad_gen->dim > 1);
-   assert(quad_gen->num_nodes = POW_INT(quad_1D->num_nodes, quad_gen->dim));
+   assert(quad_gen->num_nodes == POW_INT(quad_1D->num_nodes, quad_gen->dim));
 
    int dim = quad_gen->dim;
    int p = quad_1D->deg;
@@ -105,7 +105,7 @@ void GeneralizedWeightsTensor(const quadrature *quad_1D, quadrature *quad_gen)
 {
    assert(quad_1D->dim == 1);
    assert(quad_gen->dim > 1);
-   assert(quad_gen->num_nodes = POW_INT(quad_1D->num_nodes, quad_gen->dim));
+   assert(quad_gen->num_nodes == POW_INT(quad_1D->num_nodes, quad_gen->dim));
 
    int dim = quad_gen->dim;
    int n = quad_1D->num_nodes;
