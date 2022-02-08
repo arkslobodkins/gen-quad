@@ -209,7 +209,7 @@ quadrature *quadrature_make_full_copy(const quadrature *q)
    DOMAIN_TYPE D = q->D;
 
    int dims[q->num_dims];
-   #pragma GCC ivdep
+   #pragma omp simd
    for(int d = 0; d < q->num_dims; ++d)
       dims[d] = q->dims[d];
 
@@ -236,7 +236,7 @@ quadrature *quadrature_without_element(quadrature *q, int i)
    for(count = 0, j = 0; j < num_nodes; ++j) {
       if(j == i) continue;
       q_without->w[count] = q->w[j];
-      #pragma GCC ivdep
+      #pragma omp simd
       for(d = 0; d < dim; ++d)
          q_without->x[count*dim+d] = q->x[j*dim+d];
       ++count;
@@ -277,7 +277,7 @@ void quadrature_remove_element(int index, quadrature *q)
    for(int i = index; i < k-1; ++i)
       w[i] = w[i+1];
 
-   #pragma GCC ivdep
+   #pragma omp simd
    for(int i = index; i < k-1; ++i)
       for(int d = 0; d < dim; ++d)
          x[i*dim+d] = x[(i+1)*dim+d];
@@ -631,12 +631,12 @@ double QuadTestIntegral(const quadrature *q, BASIS_TYPE btype)
    for(int i = 0; i < k; ++i)
    {
       basisPtr(q->basis, &x[dim*i], functions);
-      #pragma GCC ivdep
+      #pragma omp simd
       for(int j = 0; j < numFuncs; ++j)
          IQuad.id[j] += functions.id[j] * w[i];
    }
 
-   #pragma GCC ivdep
+   #pragma omp simd
    for(int j = 0; j < numFuncs; ++j) res_arr.id[j] = fabs(IQuad.id[j]-integrals.id[j]);
    double res = V_InfNorm(res_arr);
 
@@ -693,7 +693,7 @@ bool QuadEqnOnTheBoundary(const quadrature *q, int elem, int eqn)
 static void CopyBasis(const quadrature *q1, quadrature *q2)
 {
    assert(q1->D == q2->D);
-   q2->basis = q1->basis->interface->makeBasisCopy(q1->basis);
+   q2->basis = BasisCopy(q1->basis);
 }
 
 

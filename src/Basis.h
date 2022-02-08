@@ -97,6 +97,7 @@ BasisInterface SetCubeSimplexBasisInterface();
 BasisInterface SetSimplexSimplexBasisInterface();
 
 Basis* BasisInit(void *params, BasisInterface *interface);
+Basis* BasisCopy(Basis *basis);
 void BasisFuncs(Basis *basis, const double *x, Vector v);
 void BasisDer(Basis *basis, const double *x, Vector v);
 void BasisIntegrals(Basis *basis, Vector v);

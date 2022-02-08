@@ -28,12 +28,11 @@ void AddLineFirst(const quadrature *q1D, const quadrature *quad_prev, quadrature
    // compute tensor product for nodes
    for(int j = 0; j < n_prev; ++j)
    {
-      int jxdim_minus_1 = j*(dim-1);
       for(int i = 0; i < n1D; ++i) {
          int ind = i*dim*n_prev + j*dim;
          x_new[ind] = x1D[i];
          for(int d = 1; d < dim; ++d)
-            x_new[ind+d] = x_prev[jxdim_minus_1+d-1];
+            x_new[ind+d] = x_prev[j*(dim-1)+d-1];
       }
    }
    WeightsTensor2D(q1D, quad_prev, quad_new);

@@ -81,6 +81,12 @@ double VDot(Vector a, Vector b)
    return dot;
 }
 
+void VSetToOne(Vector v)
+{
+   for(int k = 0; k < v.len; ++k)
+      v.id[k] = 1.0;
+}
+
 void VectorScale(double c, Vector V)
 {
    int spacing = 1;

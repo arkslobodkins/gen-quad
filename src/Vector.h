@@ -36,6 +36,7 @@ void FreeVectorOmpData(Vector v);
 
 void VPrint(Vector V);
 double VDot(Vector a, Vector b);
+void VSetToOne(Vector v);
 void VectorScale(double c, Vector V);
 void Vector_daxpy(double a, Vector x, Vector y);
 void double_daxpy(int len, double a, double *x, double *y);
