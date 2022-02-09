@@ -171,7 +171,7 @@ static bool LsqSearch(bool_enum CONSTR_FLAG, quadrature *q_new, history *hist)
    bool SOL_FLAG = SOL_NOT_FOUND;
 
    DistanceStruct *distanceWeight = distance_init(n_cur);
-   RMatrix Z  = Predictor_Ptr(q_new, distanceWeight);
+   RMatrix Z = Predictor_Ptr(q_new, distanceWeight);
    qsort(distanceWeight, n_cur, sizeof(DistanceStruct), compareDouble);
 
    DistanceStruct *distanceSVD = distance_init(1);
@@ -529,7 +529,9 @@ static RMatrix PredictorPlasma(quadrature *q, DistanceStruct *distance)
    CMatrix J        = CMatrix_init(numFuncs, (dim+1)*n_cur);
 
    // construct QR factorization of transpose of the Jacobian
+   QuadAllocBasisOmp(q, omp_get_max_threads());
    GetJacobianOmp(q, J);
+   QuadFreeBasisOmp(q, omp_get_max_threads());
    double start_time__1 = get_cur_time();
    CMatrix J_TR = CMatrix_Transpose(J);
    int LDJ = J_TR.rows;

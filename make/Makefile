@@ -1,29 +1,53 @@
-CC = gcc
-VERSION = -std=c11
+assertions = 1
+OPENMP     = 1
+debug      = 1
 
-#uncomment "-DQUAD_DEBUG_OFF"   to disable debug mode
-#uncomment "-NDEBUG"            to disable assert statements
-#comment out -fopenmp           to disable OpenMP parallelism
-CFLAGS= -g -Wall -fopenmp -O3 -march=x86-64
-      #-fsanitize=address              \
-      #-DQUAD_DEBUG_OFF                \
-      #-DNDEBUG                        \
-      #-fopt-info                      \
+CXX = g++
+CC  = gcc
+CXXFLAGS= -g -Wall -O3 -march=native #-fsanitize=address -fopt-info
+CFLAGS= -g -Wall -O3 -march=native #-fsanitize=address #-fopt-info
 
-# alternatively, LIBSBLAS= -lopenblas -llapacke if openblas is available
-LIBSBLAS= -lblas -llapack -llapacke
+CVERSION = -std=c11
+CPPVERSION = -std=c++98
+
+ifeq ($(OPENMP), 1)
+CFLAGS+= -fopenmp
+CXXFLAGS+= -fopenmp
+endif
+
+ifeq ($(assertions), 0)
+CFLAGS+= -DNDEBUG
+CXXFLAGS+= -DNDEBUG
+endif
+
+ifeq ($(debug), 0)
+CFLAGS+= -DQUAD_DEBUG_OFF
+CXXFLAGS+= -DQUAD_DEBUG_OFF
+endif
+
+LIBSBLAS= -lopenblas
 MATH= -lm
 RANLIB = ranlib
 VPATH= ../src:../src/Gauss_Lib
 
-all : quad results data
-quad: Main.o LeastSquaresNewton.o  GeneralGaussTensor.o GENERAL_QUADRATURE.o GetJacobian.o  \
+
+OBJECTS = Main.o LeastSquaresNewton.o  GeneralGaussTensor.o GENERAL_QUADRATURE.o GetJacobian.o  \
 	GetFunction.o NodeElimination.o Output.o AddDimension.o ComputeDomain.o QuadDriver.o     \
 	Constraints.o ConstrainedOptimization.o Vector.o Matrix.o Print.o Quadrature.o           \
 	LINALG.o Basis.o get_time.o libgaussq.a libplasma.a libcoreblas.a
-	$(CC) $(VERSION) $(CFLAGS) -o $@ $^ $(LIBSBLAS) $(MATH)
 
-OBJS =  GaussCore.o Jacobi.o
+all:quad_c quad_cpp
+
+quad_c : quad_c.x results data
+quad_c.x: $(OBJECTS)
+	$(CC) $(CVERSION) $(CFLAGS) -o $@ $^ $(LIBSBLAS) $(MATH)
+
+quad_cpp : quad_cpp.x results data
+quad_cpp.x: $(OBJECTS)
+	$(CXX) $(CPPVERSION) $(CXXFLAGS) -o $@ $^ $(LIBSBLAS) $(MATH)
+
+
+OBJS = GaussCore.o Jacobi.o
 libgaussq.a: $(OBJS)
 	$(AR) rv libgaussq.a $(OBJS)
 	$(RANLIB) libgaussq.a
@@ -37,7 +61,7 @@ clean :
 	\rm -f *.o
 
 distclean : clean txtclean
-	\rm -f quad *~
+	\rm -f quad_c.x quad_cpp.x*~
 
 SUBDIR_ROOTS := ../results ../data
 DIRS := . $(shell find $(SUBDIR_ROOTS) -type d)
