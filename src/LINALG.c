@@ -3,7 +3,7 @@
 
 #include <stdlib.h>
 #include <omp.h>
-#include "../plasma-17.1/include/plasma.h"
+#include <plasma.h>
 
 
 int DGEMM_LAPACK(CMatrix A, CMatrix B, CMatrix C)

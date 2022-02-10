@@ -20,7 +20,7 @@
 #include <assert.h>
 #include <string.h>
 #include <omp.h>
-#include "../plasma-17.1/include/plasma.h"
+#include <plasma.h>
 
 extern int MAX_DIM;
 

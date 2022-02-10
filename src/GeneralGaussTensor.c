@@ -53,7 +53,7 @@ void GeneralizedNodesTensor(const quadrature *quad_1D, quadrature *quad_gen)
    int p = quad_1D->deg;
    int n = quad_1D->num_nodes;
    int n_sq = SQUARE(n);
-   int id1 = -1, id2 = -1;
+   int id1, id2;
    double *x_gen = quad_gen->x;
 
    int dims_temp1[1] = {2};
