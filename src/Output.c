@@ -7,11 +7,10 @@
 #include <stdio.h>
 #include <assert.h>
 
-// Prints history and quadrature parameters to a file.
 void HistoryToFile(const quadrature *q, int arr_size, history **hist)
 {
    char str[80];
-   int i,j;
+   int i, j;
    int deg = q->deg;
    int dim = q->dim;
    char *shape = get_domain_string(q->D);
@@ -44,10 +43,9 @@ void HistoryToFile(const quadrature *q, int arr_size, history **hist)
 }
 
 
-// Prints final quadrature to a file
 void QuadratureToFile(const quadrature *quad)
 {
-   int i,j;
+   int i, j;
    char str[80] = "0";
    int dim = quad->dim;
    int deg = quad->deg;
@@ -68,7 +66,6 @@ void QuadratureToFile(const quadrature *quad)
 }
 
 
-// Prints how many nodes contain coordinates < 0.1 and > 0.9, and how many coordinates per node
 void BoundaryCubeStats(const quadrature *quad)
 {
    assert(quad->D == CUBE);

@@ -25,10 +25,12 @@
 extern int MAX_DIM;
 
 #define SEARCH_DIM 3
-#define MAX_FAILS_LEVEL_1 8
-#define MAX_FAILS_LEVEL_2 1
-#define MAX_FAILS_ELIM 15
+#define MAX_FAILS_LEVEL_1 4
+#define MAX_FAILS_LEVEL_2 6
+#define MAX_FAILS_ELIM 12
 
+#define PASSED true
+#define FAILED false
 
 typedef struct
 {
@@ -36,13 +38,11 @@ typedef struct
    double d;
 } DistanceStruct;
 
-
 typedef struct
 {
    double t[SEARCH_DIM];
 } ShortenParams;
 static const ShortenParams shortParams = {{0.5, 0.25, 0.125}};
-
 
 static DistanceStruct* distance_init(int n)
 {
@@ -52,11 +52,9 @@ static DistanceStruct* distance_init(int n)
    return distanceStr;
 }
 
-
 static bool LsqSearch(bool_enum CONSTR_FLAG, quadrature *q_new, history *hist);
 static bool TreeSearch(bool_enum CONSTR_FLAG, quadrature *q_new, history *hist);
 
-static quadrature* svdPredictorLapack(quadrature *q, DistanceStruct *distance);
 static RMatrix PredictorLapack(quadrature *q, DistanceStruct *distance);
 #ifdef _OPENMP
 static RMatrix PredictorPlasma(quadrature *q, DistanceStruct *distance);
@@ -66,7 +64,6 @@ __attribute__unused static RMatrix PredictorSimple(quadrature *q, DistanceStruct
 static void ExtractFromPredictor(RMatrix Z, int arrayIndex, quadrature *q);
 static void ExtractFromPredictorFull(RMatrix Z, int arrayIndex, quadrature *q);
 __attribute__unused static void ReorderWithBoundaryDist(RMatrix predictor, quadrature *q, DistanceStruct *arrayIndex);
-__attribute__unused static VMin SolveEigenvalue(quadrature *q, Vector v);
 __attribute__unused static void InsertionSort(int num_entries, double *norms, int *arrayIndex);
 
 static int compareDouble(const void *a, const void *b);
@@ -76,14 +73,7 @@ __attribute__unused static bool TestQR(const CMatrix Q);
 __attribute__unused static void QuadSavePlots(quadrature *q);
 
 
-
 double PREDICTOR_TIME = 0.0;
-/***************************************************************************************************
- * A new node elimination scheme that eliminates one node at a time and computes
- * the initial guess for constrained Newton's method. Subsequently, Newton's method is called
- * to obtain quadrature rule with fewer nodes. The procedure is repeated
- * until no more nodes can be eliminated.
- ***************************************************************************************************/
 void NodeElimination(const quadrature *q_initial, quadrature *q_final, history *hist)
 {
    if(q_initial->isFullyInitialized != GQ_TRUE) {
@@ -98,7 +88,6 @@ void NodeElimination(const quadrature *q_initial, quadrature *q_final, history *
    int numFuncs     = q_initial->basis->numFuncs;
    int dim          = q_initial->dim;
    double tol       = QUAD_TOL; // 10^(-14);
-
    quadrature *q_new  = quadrature_make_full_copy(q_initial);
 
    // test accuracy of the initial quadrature
@@ -114,7 +103,8 @@ void NodeElimination(const quadrature *q_initial, quadrature *q_final, history *
       if(SOL_FLAG == SOL_FOUND) {
          quadrature_assign_resize(q_temp, q_new);
          quadrature_free(q_temp);
-      } else if(SOL_FLAG == SOL_NOT_FOUND) {
+      }
+      else if(SOL_FLAG == SOL_NOT_FOUND) {
          Print("Initial quadrature did not converge. The initial guess should be more accurate.\n");
          quadrature_free(q_temp);
          quadrature_free(q_new);
@@ -172,27 +162,6 @@ static bool LsqSearch(bool_enum CONSTR_FLAG, quadrature *q_new, history *hist)
 
    DistanceStruct *distanceWeight = distance_init(n_cur);
    RMatrix Z = Predictor_Ptr(q_new, distanceWeight);
-   qsort(distanceWeight, n_cur, sizeof(DistanceStruct), compareDouble);
-
-   DistanceStruct *distanceSVD = distance_init(1);
-   quadrature *q_svd = svdPredictorLapack(q_new, distanceSVD);
-
-   if(distanceSVD[0].d < distanceWeight[0].d)
-   {
-      int its = 0;
-      SOL_FLAG = LeastSquaresNewton(CONSTR_FLAG, q_svd, &its);
-      if(SOL_FLAG == SOL_FOUND)
-      {
-         n_cur = q_svd->num_nodes;
-         quadrature_assign_resize(q_svd, q_new);
-
-         hist->hist_array[hist->total_elims].elim_type    = SVD;
-         hist->hist_array[hist->total_elims].nodes_tot    = n_cur;
-         hist->hist_array[hist->total_elims].success_node = 0;
-         hist->hist_array[hist->total_elims].success_its  = its;
-         ++hist->total_elims;
-      }
-   }
 
    int failCount = 0;
    if(SOL_FLAG == SOL_NOT_FOUND)
@@ -205,8 +174,8 @@ static bool LsqSearch(bool_enum CONSTR_FLAG, quadrature *q_new, history *hist)
          // store ith initial quadrature guess in q_temp
          ExtractFromPredictor(Z, distanceWeight[i].index, q_temp);
 
-         if(V_InfNorm(q_temp->z) >= QUAD_HUGE)               continue;
-         if(!QuadInConstraint(q_temp) && CONSTR_FLAG == OFF) continue;
+         if(V_InfNorm(q_temp->z) >= QUAD_HUGE) continue;
+         if(!QuadInConstraint(q_temp))         continue;
 
          int its = 0;
          SOL_FLAG = LeastSquaresNewton(CONSTR_FLAG, q_temp, &its);
@@ -235,37 +204,10 @@ static bool LsqSearch(bool_enum CONSTR_FLAG, quadrature *q_new, history *hist)
    free(distanceWeight);
    RMatrix_free(Z);
 
-   if(SOL_FLAG == SOL_NOT_FOUND)
-   {
-      int its = 0;
-      SOL_FLAG = LeastSquaresNewton(CONSTR_FLAG, q_svd, &its);
-      if(SOL_FLAG == SOL_FOUND)
-      {
-         n_cur = q_svd->num_nodes;
-         quadrature_assign_resize(q_svd, q_new);
-
-         printf("\neliminated additional node using SVD\n");
-         hist->hist_array[hist->total_elims].elim_type    = SVD;
-         hist->hist_array[hist->total_elims].nodes_tot    = n_cur;
-         hist->hist_array[hist->total_elims].success_node = failCount;
-         hist->hist_array[hist->total_elims].success_its  = its;
-         ++hist->total_elims;
-      }
-   }
-   free(distanceSVD);
-   quadrature_free(q_svd);
-
-
-
    return SOL_FLAG;
 }
 
 
-// implementation of 2-level b-tree solution search
-// globally affects:
-// 1.SOL_FLAG if solution is found
-// 2.q_new if solution is found
-// 3. n_cur if solution is found
 static bool TreeSearch(bool_enum CONSTR_FLAG, quadrature *q_new, history *hist)
 {
    RMatrix(*Predictor_Ptr)(quadrature *, DistanceStruct *);
@@ -277,53 +219,56 @@ static bool TreeSearch(bool_enum CONSTR_FLAG, quadrature *q_new, history *hist)
    #endif
 
    int n_cur = q_new->num_nodes;
-   int dim   = q_new->dim;
+   int dim = q_new->dim;
    bool SOL_FLAG = SOL_NOT_FOUND;
 
    DistanceStruct *distance__1 = distance_init(n_cur);
-   RMatrix Z__1  = Predictor_Ptr(q_new, distance__1);
+   RMatrix Z__1 = Predictor_Ptr(q_new, distance__1);
 
    quadrature *qnewtemp__1 = quadrature_make_full_copy(q_new);
    quadrature *qsearch__1  = quadrature_make_full_copy(q_new);
    Vector dz__1 = Vector_init(n_cur*(dim+1));
    int failCount__1 = 0;
-   for(int i = 0; i < n_cur; ++i)
+   for(int i1 = 0; i1 < n_cur; ++i1)
    {
-      quadrature_assign(q_new, qnewtemp__1);
-      ExtractFromPredictorFull(Z__1, distance__1[i].index, qsearch__1);
-      bool searchElimFlag__1 = SOL_NOT_FOUND;
 
       // level 1 search
+      quadrature_assign(q_new, qnewtemp__1);
+      ExtractFromPredictorFull(Z__1, distance__1[i1].index, qsearch__1);
+      bool searchElimFlag__1 = SOL_NOT_FOUND;
       bool searchNewGuessFlag__1 = SOL_NOT_FOUND;
-      int sd;
-      for(sd = 0; sd < SEARCH_DIM; ++sd) {
+      int sd1;
+      for(sd1 = 0; sd1 < SEARCH_DIM; ++sd1) {
          VectorAddScale(1.0, qsearch__1->z, -1.0, qnewtemp__1->z, dz__1);
-         VectorAddScale(1.0, qnewtemp__1->z, shortParams.t[sd], dz__1, qsearch__1->z);
+         VectorAddScale(1.0, qnewtemp__1->z, shortParams.t[sd1], dz__1, qsearch__1->z);
          int itsLoc = 0;
          searchNewGuessFlag__1 = LeastSquaresNewton(OFF, qsearch__1, &itsLoc);
          if(searchNewGuessFlag__1)
-            break; // break sd loop
+            break; // break sd1 loop
       }
 
-      if(searchNewGuessFlag__1) {
-         searchElimFlag__1 = LsqSearch(ON, qsearch__1, hist);
+      if(searchNewGuessFlag__1)
+      {
+         searchElimFlag__1 = LsqSearch(CONSTR_FLAG, qsearch__1, hist);
 
          // if eliminated a node, save solution and break all loops
-         if(searchElimFlag__1) {
+         if(searchElimFlag__1)
+         {
             quadrature_assign_resize(qsearch__1, q_new);
-            n_cur = q_new->num_nodes;
             SOL_FLAG = SOL_FOUND;
-            printf("succeeded at %i th iteration, with shortening at depth level 1, and damping parameter %.4e\n", i, shortParams.t[sd]);
-            break; // break i loop if new solution was found
+            printf("succeeded at %i th iteration, with shortening at depth level 1, and damping parameter %.4e\n", i1, shortParams.t[sd1]);
+            break; // break i1 loop if new solution was found
          }
          // new initial guess was found, but node was not eliminated, take new initial guess to level 2
          else if(!searchElimFlag__1)
             quadrature_assign(qsearch__1, qnewtemp__1);
       }
-      else if(searchNewGuessFlag__1 == false) {
+      else if(!searchNewGuessFlag__1)
+      {
          ++failCount__1;
          continue; // go to next node
       }
+
 
       // level 2 search
       // assumes searchNewGuessFlag__1 is true and searchElimFlag__1 false;
@@ -336,12 +281,14 @@ static bool TreeSearch(bool_enum CONSTR_FLAG, quadrature *q_new, history *hist)
 
       bool searchElimFlag__2  = SOL_NOT_FOUND;
       int failCount__2 = 0;
-      for(int i2 = 0; i2 < n_cur; ++i2) {
-         ExtractFromPredictorFull(Z__2, distance__2[i].index, qsearch__2);
+      for(int i2 = 0; i2 < n_cur; ++i2)
+      {
+         ExtractFromPredictorFull(Z__2, distance__2[i2].index, qsearch__2);
          bool searchNewGuessFlag__2 = SOL_NOT_FOUND;
 
          int sd2 = 0;
-         for(sd2 = 0; sd2 < SEARCH_DIM; ++sd2) {
+         for(sd2 = 0; sd2 < SEARCH_DIM; ++sd2)
+         {
             VectorAddScale(1.0, qsearch__2->z, -1.0, qnewtemp__1->z, dz__2);
             VectorAddScale(1.0, qnewtemp__1->z, shortParams.t[sd2], dz__2, qsearch__2->z);
             int itsLoc = 0;
@@ -350,74 +297,44 @@ static bool TreeSearch(bool_enum CONSTR_FLAG, quadrature *q_new, history *hist)
                break; // break sd2 loop
          }
 
-         if(searchNewGuessFlag__2) {
-            searchElimFlag__2 = LsqSearch(ON, qsearch__2, hist);
+         if(searchNewGuessFlag__2)
+         {
+            searchElimFlag__2 = LsqSearch(CONSTR_FLAG, qsearch__2, hist);
             // if eliminated a node, save solution and break all loops
-            if(searchElimFlag__2) {
+            if(searchElimFlag__2)
+            {
                quadrature_assign_resize(qsearch__2, q_new);
                SOL_FLAG = SOL_FOUND;
-               n_cur = q_new->num_nodes;
-               printf("succeeded at %i->%i th iteration, with shortening at depth level 2, and damping parameter %.4e\n", i, i2, shortParams.t[sd]);
-               break; // break i2 loop and later i loop
+               printf("succeeded at %i->%i th iteration, with shortening at depth level 2, and damping parameter %.4e\n", i1, i2, shortParams.t[sd2]);
+               break; // break i2 loop and later i1 loop
             }
          }
 
-         if(++failCount__2 > MAX_FAILS_LEVEL_2)
+         if(++failCount__2 >= MAX_FAILS_LEVEL_2)
             break;
       }
       quadrature_free(qsearch__2);
-      Vector_free(dz__2);
       RMatrix_free(Z__2);
+      Vector_free(dz__2);
       free(distance__2);
 
       if(searchElimFlag__2)
          break;
 
-      if(++failCount__1 >= MAX_FAILS_LEVEL_1) {
+      if(++failCount__1 >= MAX_FAILS_LEVEL_1)
+      {
          SOL_FLAG = SOL_NOT_FOUND;
          break;
       }
 
    } // end i loop
 
-   RMatrix_free(Z__1);
    quadrature_free(qnewtemp__1);
    quadrature_free(qsearch__1);
+   RMatrix_free(Z__1);
    Vector_free(dz__1);
    free(distance__1);
    return SOL_FLAG;
-}
-
-
-static quadrature* svdPredictorLapack(quadrature *q, DistanceStruct *distance)
-{
-   double start = get_cur_time();
-
-   int n = q->num_nodes;
-   int numFuncs = q->basis->numFuncs;
-   Vector MinV = Vector_init(n);
-   CMatrix Basis = CMatrix_init(numFuncs, n);
-
-   GetBasis(q, Basis);
-   DGESVD_LAPACK(Basis, MinV);
-   VMin minEigen = SolveEigenvalue(q, MinV);
-
-   int min_index = minEigen.min_index;
-   double min_value = minEigen.min_value;
-   distance->index = min_index;
-   distance->d = fabs(min_value);
-
-   quadrature *q_guess = quadrature_make_full_copy(q);
-   for(int i = 0; i < n; ++i)
-      q_guess->w[i] += min_value*MinV.id[i];
-   COND_TEST_5;
-   quadrature_remove_element(min_index, q_guess);
-
-   Vector_free(MinV);
-   CMatrix_free(Basis);
-
-   PREDICTOR_TIME += get_cur_time() - start;
-   return q_guess;
 }
 
 
@@ -453,6 +370,8 @@ static RMatrix PredictorLapack(quadrature *q, DistanceStruct *distance)
    for(int i = 0; i < QFull.rows; ++i) C_ELEM_ID(QFull, i, i) = 1.0;
    if(DORMQR_LAPACK('L',  'N', REFL, J_TR, QFull) != 0)
       PRINT_ERR(STR_LAPACK_ERR, __LINE__, __FILE__);
+
+//   COND_TEST_3;
 
    // loop over columns for more efficient access(although marginal compared to QR)
    // extract Q2
@@ -550,6 +469,7 @@ static RMatrix PredictorPlasma(quadrature *q, DistanceStruct *distance)
                  QFull.id, QFull.rows);
    if(INFO != 0)
       PRINT_ERR(STR_PLASMA_ERR, __LINE__, __FILE__);
+//   COND_TEST_3;
 
    // extract Q2
    for(int i = 0; i < Q2.rows; ++i)
@@ -697,24 +617,6 @@ static void ReorderWithBoundaryDist(RMatrix predictor, quadrature *q, DistanceSt
       distance[boundCount+i].d = tempDistances[boundCount+i];
    }
    quadrature_free(q_temp);
-}
-
-
-static VMin SolveEigenvalue(quadrature *q, Vector v)
-{
-   assert(v.len == q->num_nodes);
-
-   Vector eig = Vector_init(v.len);
-   for(int i = 0; i < v.len; ++i)
-      eig.id[i] = fabs((q->w[i] / v.id[i]));
-   VMin minEigAbs = VectorMin(eig);
-   Vector_free(eig);
-
-   VMin minEig;
-   minEig.min_index = minEigAbs.min_index;
-   minEig.min_value = -q->w[minEigAbs.min_index] / v.id[minEigAbs.min_index];
-
-   return minEig;
 }
 
 

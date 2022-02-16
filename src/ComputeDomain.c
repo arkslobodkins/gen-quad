@@ -173,7 +173,7 @@ void ComputeSimplex(int deg, int dim)
    double basisRes = orthogonal_simplex_basis_test(deg, dim);
    if(basisRes > POW_DOUBLE(10.0, -13))
    {
-      PRINT_ERR("Residual of orthogonal simplex basis functions is too", __LINE__, __FILE__);
+      PRINT_ERR("Residual of orthogonal simplex basis functions is too large", __LINE__, __FILE__);
       return;
    }
 #endif

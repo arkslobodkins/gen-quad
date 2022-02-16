@@ -14,13 +14,16 @@
 
 RMatrix RMatrix_init(int nRows, int nCols)
 {
+   assert(nRows >= 1);
+   assert(nCols >= 1);
+
    RMatrix M = {0};
 
    M.rows = nRows;
    M.cols = nCols;
    M.len  = nRows*nCols;
 
-   M.id   = (double *)calloc(nRows*nCols, sizeof(double));
+   M.id = (double *)calloc(nRows*nCols, sizeof(double));
    if(M.id == NULL) PRINT_ERR(STR_ALLOC_FAIL, __LINE__, __FILE__);
 
    M.rid  = (double **)malloc(nRows*sizeof(double*));
@@ -29,15 +32,14 @@ RMatrix RMatrix_init(int nRows, int nCols)
    for(int i = 0; i < nRows; ++i)
       M.rid[i] = &M.id[nCols*i];
 
-   M.vecFormat.len = M.len;
-   M.vecFormat.id = &M.id[0];
-   M.vecFormat.ompId = NULL;
-
    return M;
 }
 
 void RMatrix_realloc(int nRows, int nCols, RMatrix *M)
 {
+   assert(nRows >= 1);
+   assert(nCols >= 1);
+
    M->rows = nRows;
    M->cols = nCols;
    M->len  = nRows*nCols;
@@ -52,16 +54,19 @@ void RMatrix_realloc(int nRows, int nCols, RMatrix *M)
 
    for(int i = 0; i < nRows; ++i)
       M->rid[i] = &M->id[nCols*i];
-
-   M->vecFormat.len = M->len;
-   M->vecFormat.id = &M->id[0];
-   M->vecFormat.ompId = NULL;
 }
 
 void RMatrix_free(RMatrix M)
 {
    if(M.id != NULL)  { free(M.id); M.id = NULL; }
    if(M.rid != NULL) { free(M.rid); M.rid = NULL; }
+}
+
+void RMatrix_LoadRow(int row, RMatrix M, Vector v)
+{
+   assert(v.len == M.cols);
+   assert(row > -1);
+   memcpy(M.rid[row], v.id, SIZE_DOUBLE(M.cols));
 }
 
 void RMatVec(RMatrix M, Vector x, Vector y)
@@ -90,6 +95,9 @@ void RMatrixPrint(RMatrix M)
 
 CMatrix CMatrix_init(int nRows, int nCols)
 {
+   assert(nRows >= 1);
+   assert(nCols >= 1);
+
    CMatrix M = {0};
 
    M.rows = nRows;
@@ -109,6 +117,9 @@ CMatrix CMatrix_init(int nRows, int nCols)
 
 void CMatrix_realloc(int nRows, int nCols, CMatrix *M)
 {
+   assert(nRows >= 1);
+   assert(nCols >= 1);
+
    M->rows = nRows;
    M->cols = nCols;
    M->len  = nRows*nCols;
@@ -137,14 +148,14 @@ void CMatrix_Assign(CMatrix A, CMatrix B)
    memcpy(B.id, A.id, A.len*sizeof(double));
 }
 
-void CMatrix_LoadColumn(int col, Vector x, CMatrix M)
+void CMatrix_LoadColumn(int col, CMatrix M, Vector x)
 {
    assert(x.len == M.rows);
    assert(col > -1);
    memcpy(M.cid[col], x.id, SIZE_DOUBLE(M.rows));
 }
 
-void CMatrix_LoadColumnDD(int col, int len, double *x, CMatrix M)
+void CMatrix_LoadColumnDD(int col, int len, CMatrix M, double *x)
 {
    assert(len == M.rows);
    assert(col > -1);
@@ -178,9 +189,6 @@ CMatrix CMatrix_Transpose(CMatrix A)
    int Acols = A.cols;
    int Arows = A.rows;
 
-   #ifdef _OPENMP
-   #pragma omp parallel for default(shared) schedule(static) num_threads(omp_get_max_threads())
-   #endif
    for(int j = 0; j < Acols; ++j)
       for(int i = 0; i < Arows; ++i)
          A_TR.cid[i][j] = A.cid[j][i];

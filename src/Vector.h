@@ -7,6 +7,7 @@
 extern "C" {
 #endif
 
+// Level-1 BLAS
 void dcopy_(int *N, double *DX, int *INCX, double *DY, int *INCY);
 void dscal_(int *n, double *c, double *x, int *incx);
 void daxpy_(int *n, double *c, double *x, int *incx, double *y, int *incy);
@@ -19,6 +20,7 @@ typedef struct
    double **ompId;
    int len;
 } Vector;
+
 typedef struct
 {
    int min_index;
@@ -29,6 +31,7 @@ Vector Vector_init(int n);
 void Vector_realloc(int n, Vector *V);
 void Vector_Assign(Vector v1, Vector v2);
 void Vector_free(Vector V);
+
 #ifdef _OPENMP
 void AllocVectorOmpData(Vector *v);
 void FreeVectorOmpData(Vector v);

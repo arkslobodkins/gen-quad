@@ -3,6 +3,7 @@
 #define CONSTRAINED_OPTIMIZATION_H
 
 #include "GENERAL_QUADRATURE.h"
+#include "Quadrature.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -14,6 +15,8 @@ extern "C" {
 
 #define CONSTR_FAIL -1
 #define CONSTR_UNEXPECTED -2
+
+typedef enum { NODE, WEIGHT, NONE } NODE_OR_WEIGHT;
 
 typedef struct
 {

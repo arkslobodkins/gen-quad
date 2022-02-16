@@ -13,19 +13,24 @@
 #include <string.h>
 #include <omp.h>
 
-static inline double max_double(double x, double y)
-{
-   return x > y ? x : y;
-}
 
 Vector Vector_init(int n)
 {
+   assert(n >= 1);
+
    Vector V = {0};
    V.len = n;
    V.id = (double *)calloc(n, sizeof(double));
    V.ompId = NULL;
 
    return V;
+}
+
+void Vector_realloc(int n, Vector *V)
+{
+   assert(n >= 1);
+   V->id = (double *)realloc(V->id, n*sizeof(double));
+   V->len = n;
 }
 
 void Vector_Assign(Vector v1, Vector v2)
@@ -57,11 +62,7 @@ void FreeVectorOmpData(Vector v)
 }
 #endif
 
-void Vector_realloc(int n, Vector *V)
-{
-   V->id = (double *)realloc(V->id, n*sizeof(double));
-   V->len = n;
-}
+
 
 void VPrint(Vector V)
 {
@@ -136,7 +137,7 @@ void VectorRemoveElement(int index, Vector *z)
    assert(index <= z->len-1);
 
    for(int i = index; i < z->len-1; ++i)
-      z->id[index] = z->id[i+1];
+      z->id[i] = z->id[i+1];
 
    Vector_realloc(z->len-1, z);
 }

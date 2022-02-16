@@ -17,7 +17,6 @@ typedef struct
    int len;
    double *id;
    double **rid;
-   Vector vecFormat;
 } RMatrix;
 
 typedef struct CMatrix
@@ -32,6 +31,7 @@ typedef struct CMatrix
 RMatrix RMatrix_init(int nRows, int nCols);
 void RMatrix_realloc(int nRows, int nCols, RMatrix *M);
 void RMatrix_free(RMatrix M);
+void RMatrix_LoadRow(int row, RMatrix M, Vector v);
 void RMatVec(RMatrix M, Vector x, Vector y);
 void RMatrixPrint(RMatrix M);
 
@@ -39,8 +39,8 @@ CMatrix CMatrix_init(int nRows, int nCols);
 void CMatrix_realloc(int nRows, int nCols, CMatrix *M);
 void CMatrix_free(CMatrix M);
 void CMatrix_Assign(CMatrix A, CMatrix B);
-void CMatrix_LoadColumn(int col, Vector x, CMatrix M);
-void CMatrix_LoadColumnDD(int col, int len, double *x, CMatrix M);
+void CMatrix_LoadColumn(int col, CMatrix M, Vector x);
+void CMatrix_LoadColumnDD(int col, int len, CMatrix M, double *x);
 void CMatrix_GetRow(int row, CMatrix M, Vector x);
 void CMatrix_GetColumn(int col, CMatrix M, Vector x);
 void CMatrix_ColumnScale(int col, double c, CMatrix M);

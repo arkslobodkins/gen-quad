@@ -117,27 +117,27 @@ constrInterface SetSimplexConstrInterface();
 constrInterface SetCubeSimplexConstrInterface();
 constrInterface SetSimplexSimplexConstrInterface();
 
-constraints *constraints_init(void *params, constrInterface *interface);
+constraints* constraints_init(void *params, constrInterface *interface);
 void constraints_get(constraints *constr);
 void constraints_free(constraints *constr);
 
-constraintsInterval *constraints_interval_init(dimParamsInterval *params);
+constraintsInterval* constraints_interval_init(dimParamsInterval *params);
 void get_constraints_interval(constraintsInterval *constr);
 void constraints_interval_free(constraintsInterval *constr);
 
-constraintsCube *constraints_cube_init(dimParamsCube *params);
+constraintsCube* constraints_cube_init(dimParamsCube *params);
 void get_constraints_cube(constraintsCube *constr);
 void constraints_cube_free(constraintsCube *constr);
 
-constraintsSimplex *constraints_simplex_init(dimParamsSimplex *params);
+constraintsSimplex* constraints_simplex_init(dimParamsSimplex *params);
 void get_constraints_simplex(constraintsSimplex *constr);
 void constraints_simplex_free(constraintsSimplex *constr);
 
-constraintsCubeSimplex *constraints_cubesimplex_init(dimParamsCubeSimplex *params);
+constraintsCubeSimplex* constraints_cubesimplex_init(dimParamsCubeSimplex *params);
 void get_constraints_cubesimplex(constraintsCubeSimplex *constr);
 void constraints_cubesimplex_free(constraintsCubeSimplex *constr);
 
-constraintsSimplexSimplex *constraints_simplexsimplex_init(dimParamsSimplexSimplex *params);
+constraintsSimplexSimplex* constraints_simplexsimplex_init(dimParamsSimplexSimplex *params);
 void get_constraints_simplexsimplex(constraintsSimplexSimplex *constr);
 void constraints_simplexsimplex_free(constraintsSimplexSimplex *constr);
 

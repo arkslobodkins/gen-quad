@@ -563,7 +563,7 @@ void SimplexBasisIntegralsMonomial(SimplexBasis *basis, Vector v)
    int dim             = basis->dim;
    int numFuncs        = basis->numFuncs;
    INT_8 *basisIndices = basis->indices;
-   Vector integrals    = basis->integrals;
+   Vector integrals    = v;
    double val, power;
 
    for(int i = 0; i < numFuncs; ++i)
@@ -1023,7 +1023,7 @@ void SimplexSimplexBasisFuncs(SimplexSimplexBasis *basis, const double *x, Vecto
    Vector polytopic = basis->addData->basis_polytopic;
 
    VSetToOne(basis->functions);
-   double *phi = basis->functions.id;
+   double *phi = v.id;
 
    SimplexFuncsPolytopicOne((MixedPolytopeBasis *)basis, x, polytopic);
    #pragma omp simd

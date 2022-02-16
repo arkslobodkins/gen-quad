@@ -30,14 +30,10 @@ typedef struct
 
 static errInfo CheckForStop(int INFO, double errorNorm, double errorNormPrev, Vector least_sq_sol);
 
-// LeastSquaresNewton
-// Receives initial quadrature guess. Primarily solves
-// underdetermined systems of equations in the least
-// squares sense. Returns success if algorithm converged
-// and all nodes are inside of the domain and if all nodes are positive.
 double CONSTR_TIME = 0.0;
 double LSQ_TIME = 0.0;
 #define MAX_ELIM_WEIGHTS 10
+
 bool LeastSquaresNewton(const bool_enum CONSTR_OPT, quadrature *q_orig, int *its)
 {
    assert(q_orig->num_nodes >= 1);
@@ -101,7 +97,7 @@ bool LeastSquaresNewton(const bool_enum CONSTR_OPT, quadrature *q_orig, int *its
    while( (itsLoc < maxiter) && (errorNormUpdate > q_tol) )
    {
 
-      if(CONSTR_OPT == ON  && cVectData.ACTIVE == ON  && cVectData.N_OR_W == WEIGHT)
+      if(CONSTR_OPT == ON && cVectData.ACTIVE == ON && cVectData.N_OR_W == WEIGHT)
       {
          if( (k == 1) || (++elim_weights > MAX_ELIM_WEIGHTS) ) {
             SOL_FLAG = SOL_NOT_FOUND;
@@ -201,6 +197,8 @@ FREERETURN:
    *its = itsLoc;
    return SOL_FLAG;
 }// end LeastSquaresNewton
+
+#undef MAX_ELIM_WEIGHTS
 
 
 

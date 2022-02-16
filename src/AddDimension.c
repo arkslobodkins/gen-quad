@@ -8,10 +8,6 @@
 
 #include <assert.h>
 
-// Computes tensor product of arbitrary quadrature over (dim-1)-dimensional
-// domain Ω and 1-dimensional interval [0, 1]. Quadrature of dimension dim
-// and degree p over interval Ω x [0,1] is generated. Stores interval quadrature nodes
-// as the first coordinate.
 void AddLineFirst(const quadrature *q1D, const quadrature *quad_prev, quadrature *quad_new)
 {
    assert(q1D->dim == 1);
@@ -23,25 +19,23 @@ void AddLineFirst(const quadrature *q1D, const quadrature *quad_prev, quadrature
    const int n_prev     = quad_prev->num_nodes;
    const double *x_prev = quad_prev->x;
    const int dim        = quad_new->dim;
+   const int sizePrev   = dim*n_prev;
    double *x_new        = quad_new->x;
 
    // compute tensor product for nodes
-   for(int j = 0; j < n_prev; ++j)
-   {
-      for(int i = 0; i < n1D; ++i) {
-         int ind = i*dim*n_prev + j*dim;
-         x_new[ind] = x1D[i];
+   for(int i = 0; i < n1D; ++i)
+      for(int j = 0; j < n_prev; ++j)
+         x_new[i*sizePrev+j*dim] = x1D[i];
+
+   for(int i = 0; i < n1D; ++i)
+      for(int j = 0; j < n_prev; ++j)
          for(int d = 1; d < dim; ++d)
-            x_new[ind+d] = x_prev[j*(dim-1)+d-1];
-      }
-   }
+            x_new[i*sizePrev+j*dim+d] = x_prev[j*(dim-1)+d-1];
+
    WeightsTensor2D(q1D, quad_prev, quad_new);
 }
 
 
-// Computes tensor product of unit (dim-1)-dimensional simplex
-// and 1-dimensional interval [0, 1], and maps the product to the unit
-// simplex of dimension dim using Duffy transformation.
 void AddLineSimplex(const quadrature *q1D, const quadrature *quad_prev, quadrature *quad_new)
 {
    assert(q1D->dim == 1);
@@ -57,18 +51,17 @@ void AddLineSimplex(const quadrature *q1D, const quadrature *quad_prev, quadratu
    WeightsTensor2D(q1D, quad_prev, quad_new);
 
    // apply one level of Duffy Transformation
-   for(int i = 0; i < n_new; ++i) {
-      int ind = i*dim;
-      for(int d = 1; d < dim; ++d) {
-         x_new[ind+d] *= x_new[ind];
-         w_new[i] *= x_new[ind];
-      }
-   }
+   for(int i = 0; i < n_new; ++i)
+      for(int d = 1; d < dim; ++d)
+         w_new[i] *= x_new[i*dim];
+
+   for(int i = 0; i < n_new; ++i)
+      for(int d = 1; d < dim; ++d)
+         x_new[i*dim+d] *= x_new[i*dim];
+
 }
 
 
-// Maps nodes and weights from cube of dimension dim to
-// simplex of dimension dim using generalized Duffy transformation.
 void GeneralDuffy(quadrature *q)
 {
    const int dim = q->dim;
@@ -76,17 +69,15 @@ void GeneralDuffy(quadrature *q)
    double *x = q->x;
    double *w = q->w;
 
-   for(int i = 0; i < N; ++i) {
-      int ind = i*dim;
-      for(int d = 1; d < dim; ++d) {
-         x[ind+d] *= x[ind+d-1];
-         w[i] *= x[ind+d-1];
+   for(int i = 0; i < N; ++i)
+      for(int d = 1; d < dim; ++d)
+      {
+         x[i*dim+d] *= x[i*dim+d-1];
+         w[i] *= x[i*dim+d-1];
       }
-   }
 }
 
-// Computes tensor product of dim1-dimensional quadrature q1
-// and dim2-dimensional quadrature q2.
+
 void MixedTensor(const quadrature *q1, const quadrature *q2, quadrature *q_tp)
 {
    assert(q1->dim + q2->dim == q_tp->dim);

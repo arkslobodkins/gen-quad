@@ -12,7 +12,7 @@
 #include <assert.h>
 
 
-constraints *constraints_init(void *params, constrInterface *interface)
+constraints* constraints_init(void *params, constrInterface *interface)
 {
    constraints *constr  = interface->constr_init(params);
    constr->interface    = (constrInterface *)malloc(sizeof(constrInterface));
@@ -104,7 +104,8 @@ constrInterface SetSimplexSimplexConstrInterface()
 /**************************************
 \* Routines for interval constraints \*
 **************************************/
-constraintsInterval *constraints_interval_init(dimParamsInterval *params)
+
+constraintsInterval* constraints_interval_init(__attribute__unused dimParamsInterval *params)
 {
    constraintsInterval *constr = (constraintsInterval *)malloc(sizeof(constraintsInterval));
 
@@ -148,7 +149,7 @@ void constraints_interval_free(constraintsInterval *constr)
 \* Routines for cube constraints \*
 **********************************/
 
-constraintsCube *constraints_cube_init(dimParamsCube *params)
+constraintsCube* constraints_cube_init(dimParamsCube *params)
 {
    assert(params->dim > 0);
 
@@ -209,7 +210,7 @@ void constraints_cube_free(constraintsCube *constr)
 \* Routines for simplex constraints \*
 *************************************/
 
-constraintsSimplex *constraints_simplex_init(dimParamsSimplex *params)
+constraintsSimplex* constraints_simplex_init(dimParamsSimplex *params)
 {
    assert(params->dim > 1);
 
@@ -269,7 +270,7 @@ void constraints_simplex_free(constraintsSimplex *constr)
 \* Routines for cubesimplex constraints \*
 *****************************************/
 
-constraintsCubeSimplex *constraints_cubesimplex_init(dimParamsCubeSimplex *params)
+constraintsCubeSimplex* constraints_cubesimplex_init(dimParamsCubeSimplex *params)
 {
    assert((params->dims[0] > 0));
    assert((params->dims[1] > 1));
@@ -345,7 +346,7 @@ void constraints_cubesimplex_free(constraintsCubeSimplex *constr)
 \* Routines for simplexsimplex constraints \*
 ********************************************/
 
-constraintsSimplexSimplex *constraints_simplexsimplex_init(dimParamsSimplexSimplex *params)
+constraintsSimplexSimplex* constraints_simplexsimplex_init(dimParamsSimplexSimplex *params)
 {
    assert((params->dims[0] > 1));
    assert((params->dims[1] > 1));

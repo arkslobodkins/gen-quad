@@ -2,6 +2,7 @@
 #define PRINT_H
 
 #include "GENERAL_QUADRATURE.h"
+#include "Quadrature.h"
 #include <stdio.h>
 
 /**********************************************

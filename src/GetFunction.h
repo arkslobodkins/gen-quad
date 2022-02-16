@@ -2,6 +2,7 @@
 #define GET_FUNCTION_H
 
 #include "GENERAL_QUADRATURE.h"
+#include "Quadrature.h"
 
 #ifdef __cplusplus
 extern "C" {

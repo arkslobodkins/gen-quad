@@ -5,9 +5,12 @@
 #include <omp.h>
 #include <plasma.h>
 
-
 int DGEMM_LAPACK(CMatrix A, CMatrix B, CMatrix C)
 {
+   if(A.rows != C.rows) return INV_INPUT;
+   if(A.cols != B.rows) return INV_INPUT;
+   if(B.cols != C.cols) return INV_INPUT;
+
    char TRANS1  = 'N';
    char TRANS2  = 'N';
    double alpha = 1.0;
@@ -15,12 +18,8 @@ int DGEMM_LAPACK(CMatrix A, CMatrix B, CMatrix C)
    int M = A.rows;
    int K = A.cols;
    int N = B.cols;
-   if(A.rows != C.rows) return INV_INPUT;
-   if(A.cols != B.rows) return INV_INPUT;
-   if(B.cols != C.cols) return INV_INPUT;
 
    dgemm_(&TRANS1, &TRANS2, &M, &N, &K, &alpha, A.id, &M, B.id, &K, &beta, C.id, &M);
-
    return GQ_SUCCESS;
 }
 
@@ -34,7 +33,8 @@ int DGEQR2_LAPACK(CMatrix A, Vector TAU)
    dgeqr2_(&A.rows, &A.cols, A.id, &LDA, TAU.id, WORK, &INFO);
    free(WORK);
 
-   return INFO;
+   if(INFO != 0) return LAPACK_ERR;
+   else          return GQ_SUCCESS;
 }
 
 int DGEQRF_LAPACK(CMatrix A, Vector TAU)
@@ -43,12 +43,13 @@ int DGEQRF_LAPACK(CMatrix A, Vector TAU)
 
    int INFO;
    int LDA = A.rows;
-   int LWORK = 2*A.cols;
+   int LWORK = 4*MAX(A.cols, A.rows);
    double *WORK = (double *)malloc(SIZE_DOUBLE(LWORK));
    dgeqrf_(&A.rows, &A.cols, A.id, &LDA, TAU.id, WORK, &LWORK, &INFO);
    free(WORK);
 
-   return INFO;
+   if(INFO != 0) return LAPACK_ERR;
+   else          return GQ_SUCCESS;
 }
 
 int DORMQR_LAPACK(char SIDE, char TRANS, Vector TAU, CMatrix Q, CMatrix A)
@@ -61,7 +62,8 @@ int DORMQR_LAPACK(char SIDE, char TRANS, Vector TAU, CMatrix Q, CMatrix A)
    dormqr_(&SIDE, &TRANS, &A.rows, &A.cols, &TAU.len, Q.id, &LDQ, TAU.id, A.id, &LDA, workQR, &lworkQR, &INFO);
    free(workQR);
 
-   return INFO;
+   if(INFO != 0) return LAPACK_ERR;
+   else          return GQ_SUCCESS;
 }
 
 int DORGQR_LAPACK(CMatrix Q, Vector TAU)
@@ -72,14 +74,17 @@ int DORGQR_LAPACK(CMatrix Q, Vector TAU)
    double *WORK = (double *)malloc(LWORK*sizeof(LWORK));
 
    dorgqr_(&Q.rows, &Q.cols, &TAU.len, Q.id, &LDA,
-          TAU.id, WORK, &LWORK, &INFO);
+           TAU.id, WORK, &LWORK, &INFO);
 
    free(WORK);
-   return INFO;
+   if(INFO != 0) return LAPACK_ERR;
+   else          return GQ_SUCCESS;
 }
 
-int DGESVD_LAPACK(CMatrix A, Vector VMin)
+int DGESVD_LAPACK(CMatrix A, CMatrix VT)
 {
+   assert(VT.rows == MIN(A.rows, A.cols));
+   assert(VT.cols == A.cols);
    char JOBU  = 'N'; // U is not computed
    char JOBVT = 'S'; //  return MIN(M, N) rows of V^T, i.e. right singular vectors
 
@@ -92,9 +97,7 @@ int DGESVD_LAPACK(CMatrix A, Vector VMin)
 
    double *U = NULL;
    int LDU = 1;
-   int LDVT = MIN(M, N);               // expected to be N in general
-   CMatrix VT = CMatrix_init(LDVT, N); // expected to be N x N in general
-
+   int LDVT = MIN(M, N);    // expected to be N in general
    int LWORK = 8*MIN(M, N); // assumes M is larger than N, 5*MIN is the minimum work required
    Vector WORK = Vector_init(LWORK);
    int INFO;
@@ -102,15 +105,12 @@ int DGESVD_LAPACK(CMatrix A, Vector VMin)
    dgesvd_(&JOBU, &JOBVT, &M, &N, A.id, &LDA,
            SINGV.id, U, &LDU, VT.id, &LDVT,
            WORK.id, &LWORK, &INFO);
-//   printf("minimum singular value = %.12e\n", SINGV.id[MIN(M, N)-1]);
-   CMatrix_GetRow(MIN(M, N)-1, VT, VMin); // get last row of VT;
 
    Vector_free(SINGV);
    Vector_free(WORK);
-   CMatrix_free(VT);
 
-   if(!INFO) return LAPACK_ERR;
-   else      return GQ_SUCCESS;
+   if(INFO != 0) return LAPACK_ERR;
+   else          return GQ_SUCCESS;
 }
 
 int DGELS_LAPACK(CMatrix A, Vector RHS_TO_X)
@@ -129,7 +129,8 @@ int DGELS_LAPACK(CMatrix A, Vector RHS_TO_X)
           RHS_TO_X.id, &LEAD_DIM, WORK.id, &WORK.len, &INFO);
    Vector_free(WORK);
 
-   return INFO;
+   if(INFO != 0) return LAPACK_ERR;
+   else          return GQ_SUCCESS;
 }
 
 #ifdef _OPENMP
@@ -150,7 +151,8 @@ int DGELS_PLASMA(CMatrix A, Vector RHS_TO_X)
    plasma_desc_destroy(&T);
    plasma_finalize();
 
-   return INFO;
+   if(INFO != 0) return PLASMA_ERR;
+   else          return GQ_SUCCESS;
 }
 
 int DGEMM_PLASMA(CMatrix A, CMatrix B, CMatrix C)
@@ -166,17 +168,16 @@ int DGEMM_PLASMA(CMatrix A, CMatrix B, CMatrix C)
    int INFO = plasma_dgemm(TRANS1, TRANS2, M, N, K, alpha, A.id, M,
                            B.id, K, beta, C.id, M);
    plasma_finalize();
-   return INFO;
+   if(INFO != 0) return PLASMA_ERR;
+   else          return GQ_SUCCESS;
 }
-#endif
 
-// Simple transpose
 void Transpose(int M, int N, const double *A, double *B)
 {
-   #ifdef _OPENMP
    #pragma omp parallel for default(shared) schedule(static) num_threads(omp_get_max_threads())
-   #endif
    for(int i = 0; i < M; ++i)
+      #pragma omp simd
       for(int j = 0; j < N; ++j)
          B[i+j*M] = A[j+i*N];
 }
+#endif

@@ -3,6 +3,7 @@
 
 #include "Matrix.h"
 #include "Vector.h"
+#include "Tensor.h"
 #include <stdbool.h>
 #include <stdint.h>
 #include <math.h>
@@ -53,7 +54,6 @@ typedef enum { SVD, ELIM } ElimType;
 typedef enum { ON, OFF } bool_enum;
 typedef enum { orthogonal, monomial } BASIS_TYPE;
 typedef enum { INTERVAL, CUBE, SIMPLEX, CUBESIMPLEX, SIMPLEXSIMPLEX } DOMAIN_TYPE;
-typedef enum { NODE, WEIGHT, NONE } NODE_OR_WEIGHT;
 
 #define StaticVectorInit(vecName, __len)  \
    Vector vecName;                        \
@@ -97,38 +97,6 @@ typedef struct
    int total_elims;
 } history;
 
-typedef struct quadrature quadrature;
-typedef void(*SetBasisAndConstr)(quadrature *q);
-typedef void(*SetBasis)(quadrature *q);
-typedef void(*SetConstr)(quadrature *q);
-typedef double(*ExpIntegralExact)(const quadrature *q);
-typedef void(*FreePtr)(quadrature *quad);
-
-struct quadrature
-{
-   DOMAIN_TYPE D;
-   int dim;
-   int num_dims;
-   int *dims;
-   int deg;
-
-   int num_nodes;
-   double *w;
-   double *x;
-   Vector z;
-
-   int isFullyInitialized;
-   SetBasisAndConstr setBasisAndConstr;
-   SetBasis setBasis;
-   SetConstr setConstr;
-
-   struct constraints *constr;
-   struct Basis *basis;
-   struct Basis **basisOmp;
-   ExpIntegralExact expIntegralExact;
-
-   FreePtr free_ptr;
-};
 
 #define GQ_SUCCESS      0
 #define NULL_VAL       -1
