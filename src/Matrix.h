@@ -40,7 +40,7 @@ void CMatrix_realloc(int nRows, int nCols, CMatrix *M);
 void CMatrix_free(CMatrix M);
 void CMatrix_Assign(CMatrix A, CMatrix B);
 void CMatrix_LoadColumn(int col, CMatrix M, Vector x);
-void CMatrix_LoadColumnDD(int col, int len, CMatrix M, double *x);
+void CMatrix_LoadColumnDD(int col, CMatrix M, double *x);
 void CMatrix_GetRow(int row, CMatrix M, Vector x);
 void CMatrix_GetColumn(int col, CMatrix M, Vector x);
 void CMatrix_ColumnScale(int col, double c, CMatrix M);

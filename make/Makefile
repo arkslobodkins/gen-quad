@@ -4,8 +4,8 @@ debug      = 1
 
 CXX = g++
 CC  = gcc
-CXXFLAGS = -g -O3 -mfma -march=native -I../plasma-17.1/include #-fsanitize=address -fopt-info
-CFLAGS   = -g -O3 -mfma -march=native -I../plasma-17.1/include #-fsanitize=address #-fopt-info
+CXXFLAGS = -O3 -mfma -march=native -isystem../plasma-17.1/include  #-fsanitize=address #-fopt-info -Og
+CFLAGS   = -O3 -mfma -march=native -isystem../plasma-17.1/include  #-fsanitize=address #-fopt-info -Og
 
 CVERSION   = -std=c11
 CPPVERSION = -std=c++11
@@ -24,8 +24,8 @@ ifeq ($(debug), 0)
 CFLAGS   += -DQUAD_DEBUG_OFF
 CXXFLAGS += -DQUAD_DEBUG_OFF
 else
-CFLAGS   += -Wall #-Wextra -pedantic
-CXXFLAGS += -Wall #-Wextra -pedantic
+CFLAGS   += -Wall -Wextra -pedantic
+CXXFLAGS += -Wall -Wextra -pedantic
 
 endif
 

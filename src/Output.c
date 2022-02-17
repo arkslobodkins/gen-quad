@@ -31,7 +31,6 @@ void HistoryToFile(const quadrature *q, int arr_size, history **hist)
       fprintf(FID, "final residual            = %.16e\n\n", hist[i]->res);
       for(j = 0; j < hist[i]->total_elims; ++j)
       {
-         fprintf(FID, "type: %s\n", ElimToString(hist[i]->hist_array[j].elim_type));
          fprintf(FID, "total number of nodes[%i] = %i\n", j, hist[i]->hist_array[j].nodes_tot);
          fprintf(FID, "success_node[%i] = %i\n", j, hist[i]->hist_array[j].success_node);
          fprintf(FID, "Converged in %i iterations\n\n", hist[i]->hist_array[j].success_its);
@@ -70,7 +69,6 @@ void BoundaryCubeStats(const quadrature *quad)
 {
    assert(quad->D == CUBE);
 
-   int i,j;
    char str[80] = "0";
    int dim = quad->dim;
    int deg = quad->deg;
@@ -89,9 +87,9 @@ void BoundaryCubeStats(const quadrature *quad)
    for(int i = 0; i < quad->num_nodes; ++i)
       countsPerNode[i] = 0;
 
-   for(i = 0; i < quad->num_nodes; ++i) {
+   for(int i = 0; i < quad->num_nodes; ++i) {
       bool outsideFlag = false;
-      for(j = 0; j < dim; ++j) {
+      for(int j = 0; j < dim; ++j) {
          if(quad->x[dim*i+j] < 0.1) {
             ++countsPerNode[i];
             outsideFlag = true;
@@ -105,7 +103,7 @@ void BoundaryCubeStats(const quadrature *quad)
          ++totalCount;
    }
    fprintf(FID, "close to the boundary count = %i\n", totalCount);
-   for(i = 0; i < quad->num_nodes; ++i)
+   for(int i = 0; i < quad->num_nodes; ++i)
       if(countsPerNode[i] > 0)
          fprintf(FID, "node %i contains %i coordinates on the boundary\n", i, countsPerNode[i]);
    fclose(FID);

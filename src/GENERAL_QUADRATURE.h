@@ -50,19 +50,12 @@ typedef int GQ_BOOL;
 #define SIZE_INT(x) ((x)*sizeof(int))
 #define SIZE_DOUBLE(x) ((x)*sizeof(double))
 
-typedef enum { SVD, ELIM } ElimType;
 typedef enum { ON, OFF } bool_enum;
 typedef enum { orthogonal, monomial } BASIS_TYPE;
 typedef enum { INTERVAL, CUBE, SIMPLEX, CUBESIMPLEX, SIMPLEXSIMPLEX } DOMAIN_TYPE;
 
-#define StaticVectorInit(vecName, __len)  \
-   Vector vecName;                        \
-   double __ ##vecName[__len];            \
-   vecName.len = __len;                   \
-   vecName.id = __##vecName;
 
 char *get_domain_string(DOMAIN_TYPE D);
-char *ElimToString(ElimType elimType);
 bool string_to_domain(const char *shape, DOMAIN_TYPE *D);
 int IntPower(int x, int power);
 int factorial(int n);
@@ -81,7 +74,6 @@ typedef struct
    int nodes_tot;
    int success_node;
    int success_its;
-   ElimType elim_type;
 } hist_data;
 
 typedef struct

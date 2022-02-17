@@ -155,9 +155,8 @@ void CMatrix_LoadColumn(int col, CMatrix M, Vector x)
    memcpy(M.cid[col], x.id, SIZE_DOUBLE(M.rows));
 }
 
-void CMatrix_LoadColumnDD(int col, int len, CMatrix M, double *x)
+void CMatrix_LoadColumnDD(int col, CMatrix M, double *x)
 {
-   assert(len == M.rows);
    assert(col > -1);
    memcpy(M.cid[col], x, SIZE_DOUBLE(M.rows));
 }

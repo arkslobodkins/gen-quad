@@ -11,7 +11,6 @@
 
 int ConstrainedProjection(const quadrature *q_prev, quadrature *q_next)
 {
-   int i,j,d;
    int k = q_prev->num_nodes;
    int dim = q_prev->dim;
    assert(dim == q_next->constr->M.cols);
@@ -19,50 +18,61 @@ int ConstrainedProjection(const quadrature *q_prev, quadrature *q_next)
    int num_eqns = q_next->constr->M.rows;
    RMatrix M = q_next->constr->M;
 
+   Tensor2D x_next_T = DoubleToTensor2D(k, dim, q_next->x);
+   Tensor2D x_prev_T = DoubleToTensor2D(k, dim, q_prev->x);
+
    StaticVectorInit(node_change, dim);
    StaticVectorInit(node_projected, dim);
+   Tensor1D node_change_T = VectorToTensor1D(node_change);
+   Tensor1D node_projected_T = VectorToTensor1D(node_projected);
 
-   for(i = 0; i < k; ++i)
+   for(int i = 0; i < k; ++i)
    {
       int active_eqn_count = 0;
-      int node_index = i*dim;
       bool do_project = false;
       bool eqn_flags[num_eqns];
-      for(j = 0; j < num_eqns; ++j) eqn_flags[j] = false;
+
+      for(int j = 0; j < num_eqns; ++j) eqn_flags[j] = false;
 
       if( QuadOnTheBoundary(q_prev, i)  && !QuadInDomainElem(q_next, i) )
          do_project = true;
 
       if(do_project)
       {
-         for(j = 0; j < num_eqns; ++j)
+         for(int j = 0; j < num_eqns; ++j)
          {
-            if(QuadEqnOnTheBoundary(q_prev, i, j)) {
+            if(QuadEqnOnTheBoundary(q_prev, i, j))
+            {
                ++active_eqn_count;
                eqn_flags[j] = true;
             }
          }
          CMatrix eqn_matrix = CMatrix_init(dim, active_eqn_count);
          int count = 0;
-         for(j = 0; j < num_eqns; ++j) {
-            if(eqn_flags[j] == true) {
-               for(d = 0; d < dim; ++d)
+         for(int j = 0; j < num_eqns; ++j)
+         {
+            if(eqn_flags[j] == true)
+            {
+               for(int d = 0; d < dim; ++d)
                   eqn_matrix.cid[count][d]= M.rid[j][d];
                ++count;
             }
          }
-         for(d = 0; d < dim; ++d)
-            node_change.id[d] = q_next->x[node_index+d] - q_prev->x[node_index+d];
+
+         for(int d = 0; d < dim; ++d)
+            TID1(node_change_T, 1) = TID2(x_next_T, i, d) - TID2(x_prev_T, i, d);
          int P_FLAG = ProjectNode(eqn_matrix, node_change, node_projected);
-         if(P_FLAG != CONSTR_SUCCESS) {
+         if(P_FLAG != CONSTR_SUCCESS)
+         {
             CMatrix_free(eqn_matrix);
             return P_FLAG;
          }
-         for(d = 0; d < dim; ++d)
-            q_next->x[node_index+d] = q_prev->x[node_index+d] + node_projected.id[d] - POW_DOUBLE(10, -13);
+         for(int d = 0; d < dim; ++d)
+            TID2(x_next_T, i, d) = TID2(x_prev_T, i, d) + TID1(node_projected_T, d) - POW_DOUBLE(10, -13);
 
          CMatrix_free(eqn_matrix);
       }
+
    }
    COND_TEST_1;
    return CONSTR_SUCCESS;
@@ -74,10 +84,13 @@ int ConstrainedOptimization(ConstrOptData *data, const quadrature *q_prev, quadr
    assert(q_prev->num_nodes == q_next->num_nodes);
    int qlen = q_next->z.len;
 
-   Vector q_diff           = data->q_diff;
+   Vector q_diff = data->q_diff;
    quadrature *q_next_copy = data->q_next_copy;
+   Vector x_next_copy = q_next_copy->z;
+   Vector x_prev = q_prev->z;
+
    for(int i = 0; i < qlen; ++i)
-      q_diff.id[i] = q_next_copy->z.id[i] - q_prev->z.id[i];
+      q_diff.id[i] = x_next_copy.id[i] - x_prev.id[i];
 
    if(QuadInConstraint(q_prev) == false)
       return CANNOT_CONSTRAIN;
@@ -91,7 +104,7 @@ int ConstrainedOptimization(ConstrOptData *data, const quadrature *q_prev, quadr
          return RET_FLAG;
       }
       for(int i = 0; i < qlen; ++i)
-         q_next_copy->z.id[i] = q_prev->z.id[i] + (cVectData->tMin - BOUND_CORRECTION) * q_diff.id[i];
+         x_next_copy.id[i] = x_prev.id[i] + (cVectData->tMin - BOUND_CORRECTION) * q_diff.id[i];
       COND_TEST_2;
 
       if(QuadInConstraintEps(q_next_copy) == true) {
@@ -108,15 +121,12 @@ int ConstrainedOptimization(ConstrOptData *data, const quadrature *q_prev, quadr
 }
 
 
-// Shortens q_next vector such that every node satisfies the inequality
-// A*q_next(node[i]) <=  b, provided that q_prev satisfies the constraints.
 int ShortenVector(const quadrature *q_prev, const quadrature *q_next, ConstrVectData *cVectData)
 {
    assert(q_prev->num_nodes == q_next->num_nodes);
    if(!QuadInConstraint(q_prev)) return CANNOT_CONSTRAIN;
    if(QuadInConstraint(q_next))  return CONSTR_NOT_NEEDED;
 
-   int i, count;
    int k = q_prev->num_nodes;
    int dim = q_prev->dim;
    const RMatrix A = q_prev->constr->M_FULL;
@@ -130,12 +140,13 @@ int ShortenVector(const quadrature *q_prev, const quadrature *q_next, ConstrVect
    StaticVectorInit(z_prev_node, dim+1);
    StaticVectorInit(z_next_node, dim+1);
 
-   for(count = 0, i = 0; i < k; ++i)
+   int count = 0;
+   for(int i = 0; i < k; ++i)
    {
       quadrature_get_elem(q_prev, i, z_prev_node);
       quadrature_get_elem(q_next, i, z_next_node);
 
-      if( !QuadInConstraintElem(q_next, i)) {
+      if( !QuadInConstraintElem(q_next, i) ) {
          cNodeDataArr[i] = ShortenNode(A, b, z_prev_node, z_next_node);
          if(cNodeDataArr[i].ACTIVE == ON) ++count;
          else {
@@ -173,10 +184,6 @@ int ShortenVector(const quadrature *q_prev, const quadrature *q_next, ConstrVect
 }
 
 
-// Returns data information needed to map z_new onto the boundary, such that A*z_new = b_bound,
-// provided that z_old satisfies A*z_old <= b_bound, and A*z_new > b_bound.
-// If both A*z_new <= b_bound, and A*z_old <= b_bound,
-// the routine does no further computations and default is returned.
 ConstrNodeData ShortenNode(const RMatrix A, const Vector b_bound, const Vector z_old, const Vector z_new)
 {
    assert(A.rows == b_bound.len);
@@ -239,10 +246,6 @@ ConstrNodeData ShortenNode(const RMatrix A, const Vector b_bound, const Vector z
 }
 
 
-// Projects dx onto equations specified by eqn_matrix. Reduced matrix Q of eqn_matrix
-// is extracted from QR factorization, and projector P is computed by
-// P = I-Q_red*Q_red'. Results are stored in x_projected.
-// Most parameters are allocated on the stack due to small matrix sizes.
 int ProjectNode(const CMatrix eqn_matrix, const Vector dx, Vector x_projected)
 {
    int i, j, l, k;
@@ -255,7 +258,7 @@ int ProjectNode(const CMatrix eqn_matrix, const Vector dx, Vector x_projected)
 
    dgeqr2_(&M, &N, eqn_matrix.id, &LDA, TAU, WORK, &INFO);
    if(INFO != 0)
-      return LAPACK_ERR;
+      return CONSTR_FAIL;
 
    double Q_EXPL[M][M], Q_TEMP[M][M];
    for(i = 0; i < M; ++i) for(j = 0; j < M; ++j) Q_TEMP[i][j] = 0.0;
@@ -342,7 +345,7 @@ ConstrVectData ConstrVectDataInit()
    ConstrVectData cVectData;
    cVectData.boundaryNodeId = -1;
    cVectData.eqnId          = -1;
-   cVectData.tMin           =  1.0;
+   cVectData.tMin           = 1.0;
    cVectData.ACTIVE         = OFF;
    cVectData.N_OR_W         = NONE;
 
@@ -353,7 +356,7 @@ void ConstrVectDataReset(ConstrVectData *cVectData)
 {
    cVectData->boundaryNodeId = -1;
    cVectData->eqnId          = -1;
-   cVectData->tMin           =  1.0;
+   cVectData->tMin           = 1.0;
    cVectData->ACTIVE         = OFF;
    cVectData->N_OR_W         = NONE;
 }
@@ -362,7 +365,7 @@ ConstrNodeData ConstrNodeDataInit()
 {
    ConstrNodeData cNodeData;
    cNodeData.eqnId  = -1;
-   cNodeData.tMin   =  1.0;
+   cNodeData.tMin   = 1.0;
    cNodeData.ACTIVE = OFF;
    cNodeData.N_OR_W = NONE;
 
@@ -372,7 +375,7 @@ ConstrNodeData ConstrNodeDataInit()
 __attribute__unused void ConstrNodeDataReset(ConstrNodeData *cNodeData)
 {
    cNodeData->eqnId  = -1;
-   cNodeData->tMin   =  1.0;
+   cNodeData->tMin   = 1.0;
    cNodeData->ACTIVE = OFF;
    cNodeData->N_OR_W = NONE;
 }

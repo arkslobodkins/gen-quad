@@ -29,7 +29,7 @@ void GetFunctionOmp(quadrature *q, Vector f)
    int len = q->basis->numFuncs;
    int nodes = q->num_nodes;
    const double *w = q->w;
-   const double *x = q->x;
+   Tensor2D x = DoubleToTensor2D(nodes, dim, q->x);
 
    int num_dims = q->num_dims;
    int dims[num_dims];
@@ -49,14 +49,14 @@ void GetFunctionOmp(quadrature *q, Vector f)
       Vector basisFuncsLoc = basisLoc->functions;
 
       #pragma omp for schedule(static)
-      for(int j = 0; j < nodes; ++j)
+      for(int i = 0; i < nodes; ++i)
       {
          double curNode[dim];
-         for(int i = 0; i < dim; ++i)
-            curNode[i] = x[dim*j+i];
+         for(int d = 0; d < dim; ++d)
+            curNode[d] = TID2(x, i, d);
 
          BasisFuncs(basisLoc, curNode, basisFuncsLoc);
-         double_daxpy(len, w[j], basisFuncsLoc.id, fLoc);
+         double_daxpy(len, w[i], basisFuncsLoc.id, fLoc);
       }
       #pragma omp critical(UpdateFunction)
       double_daxpy(len, 1.0, fLoc, f.id);
@@ -87,11 +87,11 @@ void GetFunction(quadrature *q, Vector f)
    for(int i = 0; i < integrals.len; ++i)
       f.id[i] = -1.0 * integrals.id[i];
 
-   for(int j = 0; j < nodes; ++j)
+   for(int i = 0; i < nodes; ++i)
    {
-      const double *curNode = &x[dim*j];
+      const double *curNode = &x[dim*i];
       BasisFuncs(q->basis, curNode, functions);
-      Vector_daxpy(w[j], functions, f);
+      Vector_daxpy(w[i], functions, f);
    }
    FUNCTION_TIME += get_cur_time() - time_start;
 }

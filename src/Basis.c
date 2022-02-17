@@ -107,20 +107,20 @@ static void BasisIndices(int deg, int dim, INT_8 *F)
 
    int counter;
    // compute basis indices using nested recursion if dimension >= 2
-   for(int d = 2; counter = 0, d <= dim; ++d)
+   for(int dout = 2; counter = 0, dout <= dim; ++dout)
    {
       for(int i = 0; i <= deg; ++i)
       {
-         int rsize = BasisSize(deg-i, d-1);
-         INT_8 recursiveF[rsize*(d-1)];
-         BasisIndices(deg-i, d-1, recursiveF);
-         if(d == dim)
+         int rsize = BasisSize(deg-i, dout-1);
+         INT_8 recursiveF[rsize*(dout-1)];
+         BasisIndices(deg-i, dout-1, recursiveF);
+         if(dout == dim)
          {
             for(int k = 0; k < rsize; ++k)
             {
                for(int d = 0; d < dim-1; ++d)
                   F[counter+k*dim+d] = recursiveF[k*(dim-1)+d];
-               F[counter+k*dim+d-1] = i;
+               F[counter+k*dim+dout-1] = i;
             }
             counter += dim*rsize;
          }
@@ -254,7 +254,6 @@ void ComputeCubeBasisFuncs(CubeBasis *basis, const double *x, Vector v)
 
    for(int d = 1; d < dim; ++d)
    {
-      double legendre[deg+1];
       LegendrePoly(deg+1, 2*x[d]-1, legendre);
       int nextDim = d*numFuncs;
       #pragma omp simd

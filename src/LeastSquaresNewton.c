@@ -34,16 +34,15 @@ double CONSTR_TIME = 0.0;
 double LSQ_TIME = 0.0;
 #define MAX_ELIM_WEIGHTS 10
 
-bool LeastSquaresNewton(const bool_enum CONSTR_OPT, quadrature *q_orig, int *its)
+LSQ_out LeastSquaresNewton(const bool_enum CONSTR_OPT, quadrature *q_orig)
 {
    assert(q_orig->num_nodes >= 1);
+   LSQ_out lsq_out = {0, SOL_NOT_FOUND};
 
    int k         = q_orig->num_nodes;
    int numFuncs  = q_orig->basis->numFuncs;
    int dim       = q_orig->dim;
-   bool SOL_FLAG = SOL_NOT_FOUND;
 
-   int itsLoc   = 0;
    int maxiter  = 25;
    double q_tol = QUAD_TOL; // 10^(-14);
 
@@ -51,7 +50,6 @@ bool LeastSquaresNewton(const bool_enum CONSTR_OPT, quadrature *q_orig, int *its
    int nrows  = numFuncs;
    int ncols = (dim+1)*k;
    int LEAD_DIM = MAX(nrows, ncols);
-   int SMALL_DIM = MIN(nrows, ncols);
    int LWORK = 5*ncols;
    CMatrix JACOBIAN = CMatrix_init(nrows, ncols);
    Vector LEAST_SQ_SOL = Vector_init(LEAD_DIM);
@@ -87,24 +85,23 @@ bool LeastSquaresNewton(const bool_enum CONSTR_OPT, quadrature *q_orig, int *its
       getFunc_ptr(q_prev, RHS);
       double eNorm = V_InfNorm(RHS);
       if( (eNorm < q_tol) && (QuadInConstraint(q_prev) == true) ) {
-         SOL_FLAG = SOL_FOUND;
-         *its = 0;
+         lsq_out.SOL_FLAG = SOL_FOUND;
+         lsq_out.its = 0;
          goto FREERETURN;
       }
    }
 
 
-   while( (itsLoc < maxiter) && (errorNormUpdate > q_tol) )
+   while( (lsq_out.its < maxiter) && (errorNormUpdate > q_tol) )
    {
 
       if(CONSTR_OPT == ON && cVectData.ACTIVE == ON && cVectData.N_OR_W == WEIGHT)
       {
          if( (k == 1) || (++elim_weights > MAX_ELIM_WEIGHTS) ) {
-            SOL_FLAG = SOL_NOT_FOUND;
+            lsq_out.SOL_FLAG = SOL_NOT_FOUND;
             goto FREERETURN;
          }
          ncols = (dim+1)*--k;
-         SMALL_DIM = MIN(nrows, ncols);
          LEAD_DIM  = MAX(nrows, ncols);
          CMatrix_realloc(nrows, ncols, &JACOBIAN);
          Vector_realloc(LEAD_DIM, &LEAST_SQ_SOL);
@@ -113,8 +110,8 @@ bool LeastSquaresNewton(const bool_enum CONSTR_OPT, quadrature *q_orig, int *its
       }
 
       getFunctionAndJacobian_ptr(q_prev, RHS, JACOBIAN); // computes RHS at essentially zero cost
-      for(int i = 0; i < SMALL_DIM; ++i)        LEAST_SQ_SOL.id[i] = RHS.id[i];
-      for(int i = SMALL_DIM; i < LEAD_DIM; ++i) LEAST_SQ_SOL.id[i] = 0.0;
+      for(int i = 0; i < RHS.len; ++i)                LEAST_SQ_SOL.id[i] = RHS.id[i];
+      for(int i = RHS.len; i < LEAST_SQ_SOL.len; ++i) LEAST_SQ_SOL.id[i] = 0.0;
 
       double start_time = get_cur_time();
       int INFO = leastsquares_ptr(JACOBIAN, LEAST_SQ_SOL);
@@ -128,7 +125,7 @@ bool LeastSquaresNewton(const bool_enum CONSTR_OPT, quadrature *q_orig, int *its
       errorNorm = V_InfNorm(RHS);
       errInfo check_values = CheckForStop(INFO, errorNorm, errorNormPrev, LEAST_SQ_SOL);
       if(check_values.succeeded != true) {
-         SOL_FLAG = SOL_NOT_FOUND;
+         lsq_out.SOL_FLAG = SOL_NOT_FOUND;
          goto FREERETURN;
       }
 
@@ -138,7 +135,7 @@ bool LeastSquaresNewton(const bool_enum CONSTR_OPT, quadrature *q_orig, int *its
          int P_FLAG = ConstrainedProjection(q_prev, q_next);
          if(P_FLAG < 0) {
             COND_PRINT_ERR(P_FLAG);
-            SOL_FLAG = SOL_NOT_FOUND;
+            lsq_out.SOL_FLAG = SOL_NOT_FOUND;
             goto FREERETURN;
          }
 
@@ -148,14 +145,14 @@ bool LeastSquaresNewton(const bool_enum CONSTR_OPT, quadrature *q_orig, int *its
          ConstrainedOptimizationFree(data);
          if(C_FLAG < 0) {
             PRINT_ERR("Constrained optimization failed", __LINE__, __FILE__);
-            SOL_FLAG = SOL_NOT_FOUND;
+            lsq_out.SOL_FLAG = SOL_NOT_FOUND;
             goto FREERETURN;
          }
       }
       else
       {
-         if(!QuadInConstraint(q_next) && itsLoc > 10) {
-            SOL_FLAG = SOL_NOT_FOUND;
+         if(!QuadInConstraint(q_next) && lsq_out.its > 10) {
+            lsq_out.SOL_FLAG = SOL_NOT_FOUND;
             goto FREERETURN;
          }
       }
@@ -165,20 +162,20 @@ bool LeastSquaresNewton(const bool_enum CONSTR_OPT, quadrature *q_orig, int *its
       else errorNormUpdate = errorNorm;
 
       quadrature_assign(q_next, q_prev);
-      ++itsLoc;
+      ++lsq_out.its;
    }
 
 
-   if( (itsLoc < maxiter)
+   if( (lsq_out.its < maxiter)
          && (isnan(errorNormUpdate) == 0)
          && (isinf(errorNormUpdate) == 0)
          && (errorNormUpdate <= q_tol)
          && QuadInConstraint(q_next) )
    {
       quadrature_assign_resize(q_next, q_orig);
-      SOL_FLAG = SOL_FOUND;
+      lsq_out.SOL_FLAG = SOL_FOUND;
    }
-   else SOL_FLAG = SOL_NOT_FOUND;
+   else lsq_out.SOL_FLAG = SOL_NOT_FOUND;
 
 
 FREERETURN:
@@ -194,8 +191,7 @@ FREERETURN:
    quadrature_free(q_prev);
    quadrature_free(q_next);
 
-   *its = itsLoc;
-   return SOL_FLAG;
+   return lsq_out;
 }// end LeastSquaresNewton
 
 #undef MAX_ELIM_WEIGHTS

@@ -37,9 +37,9 @@ if(cVectData->ACTIVE == ON) {                                                 \
 }
 
 
-#define COND_TEST_3                                                            \
-bool TEST_QR = TestQR(QFull);                                                  \
-if(TEST_QR == FAILED)                                                          \
+#define COND_TEST_3                                                           \
+bool TEST_QR = TestQR(QFull);                                                 \
+if(TEST_QR == FAILED)                                                         \
    PRINT_ERR("FAILED QR TEST", __LINE__, __FILE__);
 
 

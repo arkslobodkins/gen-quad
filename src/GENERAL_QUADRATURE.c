@@ -34,15 +34,6 @@ bool string_to_domain(const char *shape, DOMAIN_TYPE *D)
    return true;
 }
 
-char *ElimToString(ElimType elimType)
-{
-   switch(elimType)
-   {
-      case(ELIM):  return (char *)"elim";
-      case(SVD):   return (char *)"svd";
-      default:     return (char *)"0";
-   }
-}
 
 int IntPower(int x, int power)
 {

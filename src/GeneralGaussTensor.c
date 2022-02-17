@@ -127,21 +127,21 @@ void GeneralizedWeightsTensor(const quadrature *quad_1D, quadrature *quad_gen)
 
    if(dim == 2) return;
 
-   int dims_temp2[3] = {3};
+   int dims_temp2[1] = {3};
    quadrature *quad_temp2 = quadrature_init_basic(POW_INT(n, 3), 3, dims_temp2, deg, CUBE);
    double *w2 = quad_temp2->w;
 
-   int dims_temp3[3] = {3};
+   int dims_temp3[1] = {3};
    quadrature *quad_temp3 = quadrature_init_basic(POW_INT(n, 3), 3, dims_temp3, deg, CUBE);
    double *w3 = quad_temp3->w;
 
    for(int j = dim-3; j >= 0; --j)
    {
-      int dims_temp2[1] = {dim-j-1};
+      dims_temp2[0] = dim-j-1;
       quadrature_reinit_basic(POW_INT(n, dim-j-1), dim-j-1, dims_temp2, deg, quad_temp2);
       w2 = quad_temp2->w;
 
-      int dims_temp3[1] = {dim-j};
+      dims_temp3[0] = dim-j;
       quadrature_reinit_basic(POW_INT(n, dim-j), dim-j, dims_temp3, deg, quad_temp3);
       w3 = quad_temp3->w;
 

@@ -14,11 +14,6 @@
 #include "get_time.h"
 double JACOBIAN_TIME = 0.0;
 
-// Computes an returns Jacobian of size num_funcs x (dim+1)*num_nodes
-// of a vector X * w, where each row of X corresponds to
-// a distinct polynomial of orthogonal basis, and each
-// column of X and entries in w correspond to ith node and weight
-// of the quadrature.
 #ifdef _OPENMP
 void GetJacobianOmp(quadrature *q, CMatrix JACOBIAN)
 {
@@ -55,7 +50,7 @@ void GetJacobianOmp(quadrature *q, CMatrix JACOBIAN)
          CMatrix_LoadColumn(j, JACOBIAN, basisFuncsLoc);
          int colId = j*dim+cols;
          for(int d = 0; d < dim; ++d)
-            CMatrix_LoadColumnDD(colId+d, rows, JACOBIAN, &basisDerLoc.id[d*rows]);
+            CMatrix_LoadColumnDD(colId+d, JACOBIAN, &basisDerLoc.id[d*rows]);
       }
    } // end omp parallel
 
@@ -107,7 +102,7 @@ void GetFunctionAndJacobianOmp(quadrature *q, Vector f, CMatrix JACOBIAN)
          CMatrix_LoadColumn(j, JACOBIAN, basisFuncsLoc);
          int colId = j*dim+cols;
          for(int d = 0; d < dim; ++d)
-            CMatrix_LoadColumnDD(colId+d, rows, JACOBIAN, &basisDerLoc.id[d*rows]);
+            CMatrix_LoadColumnDD(colId+d, JACOBIAN, &basisDerLoc.id[d*rows]);
       }
       #pragma omp critical(UpdateFunction)
       double_daxpy(len, 1.0, fLoc, f.id);
@@ -141,7 +136,7 @@ void GetJacobian(quadrature *q, CMatrix JACOBIAN)
       CMatrix_LoadColumn(j, JACOBIAN, functions);
       int colId = j*dim+cols;
       for(int d = 0; d < dim; ++d)
-         CMatrix_LoadColumnDD(colId+d, rows, JACOBIAN, &derivatives.id[d*rows]);
+         CMatrix_LoadColumnDD(colId+d, JACOBIAN, &derivatives.id[d*rows]);
    }
    JACOBIAN_TIME += get_cur_time() - time_start;
 }
@@ -176,7 +171,7 @@ void GetFunctionAndJacobian(quadrature *q, Vector f, CMatrix JACOBIAN)
       VectorScale(w[j], derivatives);
       int colId = j*dim+cols;
       for(int d = 0; d < dim; ++d)
-         CMatrix_LoadColumnDD(colId+d, rows, JACOBIAN, &derivatives.id[d*rows]);
+         CMatrix_LoadColumnDD(colId+d, JACOBIAN, &derivatives.id[d*rows]);
    }
    JACOBIAN_TIME += get_cur_time() - time_start;
 }

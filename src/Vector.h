@@ -27,6 +27,12 @@ typedef struct
    double min_value;
 } VMin;
 
+#define StaticVectorInit(vecName, __len)  \
+   Vector vecName;                        \
+   double __ ##vecName[__len];            \
+   vecName.len = __len;                   \
+   vecName.id = __##vecName;
+
 Vector Vector_init(int n);
 void Vector_realloc(int n, Vector *V);
 void Vector_Assign(Vector v1, Vector v2);
