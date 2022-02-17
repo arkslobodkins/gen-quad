@@ -92,14 +92,17 @@ void MixedTensor(const quadrature *q1, const quadrature *q2, quadrature *q_tp)
    const int dim_tp = q_tp->dim;
    double *xtp      = q_tp->x;
 
-   for(int i = 0; i < n1; ++i) {
-      for(int j = 0; j < n2; ++j) {
+   for(int i = 0; i < n1; ++i)
+   {
+      for(int j = 0; j < n2; ++j)
+      {
          int id = i*n2*dim_tp + j*dim_tp;
          for(int d1 = 0; d1 < dim1; ++d1)
             xtp[id+d1] = x1[i*dim1+d1];
 
          int count = 0;
-         for(int d2 = dim1; d2 < dim_tp; ++d2) {
+         for(int d2 = dim1; d2 < dim_tp; ++d2)
+         {
             xtp[id+d2] = x2[j*dim2+count];
             ++count;
          }

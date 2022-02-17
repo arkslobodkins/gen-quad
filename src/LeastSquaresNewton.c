@@ -58,6 +58,8 @@ LSQ_out LeastSquaresNewton(const bool_enum CONSTR_OPT, quadrature *q_orig)
 
    quadrature *q_prev = quadrature_make_full_copy(q_orig);
    quadrature *q_next = quadrature_make_full_copy(q_orig);
+   Vector z_prev = q_prev->z;
+   Vector z_next = q_next->z;
 
    int elim_weights = 0;
    double errorNorm = 1.0, errorNormPrev = 1.0, errorNormUpdate = 1.0;
@@ -95,40 +97,47 @@ LSQ_out LeastSquaresNewton(const bool_enum CONSTR_OPT, quadrature *q_orig)
    while( (lsq_out.its < maxiter) && (errorNormUpdate > q_tol) )
    {
 
-      if(CONSTR_OPT == ON && cVectData.ACTIVE == ON && cVectData.N_OR_W == WEIGHT)
+      if(CONSTR_OPT == ON && cVectData.N_OR_W == WEIGHT)
       {
-         if( (k == 1) || (++elim_weights > MAX_ELIM_WEIGHTS) ) {
+         if( (k == 1) || (++elim_weights > MAX_ELIM_WEIGHTS) )
+         {
             lsq_out.SOL_FLAG = SOL_NOT_FOUND;
             goto FREERETURN;
          }
-         ncols = (dim+1)*--k;
-         LEAD_DIM  = MAX(nrows, ncols);
-         CMatrix_realloc(nrows, ncols, &JACOBIAN);
-         Vector_realloc(LEAD_DIM, &LEAST_SQ_SOL);
-         quadrature_remove_element(cVectData.boundaryNodeId, q_next);
-         quadrature_remove_element(cVectData.boundaryNodeId, q_prev);
+
+         if(q_next->w[cVectData.boundaryNodeId] > QUAD_TOL)
+            PRINT_ERR("weight was not shortened to 0", __LINE__, __FILE__);
+         else
+         {
+            ncols = (dim+1)*--k;
+            LEAD_DIM = MAX(nrows, ncols);
+            CMatrix_realloc(nrows, ncols, &JACOBIAN);
+            Vector_realloc(LEAD_DIM, &LEAST_SQ_SOL);
+            quadrature_remove_element(cVectData.boundaryNodeId, q_next);
+            quadrature_remove_element(cVectData.boundaryNodeId, q_prev);
+         }
       }
 
       getFunctionAndJacobian_ptr(q_prev, RHS, JACOBIAN); // computes RHS at essentially zero cost
-      for(int i = 0; i < RHS.len; ++i)                LEAST_SQ_SOL.id[i] = RHS.id[i];
-      for(int i = RHS.len; i < LEAST_SQ_SOL.len; ++i) LEAST_SQ_SOL.id[i] = 0.0;
+      for(int i = 0; i < LEAST_SQ_SOL.len; ++i) LEAST_SQ_SOL.id[i] = 0.0;
+      for(int i = 0; i < RHS.len; ++i)          LEAST_SQ_SOL.id[i] = RHS.id[i];
 
       double start_time = get_cur_time();
       int INFO = leastsquares_ptr(JACOBIAN, LEAST_SQ_SOL);
       LSQ_TIME += get_cur_time() - start_time;
 
       for(int i = 0; i < ncols; ++i)
-         q_next->z.id[i] = q_prev->z.id[i] - LEAST_SQ_SOL.id[i];
+         z_next.id[i] = z_prev.id[i] - LEAST_SQ_SOL.id[i];
 
       errorNormPrev = errorNorm;
       getFunc_ptr(q_next, RHS);
       errorNorm = V_InfNorm(RHS);
       errInfo check_values = CheckForStop(INFO, errorNorm, errorNormPrev, LEAST_SQ_SOL);
-      if(check_values.succeeded != true) {
+      if(check_values.succeeded != true)
+      {
          lsq_out.SOL_FLAG = SOL_NOT_FOUND;
          goto FREERETURN;
       }
-
       if(CONSTR_OPT == ON)
       {
          // Constrained optimization part 1: project onto the boundary
