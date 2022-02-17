@@ -632,6 +632,24 @@ double QuadMinDistFromTheBoundary(const quadrature *q)
    return minDist;
 }
 
+double QuadDistFromTheBoundaryTwoNorm(const quadrature *q)
+{
+   if(q->isFullyInitialized == GQ_FALSE)
+   {
+      PRINT_ERR(STR_QUAD_NOT_FULL_INIT, __LINE__, __FILE__);
+      return -1.0;
+   }
+
+   Vector dist = Vector_init(q->num_nodes);
+   for(int i = 0; i < q->num_nodes; ++i)
+      dist.id[i] = QuadDistFromTheBoundaryElem(q, i);
+
+   double TwoNorm = V_TwoNorm(dist);
+
+   Vector_free(dist);
+   return TwoNorm;
+}
+
 
 static inline bool QuadPosWeightsElem(const quadrature *q, int elem)
 {

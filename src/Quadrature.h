@@ -85,6 +85,7 @@ bool QuadOnTheBoundary(const quadrature *q, int elem);
 bool QuadEqnOnTheBoundary(const quadrature *q, int elem, int eqn);
 double QuadDistFromTheBoundaryElem(const quadrature *q, int elem);
 double QuadMinDistFromTheBoundary(const quadrature *q);
+double QuadDistFromTheBoundaryTwoNorm(const quadrature *q);
 
 double QuadTestIntegral(const quadrature *q, BASIS_TYPE btype);
 double QuadTestIntegralExp(const quadrature *q);

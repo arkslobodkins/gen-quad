@@ -77,7 +77,8 @@ void BasisFree(Basis *basis)
    Vector_free(basis->functions);
 
    basis->interface->basisFree(basis);
-   if(interface) {
+   if(interface)
+   {
       free(interface);
       interface = NULL;
    }
