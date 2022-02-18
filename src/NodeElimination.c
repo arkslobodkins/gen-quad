@@ -27,7 +27,7 @@ extern int MAX_DIM;
 #define SEARCH_DIM 3
 #define MAX_FAILS_LEVEL_1 4
 #define MAX_FAILS_LEVEL_2 6
-#define MAX_FAILS_ELIM 12
+#define MAX_FAILS_ELIM 8
 
 #define PASSED true
 #define FAILED false
@@ -118,9 +118,15 @@ void NodeElimination(const quadrature *q_initial, quadrature *q_final, history *
    int n_opt             = ceil(1.0*numFuncs/(dim+1));
    double efficiency     = (double)n_opt/nodesInitial;
    PrintElimInfo( dim, n_cur , n_opt, efficiency);
+   int repeat = 0;
    while( ((dim+1)*n_cur > numFuncs)  && (n_cur >= 2) )
    {
       SOL_FLAG = LsqSearch(OFF, q_new, hist);        // perform regular search first
+      if(repeat == 0)                                // if failed early
+         if(SOL_FLAG == SOL_NOT_FOUND)               // perform deeper search
+            SOL_FLAG = TreeSearch(ON, q_new, hist);
+      n_cur = q_new->num_nodes;
+
       if(dim == MAX_DIM)
          if(SOL_FLAG == SOL_NOT_FOUND)               // perform deeper search
             SOL_FLAG = TreeSearch(ON, q_new, hist);
@@ -134,6 +140,7 @@ void NodeElimination(const quadrature *q_initial, quadrature *q_final, history *
          Print("Last iteration did not converge");
          break; // break while loop
       }
+      ++repeat;
    }// end while loop
 
    // save nodes and weights
@@ -230,26 +237,45 @@ static bool TreeSearch(bool_enum CONSTR_FLAG, quadrature *q_new, history *hist)
       quadrature_assign(q_new, qnewtemp__1);
       ExtractFromPredictorFull(Z__1, distance__1[i1].index, qsearch__1);
       bool searchElimFlag__1 = SOL_NOT_FOUND;
+      bool earlyConstraint   = false;
       LSQ_out searchNewGuessFlag__1;
       int sd1;
       for(sd1 = 0; sd1 < SEARCH_DIM; ++sd1) {
          VectorAddScale(1.0, qsearch__1->z, -1.0, qnewtemp__1->z, dz__1);
          VectorAddScale(1.0, qnewtemp__1->z, shortParams.t[sd1], dz__1, qsearch__1->z);
-         searchNewGuessFlag__1 = LeastSquaresNewton(OFF, qsearch__1);
+         searchNewGuessFlag__1 = LeastSquaresNewton(ON, qsearch__1);
+
+         if(qsearch__1->num_nodes != n_cur)
+         {
+            quadrature_assign_resize(qsearch__1, q_new);
+            SOL_FLAG = SOL_FOUND;
+            earlyConstraint = true;
+            printf("succeeded at %i th iteration, with constraints at depth level 0.5, and damping parameter %.4e\n", failCount__1, shortParams.t[sd1]);
+            hist->hist_array[hist->total_elims].nodes_tot    = q_new->num_nodes;
+            hist->hist_array[hist->total_elims].success_node = failCount__1;
+            hist->hist_array[hist->total_elims].success_its  = searchNewGuessFlag__1.its;
+            ++hist->total_elims;
+            break; // break sd1 loop
+         }
+
+
          if(searchNewGuessFlag__1.SOL_FLAG)
             break; // break sd1 loop
       }
 
+      if(earlyConstraint)
+         break; // break i loop
+
       if(searchNewGuessFlag__1.SOL_FLAG)
       {
-         searchElimFlag__1= LsqSearch(CONSTR_FLAG, qsearch__1, hist);
+         searchElimFlag__1 = LsqSearch(CONSTR_FLAG, qsearch__1, hist);
 
          // if eliminated a node, save solution and break all loops
          if(searchElimFlag__1)
          {
             quadrature_assign_resize(qsearch__1, q_new);
             SOL_FLAG = SOL_FOUND;
-            printf("succeeded at %i th iteration, with shortening at depth level 1, and damping parameter %.4e\n", i1, shortParams.t[sd1]);
+            printf("succeeded at %i th iteration, with shortening at depth level 1, and damping parameter %.4e\n", failCount__1, shortParams.t[sd1]);
             break; // break i1 loop if new solution was found
          }
          // new initial guess was found, but node was not eliminated, take new initial guess to level 2
@@ -258,7 +284,11 @@ static bool TreeSearch(bool_enum CONSTR_FLAG, quadrature *q_new, history *hist)
       }
       else if(!searchNewGuessFlag__1.SOL_FLAG)
       {
-         ++failCount__1;
+         if(++failCount__1 >= MAX_FAILS_LEVEL_1)
+         {
+            SOL_FLAG = SOL_NOT_FOUND;
+            break;
+         }
          continue; // go to next node
       }
 
@@ -284,10 +314,26 @@ static bool TreeSearch(bool_enum CONSTR_FLAG, quadrature *q_new, history *hist)
          {
             VectorAddScale(1.0, qsearch__2->z, -1.0, qnewtemp__1->z, dz__2);
             VectorAddScale(1.0, qnewtemp__1->z, shortParams.t[sd2], dz__2, qsearch__2->z);
-            searchNewGuessFlag__2 = LeastSquaresNewton(OFF, qsearch__2);
+            searchNewGuessFlag__2 = LeastSquaresNewton(ON, qsearch__2);
+
+            if(qsearch__1->num_nodes != n_cur)
+            {
+               quadrature_assign_resize(qsearch__1, q_new);
+               SOL_FLAG = SOL_FOUND;
+               earlyConstraint = true;
+               printf("succeeded at %i->%i th iteration, with constraints at depth level 1.5, and damping parameter %.4e\n", failCount__1, failCount__2, shortParams.t[sd1]);
+               hist->hist_array[hist->total_elims].nodes_tot    = q_new->num_nodes;
+               hist->hist_array[hist->total_elims].success_node = failCount__2;
+               hist->hist_array[hist->total_elims].success_its  = searchNewGuessFlag__2.its;
+               ++hist->total_elims;
+               break; // break sd2 loop
+            }
+
             if(searchNewGuessFlag__2.SOL_FLAG)
                break; // break sd2 loop
          }
+         if(earlyConstraint)
+            break; // break i loop
 
          if(searchNewGuessFlag__2.SOL_FLAG)
          {
@@ -297,7 +343,7 @@ static bool TreeSearch(bool_enum CONSTR_FLAG, quadrature *q_new, history *hist)
             {
                quadrature_assign_resize(qsearch__2, q_new);
                SOL_FLAG = SOL_FOUND;
-               printf("succeeded at %i->%i th iteration, with shortening at depth level 2, and damping parameter %.4e\n", i1, i2, shortParams.t[sd2]);
+               printf("succeeded at %i->%i th iteration, with shortening at depth level 2, and damping parameter %.4e\n", failCount__1, failCount__2, shortParams.t[sd2]);
                break; // break i2 loop and later i1 loop
             }
          }

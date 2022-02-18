@@ -56,8 +56,6 @@ LSQ_out LeastSquaresNewton(const bool_enum CONSTR_OPT, quadrature *q_orig)
 
    quadrature *q_prev = quadrature_make_full_copy(q_orig);
    quadrature *q_next = quadrature_make_full_copy(q_orig);
-   Vector z_prev = q_prev->z;
-   Vector z_next = q_next->z;
 
    int elim_weights = 0;
    double errorNorm = 1.0, errorNormPrev = 1.0, errorNormUpdate = 1.0;
@@ -97,14 +95,14 @@ LSQ_out LeastSquaresNewton(const bool_enum CONSTR_OPT, quadrature *q_orig)
 
       if( (CONSTR_OPT == ON) && (cVectData.N_OR_W == WEIGHT) )
       {
+         if( q_next->w[cVectData.boundaryNodeId] > POW_DOUBLE(10, -12) )
+            PRINT_ERR("weight was not shortened to 0", __LINE__, __FILE__);
+
          if( (num_nodes == 1) || (++elim_weights > MAX_ELIM_WEIGHTS) )
          {
             lsq_out.SOL_FLAG = SOL_NOT_FOUND;
             goto FREERETURN;
          }
-
-         if( q_next->w[cVectData.boundaryNodeId] > POW_DOUBLE(10, -12) )
-            PRINT_ERR("weight was not shortened to 0", __LINE__, __FILE__);
          else
          {
             ncols = (dim+1) * --num_nodes;
@@ -126,14 +124,14 @@ LSQ_out LeastSquaresNewton(const bool_enum CONSTR_OPT, quadrature *q_orig)
 
 
       for(int i = 0; i < ncols; ++i)
-         z_next.id[i] = z_prev.id[i] - LEAST_SQ_SOL.id[i];
+         q_next->z.id[i] = q_prev->z.id[i] - LEAST_SQ_SOL.id[i];
 
       double alpha = 1.0;
-      if(CONSTR_OPT == OFF  && lsq_out.its < 5)
+      if(CONSTR_OPT == OFF && lsq_out.its < 5)
          alpha = ComputePenalty(q_prev, q_next);
       if(alpha < 1.0)
          for(int i = 0; i < ncols; ++i)
-            z_next.id[i] = z_prev.id[i] - alpha * LEAST_SQ_SOL.id[i];
+            q_next->z.id[i] = q_prev->z.id[i] - alpha * LEAST_SQ_SOL.id[i];
 
       errorNormPrev = errorNorm;
       getFunc_ptr(q_next, RHS);
@@ -144,6 +142,12 @@ LSQ_out LeastSquaresNewton(const bool_enum CONSTR_OPT, quadrature *q_orig)
          lsq_out.SOL_FLAG = SOL_NOT_FOUND;
          goto FREERETURN;
       }
+
+      if(!QuadInConstraint(q_next) && lsq_out.its >= 7) {
+         lsq_out.SOL_FLAG = SOL_NOT_FOUND;
+         goto FREERETURN;
+      }
+
       if(CONSTR_OPT == ON)
       {
          // Constrained optimization part 1: project onto the boundary
@@ -163,14 +167,9 @@ LSQ_out LeastSquaresNewton(const bool_enum CONSTR_OPT, quadrature *q_orig)
             lsq_out.SOL_FLAG = SOL_NOT_FOUND;
             goto FREERETURN;
          }
+
       }
-      else
-      {
-         if(!QuadInConstraint(q_next) && lsq_out.its > 10) {
-            lsq_out.SOL_FLAG = SOL_NOT_FOUND;
-            goto FREERETURN;
-         }
-      }
+
       getFunc_ptr(q_next, RHS);
       // if statement since norm might change after constrained optimization is applied
       if(CONSTR_OPT == ON) errorNormUpdate = V_InfNorm(RHS);
@@ -223,6 +222,7 @@ static double ComputePenalty(quadrature *q_prev, quadrature *q_next)
    else                    return distNext / distPrev;
 }
 
+
 static errInfo CheckForStop(int INFO, double errorNorm, double errorNormPrev, Vector least_sq_sol)
 {
    errInfo info;
@@ -236,7 +236,7 @@ static errInfo CheckForStop(int INFO, double errorNorm, double errorNormPrev, Ve
       info.succeeded = false;
       info.errors[0] = LAPACK_ERR;
    }
-   if(errorNorm > errorNormPrev+2) {     // fail if method is not converging
+   if(errorNorm > errorNormPrev+4) {     // fail if method is not converging
       info.succeeded = false;
       info.errors[1] =  NOT_CONVERGE;
    }

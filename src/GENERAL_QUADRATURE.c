@@ -1,4 +1,5 @@
 #include "GENERAL_QUADRATURE.h"
+#include "Gauss_Lib/Jacobi.h"
 #include <strings.h>
 #include <assert.h>
 #include <omp.h>
@@ -97,6 +98,38 @@ double expIntegralNDimSimplex(int dim)
    expI /= factorial(dim);
 
    return expI;
+}
+
+void OpenNewtonCotes(int n, double *w, double *x)
+{
+   double h = 1.0 / (n+2);
+
+   for(int i = 0; i <= n; ++i)
+      w[i] = 0.0;
+   for(int i = 0; i <= n; ++i)
+      x[i] = h*(i+1);
+
+
+   int ng = ceil( (n+1)/2.0 );
+   double wg[n+1];
+   double xg[n+1];
+   Jacobi(ng, 0.0, 0.0, xg, wg);
+
+   for(int i = 0; i <= n; ++i)
+   {
+      for(int j = 0; j < ng; ++j)
+      w[i] += wg[j] * Lagrange(i, xg[j], n+1, x);
+   }
+}
+
+double Lagrange(int i, double t, int nx, double *x)
+{
+   double lg = 1.0;
+   for(int k = 0; k < nx; ++k) {
+      if(i == k) continue;
+      lg *= (t - x[k]) / (x[i] - x[k]);
+   }
+   return lg;
 }
 
 #ifdef _OPENMP

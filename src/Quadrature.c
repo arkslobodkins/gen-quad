@@ -612,8 +612,8 @@ double QuadDistFromTheBoundaryElem(const quadrature *q, int elem)
       double b_elem = 0.0;
       for(int d = 0; d < A.cols; ++d)
          b_elem += A.rid[i][d] * q->x[node_loc+d];
-      if(i == 0) minDist = fabs(b_elem-b.id[0]);
-      else       minDist = MIN(fabs(b_elem-b.id[i]), minDist);
+      if(i == 0) minDist = fabs( fabs(b_elem) - b.id[0] );
+      else       minDist = MIN( fabs( fabs(b_elem) - b.id[i] ), minDist );
    }
    return minDist;
 }
