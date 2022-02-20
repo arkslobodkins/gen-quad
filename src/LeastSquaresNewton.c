@@ -129,8 +129,7 @@ LSQ_out LeastSquaresNewton(const bool_enum CONSTR_OPT, quadrature *q_orig)
       for(int i = 0; i < ncols; ++i)
          z_next.id[i] = z_prev.id[i] - LEAST_SQ_SOL.id[i];
 
-      if(CONSTR_OPT == OFF && lsq_out.its < 5)
-      {
+      if(CONSTR_OPT == OFF && lsq_out.its < 5) {
          double alpha = ComputePenalty(q_prev, q_next);
          if(alpha < 1.0)
             for(int i = 0; i < ncols; ++i)
@@ -141,8 +140,7 @@ LSQ_out LeastSquaresNewton(const bool_enum CONSTR_OPT, quadrature *q_orig)
       getFunc_ptr(q_next, RHS);
       errorNorm = V_InfNorm(RHS);
       errInfo check_values = CheckForStop(INFO, errorNorm, errorNormPrev, LEAST_SQ_SOL);
-      if(check_values.succeeded != true)
-      {
+      if(check_values.succeeded != true) {
          lsq_out.SOL_FLAG = SOL_NOT_FOUND;
          goto FREERETURN;
       }
