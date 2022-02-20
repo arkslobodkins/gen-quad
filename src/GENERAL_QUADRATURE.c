@@ -38,23 +38,23 @@ bool string_to_domain(const char *shape, DOMAIN_TYPE *D)
 
 int IntPower(int x, int power)
 {
-    int result = 1;
-    for (;;)
-    {
-        if (power & 1)
-            result *= x;
-        power >>= 1;
-        if (!power)
-            break;
-        x *= x;
-    }
+   int result = 1;
+   for (;;)
+   {
+      if (power & 1)
+         result *= x;
+      power >>= 1;
+      if (!power)
+         break;
+      x *= x;
+   }
    return result;
 }
 
 int factorial(int n)
 {
-    if (n == 0) return 1;
-    return n * factorial(n - 1);
+   if (n == 0) return 1;
+   return n * factorial(n - 1);
 }
 
 int binomial(int k, int n)
@@ -91,8 +91,9 @@ double expIntegralNDimSimplex(int dim)
 
    double expI = 0.0;
    double sign = 1.0;
-   for(int i = dim; i >= 0; --i) {
-         expI += (double)binomial(i, dim)*expl(i)*sign;
+   for(int i = dim; i >= 0; --i)
+   {
+      expI += (double)binomial(i, dim)*expl(i)*sign;
       sign *= -1.0;
    }
    expI /= factorial(dim);
@@ -103,29 +104,24 @@ double expIntegralNDimSimplex(int dim)
 void OpenNewtonCotes(int n, double *w, double *x)
 {
    double h = 1.0 / (n+2);
+   for(int i = 0; i <= n; ++i) x[i] = h*(i+1);
+   for(int i = 0; i <= n; ++i) w[i] = 0.0;
 
-   for(int i = 0; i <= n; ++i)
-      w[i] = 0.0;
-   for(int i = 0; i <= n; ++i)
-      x[i] = h*(i+1);
-
-
-   int ng = ceil( (n+1)/2.0 );
-   double wg[n+1];
-   double xg[n+1];
+   int ng = 8; // 15th order Gausisan quadrature
+   double wg[ng];
+   double xg[ng];
    Jacobi(ng, 0.0, 0.0, xg, wg);
 
    for(int i = 0; i <= n; ++i)
-   {
       for(int j = 0; j < ng; ++j)
-      w[i] += wg[j] * Lagrange(i, xg[j], n+1, x);
-   }
+         w[i] += wg[j] * IthLagrange(i, xg[j], n+1, x);
 }
 
-double Lagrange(int i, double t, int nx, double *x)
+double IthLagrange(int i, double t, int nx, double *x)
 {
    double lg = 1.0;
-   for(int k = 0; k < nx; ++k) {
+   for(int k = 0; k < nx; ++k)
+   {
       if(i == k) continue;
       lg *= (t - x[k]) / (x[i] - x[k]);
    }

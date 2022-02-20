@@ -28,8 +28,8 @@ typedef struct
 } errInfo;
 
 
-static double ComputePenalty(quadrature *q_prev, quadrature *q_next);
-static errInfo CheckForStop(int INFO, double errorNorm, double errorNormPrev, Vector least_sq_sol);
+static double ComputePenalty(const quadrature *q_prev, const quadrature *q_next);
+static errInfo CheckForStop(int INFO, double errorNorm, double errorNormPrev, const Vector least_sq_sol);
 
 double CONSTR_TIME = 0.0;
 double LSQ_TIME = 0.0;
@@ -56,6 +56,8 @@ LSQ_out LeastSquaresNewton(const bool_enum CONSTR_OPT, quadrature *q_orig)
 
    quadrature *q_prev = quadrature_make_full_copy(q_orig);
    quadrature *q_next = quadrature_make_full_copy(q_orig);
+   Vector z_prev = q_prev->z;
+   Vector z_next = q_next->z;
 
    int elim_weights = 0;
    double errorNorm = 1.0, errorNormPrev = 1.0, errorNormUpdate = 1.0;
@@ -109,8 +111,10 @@ LSQ_out LeastSquaresNewton(const bool_enum CONSTR_OPT, quadrature *q_orig)
             LEAD_DIM = MAX(nrows, ncols);
             CMatrix_realloc(nrows, ncols, &JACOBIAN);
             Vector_realloc(LEAD_DIM, &LEAST_SQ_SOL);
-            quadrature_remove_element(cVectData.boundaryNodeId, q_next);
             quadrature_remove_element(cVectData.boundaryNodeId, q_prev);
+            quadrature_remove_element(cVectData.boundaryNodeId, q_next);
+            z_prev = q_prev->z;
+            z_next = q_next->z;
          }
       }
 
@@ -122,16 +126,16 @@ LSQ_out LeastSquaresNewton(const bool_enum CONSTR_OPT, quadrature *q_orig)
       int INFO = leastsquares_ptr(JACOBIAN, LEAST_SQ_SOL);
       LSQ_TIME += get_cur_time() - start_time;
 
-
       for(int i = 0; i < ncols; ++i)
-         q_next->z.id[i] = q_prev->z.id[i] - LEAST_SQ_SOL.id[i];
+         z_next.id[i] = z_prev.id[i] - LEAST_SQ_SOL.id[i];
 
-      double alpha = 1.0;
       if(CONSTR_OPT == OFF && lsq_out.its < 5)
-         alpha = ComputePenalty(q_prev, q_next);
-      if(alpha < 1.0)
-         for(int i = 0; i < ncols; ++i)
-            q_next->z.id[i] = q_prev->z.id[i] - alpha * LEAST_SQ_SOL.id[i];
+      {
+         double alpha = ComputePenalty(q_prev, q_next);
+         if(alpha < 1.0)
+            for(int i = 0; i < ncols; ++i)
+               z_next.id[i] = z_prev.id[i] - alpha * LEAST_SQ_SOL.id[i];
+      }
 
       errorNormPrev = errorNorm;
       getFunc_ptr(q_next, RHS);
@@ -210,7 +214,7 @@ FREERETURN:
 #undef MAX_ELIM_WEIGHTS
 
 
-static double ComputePenalty(quadrature *q_prev, quadrature *q_next)
+static double ComputePenalty(const quadrature *q_prev, const quadrature *q_next)
 {
    if(!QuadInConstraint(q_prev)) return 1.0;
    if(!QuadInConstraint(q_next)) return 1.0;
@@ -223,7 +227,7 @@ static double ComputePenalty(quadrature *q_prev, quadrature *q_next)
 }
 
 
-static errInfo CheckForStop(int INFO, double errorNorm, double errorNormPrev, Vector least_sq_sol)
+static errInfo CheckForStop(int INFO, double errorNorm, double errorNormPrev, const Vector least_sq_sol)
 {
    errInfo info;
    info.succeeded = true;

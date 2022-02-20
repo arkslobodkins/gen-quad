@@ -27,7 +27,7 @@ extern int MAX_DIM;
 #define SEARCH_DIM 3
 #define MAX_FAILS_LEVEL_1 4
 #define MAX_FAILS_LEVEL_2 6
-#define MAX_FAILS_ELIM 8
+#define MAX_FAILS_ELIM 12
 
 #define PASSED true
 #define FAILED false
@@ -122,16 +122,17 @@ void NodeElimination(const quadrature *q_initial, quadrature *q_final, history *
    while( ((dim+1)*n_cur > numFuncs)  && (n_cur >= 2) )
    {
       SOL_FLAG = LsqSearch(OFF, q_new, hist);        // perform regular search first
-      if(repeat == 0)                                // if failed early
-         if(SOL_FLAG == SOL_NOT_FOUND)               // perform deeper search
+      if(SOL_FLAG == SOL_NOT_FOUND)                  // perform deeper search
+      {
+         if(repeat == 0)                             // if failed early
             SOL_FLAG = TreeSearch(ON, q_new, hist);
-      n_cur = q_new->num_nodes;
+         else if(dim != MAX_DIM)
+            SOL_FLAG = TreeSearch(OFF, q_new, hist); // without boundary constraints
+         else if(dim == MAX_DIM)
+            SOL_FLAG = TreeSearch(ON, q_new, hist);  // add boundary constraints for the last dimension
+      }
 
-      if(dim == MAX_DIM)
-         if(SOL_FLAG == SOL_NOT_FOUND)               // perform deeper search
-            SOL_FLAG = TreeSearch(ON, q_new, hist);
       n_cur = q_new->num_nodes;
-
       efficiency = (double)n_opt/n_cur;
       if (SOL_FLAG == SOL_FOUND)
          PrintElimInfo(dim, n_cur, n_opt, efficiency);
@@ -240,10 +241,11 @@ static bool TreeSearch(bool_enum CONSTR_FLAG, quadrature *q_new, history *hist)
       bool earlyConstraint   = false;
       LSQ_out searchNewGuessFlag__1;
       int sd1;
-      for(sd1 = 0; sd1 < SEARCH_DIM; ++sd1) {
+      for(sd1 = 0; sd1 < SEARCH_DIM; ++sd1)
+      {
          VectorAddScale(1.0, qsearch__1->z, -1.0, qnewtemp__1->z, dz__1);
          VectorAddScale(1.0, qnewtemp__1->z, shortParams.t[sd1], dz__1, qsearch__1->z);
-         searchNewGuessFlag__1 = LeastSquaresNewton(ON, qsearch__1);
+         searchNewGuessFlag__1 = LeastSquaresNewton(CONSTR_FLAG, qsearch__1);
 
          if(qsearch__1->num_nodes != n_cur)
          {
@@ -314,7 +316,7 @@ static bool TreeSearch(bool_enum CONSTR_FLAG, quadrature *q_new, history *hist)
          {
             VectorAddScale(1.0, qsearch__2->z, -1.0, qnewtemp__1->z, dz__2);
             VectorAddScale(1.0, qnewtemp__1->z, shortParams.t[sd2], dz__2, qsearch__2->z);
-            searchNewGuessFlag__2 = LeastSquaresNewton(ON, qsearch__2);
+            searchNewGuessFlag__2 = LeastSquaresNewton(CONSTR_FLAG, qsearch__2);
 
             if(qsearch__1->num_nodes != n_cur)
             {
@@ -376,7 +378,7 @@ static bool TreeSearch(bool_enum CONSTR_FLAG, quadrature *q_new, history *hist)
 }
 
 
-// assumes distance indicies are initialized properly
+// assumes distance indices are initialized properly
 static RMatrix PredictorLapack(quadrature *q, DistanceStruct *distance)
 {
    const int numFuncs  = q->basis->numFuncs;

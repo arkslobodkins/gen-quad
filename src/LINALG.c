@@ -172,12 +172,11 @@ int DGEMM_PLASMA(CMatrix A, CMatrix B, CMatrix C)
    else          return GQ_SUCCESS;
 }
 
+#endif
+
 void Transpose(int M, int N, const double *A, double *B)
 {
-   #pragma omp parallel for default(shared) schedule(static) num_threads(omp_get_max_threads())
    for(int i = 0; i < M; ++i)
-      #pragma omp simd
       for(int j = 0; j < N; ++j)
          B[i+j*M] = A[j+i*N];
 }
-#endif

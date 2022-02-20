@@ -72,7 +72,13 @@ TEST(GEN_QUAD_TEST, VECTOR)
    for(int i = 0; i < v.len; ++i)
       EXPECT_EQ(v.id[i], w.id[i]);
 
+//   v.id[0] = 10.0;
+//   for(int i = 0; i < 50; ++i)
+//      v.id[0] *= v.id[0];
+//   EXPECT_EQ(V_CheckInf, true);
+
    Vector_free(v);
+   Vector_free(w);
 }
 
 
@@ -97,7 +103,8 @@ TEST(GEN_QUAD_TEST, MATRIX)
    RMatVec(RM, x, br);
    CMatVec(CM, x, bc);
 
-   for(int i = 0; i < RM.rows; ++i) {
+   for(int i = 0; i < RM.rows; ++i)
+   {
       double rhs = 0.0;
       for(int j = 0; j < RM.cols; ++j)
          rhs += (i+j)*j;

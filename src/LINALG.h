@@ -50,8 +50,9 @@ int DGELS_LAPACK(CMatrix A, Vector RHS_TO_X);
 #ifdef _OPENMP
 int DGELS_PLASMA(CMatrix A, Vector RHS_TO_X);
 int DGEMM_PLASMA(CMatrix A, CMatrix B, CMatrix C);
-void Transpose(int M, int N, const double *A, double *B);
 #endif
+
+void Transpose(int M, int N, const double *A, double *B);
 
 #ifdef __cplusplus
 }

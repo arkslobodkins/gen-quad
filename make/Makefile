@@ -4,8 +4,8 @@ debug      = 1
 
 CXX = g++
 CC  = gcc
-CXXFLAGS = -O3 -mfma -march=native -isystem../plasma-17.1/include  -fsanitize=address #-fopt-info -Og
-CFLAGS   = -O3 -mfma -march=native -isystem../plasma-17.1/include  -fsanitize=address #-fopt-info -Og
+CXXFLAGS = -O3 -mfma -march=native -isystem../plasma-17.1/include  #-fsanitize=address #-fopt-info -Og
+CFLAGS   = -O3 -mfma -march=native -isystem../plasma-17.1/include  #-fsanitize=address #-fopt-info -Og
 
 CVERSION   = -std=c11
 CPPVERSION = -std=c++11
@@ -13,6 +13,9 @@ CPPVERSION = -std=c++11
 ifeq ($(OPENMP), 1)
 CFLAGS   += -fopenmp
 CXXFLAGS += -fopenmp
+else
+CFLAGS   += -Wno-unknown-pragmas
+CXXFLAGS += -Wno-unknown-pragmas
 endif
 
 ifeq ($(assertions), 0)

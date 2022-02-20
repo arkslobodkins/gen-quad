@@ -65,7 +65,7 @@ double expNDim(int dim, double x[]);
 double expIntegralNDimCube(int dim);
 double expIntegralNDimSimplex(int dim);
 void OpenNewtonCotes(int n, double *w, double *x);
-double Lagrange(int i, double t, int nx, double *x);
+double IthLagrange(int i, double t, int nx, double *x);
 #ifdef _OPENMP
 GQ_BOOL OMP_CONDITION(int deg, int dim);
 GQ_BOOL PLASMA_CONDITION();

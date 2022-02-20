@@ -88,7 +88,7 @@ void ComputeCube(int deg, int dim)
    double basisRes = orthogonal_cube_basis_test(deg, dim);
    if(basisRes > POW_DOUBLE(10.0, -13))
    {
-      PRINT_ERR("Residual of orthogonal cube basis functions is too", __LINE__, __FILE__);
+      PRINT_ERR("Residual of orthogonal cube basis functions is too large", __LINE__, __FILE__);
       return;
    }
 #endif
