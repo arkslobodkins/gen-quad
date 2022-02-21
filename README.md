@@ -23,7 +23,8 @@ Use instructions:
 Requires at least C99 or C++98 or more recent, as well as BLAS and LAPACK libraries. It also
 requires availability of LAPACKE interface to support initialization of PLASMA routines.
 PLASMA is a parallel linear algebra library implemented in OpenMP that 
-has been compiled and statically linked, therefore it does not need to be installed.  
+has been compiled and statically linked, therefore it does not need to be installed, 
+unless you would like to reinstall and tune it for a particular architecture.  
 Has been tested with gcc and g++ on multiple Linux platforms.  
 Makefile contains instructions for enabling/disabling debugging mode.  
   
