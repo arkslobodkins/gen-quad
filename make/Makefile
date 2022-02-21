@@ -2,10 +2,10 @@ assertions = 1
 OPENMP     = 1
 debug      = 1
 
-CXX = g++
 CC  = gcc
-CXXFLAGS = -O3 -mfma -march=native -isystem../plasma-17.1/include  #-fsanitize=address #-fopt-info -Og
-CFLAGS   = -O3 -mfma -march=native -isystem../plasma-17.1/include  #-fsanitize=address #-fopt-info -Og
+CXX = g++
+CFLAGS   = -O3 -mfma -march=native -isystem../plasma-17.1/include #-fsanitize=address #-fopt-info -Og
+CXXFLAGS = -O3 -mfma -march=native -isystem../plasma-17.1/include #-fsanitize=address #-fopt-info -Og
 
 CVERSION   = -std=c11
 CPPVERSION = -std=c++11
