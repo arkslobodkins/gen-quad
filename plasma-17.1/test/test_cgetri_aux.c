@@ -6,7 +6,7 @@
  *  University of Tennessee, US,
  *  University of Manchester, UK.
  *
- * @generated from test/test_zgetri_aux.c, normal z -> c, Mon Nov 22 19:23:12 2021
+ * @generated from test/test_zgetri_aux.c, normal z -> c, Sun Feb 20 23:48:07 2022
  *
  **/
 #include "test.h"

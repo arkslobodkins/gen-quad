@@ -119,7 +119,7 @@ void NodeElimination(const quadrature *q_initial, quadrature *q_final, history *
    double efficiency     = (double)n_opt/nodesInitial;
    PrintElimInfo( dim, n_cur , n_opt, efficiency);
    int repeat = 0;
-   while( ((dim+1)*n_cur > numFuncs)  && (n_cur >= 2) )
+   while( (n_cur > n_opt)  && (n_cur >= 2) )
    {
       SOL_FLAG = LsqSearch(OFF, q_new, hist);        // perform regular search first
       if(SOL_FLAG == SOL_NOT_FOUND)                  // perform deeper search

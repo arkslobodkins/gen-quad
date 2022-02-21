@@ -10,23 +10,26 @@ extern "C" {
 
 #ifdef QUAD_DEBUG_ON
 
-#define COND_TEST_1                                                       \
-for(int i = 0; i < k; ++i)                                                \
-{                                                                         \
-   for(int j = 0; j < num_eqns; ++j)                                      \
-   if(QuadEqnOnTheBoundary(q_prev, i, j) == true                          \
-       && QuadInDomainEqnElemEps(q_next, i, j) == false)                  \
-      {                                                                   \
-         PRINT_ERR("DID NOT PROJECT PROPERLY", __LINE__, __FILE__);       \
-         PrintInt(i, "ith node");                                         \
-         PrintNodeAndWeight(i, q_prev, "q_prev");                         \
-         PrintNodeAndWeight(i, q_next, "q_next");                         \
-      }                                                                   \
+#define COND_TEST_1                                                        \
+for(int i = 0; i < k; ++i)                                                 \
+{                                                                          \
+   for(int j = 0; j < num_eqns; ++j)                                       \
+   {                                                                       \
+      if(QuadEqnOnTheBoundary(q_prev, i, j) == true                        \
+         && QuadInDomainEqnElemEps(q_next, i, j) == false)                 \
+      {                                                                    \
+         PRINT_ERR("DID NOT PROJECT PROPERLY", __LINE__, __FILE__);        \
+         PrintInt(i, "ith node");                                          \
+         PrintNodeAndWeight(i, q_prev, "q_prev");                          \
+         PrintNodeAndWeight(i, q_next, "q_next");                          \
+      }                                                                    \
+   }                                                                       \
 }
 
 
 #define COND_TEST_2                                                           \
-if(cVectData->ACTIVE == ON) {                                                 \
+if(cVectData->ACTIVE == ON)                                                   \
+{                                                                             \
    if(QuadInConstraintEps(q_next_copy) == false)                              \
    {                                                                          \
       PrintInt(cVectData->boundaryNodeId, "node_id");                         \
@@ -43,18 +46,18 @@ if(TEST_QR == FAILED)                                                         \
    PRINT_ERR("FAILED QR TEST", __LINE__, __FILE__);
 
 
-#define COND_TEST_4                                                                     \
-for(int i = 0; i < Z.rows; ++i)                                                         \
-   if( fabs(Z.rid[i][whichIndex[i]]) > POW_DOUBLE(10, -12) )                            \
-      PRINT_ERR("TEST 4: failed positivity of weights", __LINE__, __FILE__);            \
-                                                                                        \
-for(int i = 0; i < VT.rows; ++i)                                                        \
-{                                                                                       \
-   double __norm = 0.0;                                                                 \
-   for(int j = 0; j < n_cur; ++j)                                                       \
-      __norm += SQUARE(VT.cid[j][i]);                                                   \
-   if( fabs(__norm - 1.0) > POW_DOUBLE(10.0, -13) )                                     \
-   PRINT_ERR("TEST 4: failed orthogonality test for eigenvectors", __LINE__, __FILE__); \
+#define COND_TEST_4                                                                        \
+for(int i = 0; i < Z.rows; ++i)                                                            \
+   if( fabs(Z.rid[i][whichIndex[i]]) > POW_DOUBLE(10, -12) )                               \
+      PRINT_ERR("TEST 4: failed positivity of weights", __LINE__, __FILE__);               \
+                                                                                           \
+for(int i = 0; i < VT.rows; ++i)                                                           \
+{                                                                                          \
+   double __norm = 0.0;                                                                    \
+   for(int j = 0; j < n_cur; ++j)                                                          \
+      __norm += SQUARE(VT.cid[j][i]);                                                      \
+   if( fabs(__norm - 1.0) > POW_DOUBLE(10.0, -13) )                                        \
+      PRINT_ERR("TEST 4: failed orthogonality test for eigenvectors", __LINE__, __FILE__); \
 }
 
 

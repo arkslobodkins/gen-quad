@@ -36,7 +36,7 @@ OBJECTS = Main.o LeastSquaresNewton.o  GeneralGaussTensor.o GENERAL_QUADRATURE.o
 	Constraints.o ConstrainedOptimization.o Vector.o Matrix.o Print.o Quadrature.o               \
 	LINALG.o Basis.o get_time.o libgaussq.a libplasma_icc.a libcoreblas_icc.a
 
-all:quad_c quad_cpp
+all:quadc quadcpp
 
 quadc : quad_c results data
 quad_c : $(OBJECTS)

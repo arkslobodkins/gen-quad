@@ -6,7 +6,7 @@
  *  University of Tennessee, US,
  *  University of Manchester, UK.
  *
- * @generated from core_blas/core_zsyr2k.c, normal z -> s, Mon Nov 22 19:22:19 2021
+ * @generated from core_blas/core_zsyr2k.c, normal z -> s, Sun Feb 20 23:42:05 2022
  *
  **/
 
