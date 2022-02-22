@@ -32,9 +32,9 @@ CXXFLAGS += -g -Wall -Wextra
 
 endif
 
-LIBSBLAS= -lblas -llapack -llapacke
 #alternatively:
-#LIBSBLAS = -lopenblas
+#LIBSBLAS= -lblas -llapack -llapacke
+LIBSBLAS = -lopenblas -llapacke
 MATH = -lm
 RANLIB = ranlib
 VPATH = ../src:../src/Gauss_Lib

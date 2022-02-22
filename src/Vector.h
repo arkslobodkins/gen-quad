@@ -16,6 +16,12 @@ int idamax_(int *n, double *x, int *incx);
 
 typedef struct
 {
+   int *id;
+   int len;
+} VectorInt;
+
+typedef struct
+{
    double *id;
    double **ompId;
    int len;
@@ -32,6 +38,11 @@ typedef struct
    double __ ##vecName[__len];            \
    vecName.len = __len;                   \
    vecName.id = __##vecName;
+
+VectorInt VectorInt_init(int n);
+void VectorInt_realloc(int n, VectorInt *V);
+void VectorInt_Assign(VectorInt v1, VectorInt v2);
+void VectorInt_free(VectorInt V);
 
 Vector Vector_init(int n);
 void Vector_realloc(int n, Vector *V);

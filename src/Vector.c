@@ -13,6 +13,36 @@
 #include <string.h>
 #include <omp.h>
 
+VectorInt VectorInt_init(int n)
+{
+   assert(n >= 1);
+
+   VectorInt V = {0};
+   V.len = n;
+   V.id = (int *)calloc(n, sizeof(int));
+
+   return V;
+}
+
+void VectorInt_realloc(int n, VectorInt *V)
+{
+   assert(n >= 1);
+   V->id = (int *)realloc(V->id, n*sizeof(int));
+   V->len = n;
+}
+
+void VectorInt_Assign(VectorInt v1, VectorInt v2)
+{
+   assert(v1.len == v2.len);
+   memcpy(v2.id, v1.id, v1.len*sizeof(int));
+}
+
+void VectorInt_free(VectorInt V)
+{
+   if(V.id != NULL) { free(V.id); V.id = NULL; }
+}
+
+
 
 Vector Vector_init(int n)
 {
