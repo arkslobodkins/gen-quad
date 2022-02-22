@@ -266,7 +266,7 @@ static bool TreeSearch(bool_enum CONSTR_FLAG, quadrature *q_new, history *hist)
       }
 
       if(earlyConstraint)
-         break; // break i loop
+         break; // break i1 loop
 
       if(searchNewGuessFlag__1.SOL_FLAG)
       {
@@ -318,9 +318,9 @@ static bool TreeSearch(bool_enum CONSTR_FLAG, quadrature *q_new, history *hist)
             VectorAddScale(1.0, qnewtemp__1->z, shortParams.t[sd2], dz__2, qsearch__2->z);
             searchNewGuessFlag__2 = LeastSquaresNewton(CONSTR_FLAG, qsearch__2);
 
-            if(qsearch__1->num_nodes != n_cur)
+            if(qsearch__2->num_nodes != n_cur)
             {
-               quadrature_assign_resize(qsearch__1, q_new);
+               quadrature_assign_resize(qsearch__2, q_new);
                SOL_FLAG = SOL_FOUND;
                earlyConstraint = true;
                printf("succeeded at %i->%i th iteration, with constraints at depth level 1.5, and damping parameter %.4e\n", failCount__1, failCount__2, shortParams.t[sd1]);
@@ -335,7 +335,7 @@ static bool TreeSearch(bool_enum CONSTR_FLAG, quadrature *q_new, history *hist)
                break; // break sd2 loop
          }
          if(earlyConstraint)
-            break; // break i loop
+            break; // break i2 loop
 
          if(searchNewGuessFlag__2.SOL_FLAG)
          {
@@ -357,6 +357,9 @@ static bool TreeSearch(bool_enum CONSTR_FLAG, quadrature *q_new, history *hist)
       RMatrix_free(Z__2);
       Vector_free(dz__2);
       free(distance__2);
+
+      if(earlyConstraint)
+         break;
 
       if(searchElimFlag__2)
          break;
@@ -396,7 +399,7 @@ static RMatrix PredictorLapack(quadrature *q, DistanceStruct *distance)
    // construct QR factorization of transpose of the Jacobian
    int N_REFL   = MIN(J_TR.rows, J_TR.cols);
    Vector REFL = Vector_init(N_REFL);
-   if(DGEQRF_LAPACK(J_TR, REFL) != 0)
+  if(DGEQRF_LAPACK(J_TR, REFL) != 0)
       PRINT_ERR(STR_LAPACK_ERR, __LINE__, __FILE__);
 
    RMatrix Z        = RMatrix_init(n_cur, n_cur*(dim+1));                  // M x N
