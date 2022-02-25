@@ -158,8 +158,10 @@ static bool LsqSearch(bool_enum CONSTR_FLAG, quadrature *q_new, history *hist)
 {
    RMatrix(*Predictor_Ptr)(quadrature *, DistanceStruct *);
    #ifdef _OPENMP
-      if(PLASMA_CONDITION()) Predictor_Ptr = &PredictorPlasma;
-      else                   Predictor_Ptr = &PredictorLapack;
+      if(PLASMA_CONDITION()
+         && OMP_CONDITION(q_new->deg, q_new->dim))
+            Predictor_Ptr = &PredictorPlasma;
+      else  Predictor_Ptr = &PredictorLapack;
    #else
       Predictor_Ptr = &PredictorLapack;
    #endif
@@ -214,8 +216,10 @@ static bool TreeSearch(bool_enum CONSTR_FLAG, quadrature *q_new, history *hist)
 {
    RMatrix(*Predictor_Ptr)(quadrature *, DistanceStruct *);
    #ifdef _OPENMP
-      if(PLASMA_CONDITION()) Predictor_Ptr = &PredictorPlasma;
-      else                   Predictor_Ptr = &PredictorLapack;
+      if(PLASMA_CONDITION()
+         && OMP_CONDITION(q_new->deg, q_new->dim))
+           Predictor_Ptr = &PredictorPlasma;
+      else Predictor_Ptr = &PredictorLapack;
    #else
       Predictor_Ptr = &PredictorLapack;
    #endif

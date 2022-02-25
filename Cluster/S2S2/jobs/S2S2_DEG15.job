@@ -1,0 +1,21 @@
+#!/bin/bash
+#SBATCH -J S2S2_DEG15
+#SBATCH -o S2S2_DEG15.txt
+#SBATCH -e S2S2_DEG15.err
+#SBATCH -p standard-mem-m
+#SBATCH -t 6000
+#SBATCH --mem=12G
+#SBATCH --nodes=1
+#SBATCH --chdir ../output
+
+cd ../../../make
+
+module purge
+module load gcc-9.2
+module load openblas/0.3.7-ai63y24
+export OMP_NUM_THREADS=36
+
+make clean
+make quadc
+./quad_c SIMPLEXSIMPLEX 15 2 2
+make clean

@@ -5,6 +5,7 @@
 
 #include "Matrix.h"
 #include "Print.h"
+#include "GENERAL_QUADRATURE.h"
 
 #include <assert.h>
 #include <stdlib.h>

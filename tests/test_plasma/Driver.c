@@ -5,7 +5,7 @@
 #include <omp.h>
 
 #include "get_time.h"
-#include <../../plasma-17.1/include/plasma.h>
+#include "../../plasma-17.1/include/plasma.h"
 
 void dgels_(char *TRANS, int *M, int *N, int* nrhs,
             double* A, int* LDA,
@@ -33,8 +33,8 @@ int main(int argc, char *argv[])
    printf("OPENMP enanbled with %i threads\n\n", omp_get_max_threads());
 #endif
 
-   int nrows = 200;
-   int ncols = 100;
+   int nrows = 4000;
+   int ncols = 2000;
    int NRHS  = 1;
    int LDA   = nrows;
    int LEAD_DIM = nrows>ncols ? nrows:ncols;

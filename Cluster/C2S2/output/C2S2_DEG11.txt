@@ -1,0 +1,399 @@
+\rm -f *.o quad_c quad_cpp
+gcc -O3 -mfma -march=native -isystem../plasma-17.1/include  -fopenmp -g -Wall -Wextra   -c -o Main.o ../src/Main.c
+gcc -O3 -mfma -march=native -isystem../plasma-17.1/include  -fopenmp -g -Wall -Wextra   -c -o LeastSquaresNewton.o ../src/LeastSquaresNewton.c
+gcc -O3 -mfma -march=native -isystem../plasma-17.1/include  -fopenmp -g -Wall -Wextra   -c -o GeneralGaussTensor.o ../src/GeneralGaussTensor.c
+gcc -O3 -mfma -march=native -isystem../plasma-17.1/include  -fopenmp -g -Wall -Wextra   -c -o GENERAL_QUADRATURE.o ../src/GENERAL_QUADRATURE.c
+gcc -O3 -mfma -march=native -isystem../plasma-17.1/include  -fopenmp -g -Wall -Wextra   -c -o GetJacobian.o ../src/GetJacobian.c
+gcc -O3 -mfma -march=native -isystem../plasma-17.1/include  -fopenmp -g -Wall -Wextra   -c -o GetFunction.o ../src/GetFunction.c
+gcc -O3 -mfma -march=native -isystem../plasma-17.1/include  -fopenmp -g -Wall -Wextra   -c -o NodeElimination.o ../src/NodeElimination.c
+gcc -O3 -mfma -march=native -isystem../plasma-17.1/include  -fopenmp -g -Wall -Wextra   -c -o Output.o ../src/Output.c
+gcc -O3 -mfma -march=native -isystem../plasma-17.1/include  -fopenmp -g -Wall -Wextra   -c -o AddDimension.o ../src/AddDimension.c
+gcc -O3 -mfma -march=native -isystem../plasma-17.1/include  -fopenmp -g -Wall -Wextra   -c -o ComputeDomain.o ../src/ComputeDomain.c
+gcc -O3 -mfma -march=native -isystem../plasma-17.1/include  -fopenmp -g -Wall -Wextra   -c -o QuadDriver.o ../src/QuadDriver.c
+gcc -O3 -mfma -march=native -isystem../plasma-17.1/include  -fopenmp -g -Wall -Wextra   -c -o Constraints.o ../src/Constraints.c
+gcc -O3 -mfma -march=native -isystem../plasma-17.1/include  -fopenmp -g -Wall -Wextra   -c -o ConstrainedOptimization.o ../src/ConstrainedOptimization.c
+gcc -O3 -mfma -march=native -isystem../plasma-17.1/include  -fopenmp -g -Wall -Wextra   -c -o Vector.o ../src/Vector.c
+gcc -O3 -mfma -march=native -isystem../plasma-17.1/include  -fopenmp -g -Wall -Wextra   -c -o Matrix.o ../src/Matrix.c
+gcc -O3 -mfma -march=native -isystem../plasma-17.1/include  -fopenmp -g -Wall -Wextra   -c -o Print.o ../src/Print.c
+gcc -O3 -mfma -march=native -isystem../plasma-17.1/include  -fopenmp -g -Wall -Wextra   -c -o Quadrature.o ../src/Quadrature.c
+gcc -O3 -mfma -march=native -isystem../plasma-17.1/include  -fopenmp -g -Wall -Wextra   -c -o LINALG.o ../src/LINALG.c
+gcc -O3 -mfma -march=native -isystem../plasma-17.1/include  -fopenmp -g -Wall -Wextra   -c -o Basis.o ../src/Basis.c
+gcc -O3 -mfma -march=native -isystem../plasma-17.1/include  -fopenmp -g -Wall -Wextra   -c -o Tensor.o ../src/Tensor.c
+gcc -O3 -mfma -march=native -isystem../plasma-17.1/include  -fopenmp -g -Wall -Wextra   -c -o get_time.o ../src/get_time.c
+gcc -O3 -mfma -march=native -isystem../plasma-17.1/include  -fopenmp -g -Wall -Wextra   -c -o GaussCore.o ../src/Gauss_Lib/GaussCore.c
+gcc -O3 -mfma -march=native -isystem../plasma-17.1/include  -fopenmp -g -Wall -Wextra   -c -o Jacobi.o ../src/Gauss_Lib/Jacobi.c
+ar rv libgaussq.a GaussCore.o Jacobi.o
+r - GaussCore.o
+r - Jacobi.o
+ranlib libgaussq.a
+gcc -std=c11 -O3 -mfma -march=native -isystem../plasma-17.1/include  -fopenmp -g -Wall -Wextra -o quad_c Main.o LeastSquaresNewton.o GeneralGaussTensor.o GENERAL_QUADRATURE.o GetJacobian.o GetFunction.o NodeElimination.o Output.o AddDimension.o ComputeDomain.o QuadDriver.o Constraints.o ConstrainedOptimization.o Vector.o Matrix.o Print.o Quadrature.o LINALG.o Basis.o Tensor.o get_time.o libgaussq.a libplasma.a libcoreblas.a -lopenblas -lm
+mkdir -p ../results
+mkdir -p ../data
+
+DEBUG MODE ON
+
+OPENMP enanbled with 36 threads
+
+initial orthogonal basis residual in NodeElimination = 2.2204460492503131e-16
+dimension = 2, current number of nodes = 42, optimal = 26, efficiency = 0.619048
+dimension = 2, current number of nodes = 41, optimal = 26, efficiency = 0.634146
+dimension = 2, current number of nodes = 40, optimal = 26, efficiency = 0.650000
+dimension = 2, current number of nodes = 39, optimal = 26, efficiency = 0.666667
+dimension = 2, current number of nodes = 38, optimal = 26, efficiency = 0.684211
+dimension = 2, current number of nodes = 37, optimal = 26, efficiency = 0.702703
+dimension = 2, current number of nodes = 36, optimal = 26, efficiency = 0.722222
+dimension = 2, current number of nodes = 35, optimal = 26, efficiency = 0.742857
+dimension = 2, current number of nodes = 34, optimal = 26, efficiency = 0.764706
+dimension = 2, current number of nodes = 33, optimal = 26, efficiency = 0.787879
+dimension = 2, current number of nodes = 32, optimal = 26, efficiency = 0.812500
+dimension = 2, current number of nodes = 31, optimal = 26, efficiency = 0.838710
+dimension = 2, current number of nodes = 30, optimal = 26, efficiency = 0.866667
+succeeded at 0->3 th iteration, with shortening at depth level 2, and damping parameter 5.0000e-01
+dimension = 2, current number of nodes = 29, optimal = 26, efficiency = 0.896552
+dimension = 2, current number of nodes = 28, optimal = 26, efficiency = 0.928571
+Last iteration did not converge
+Final orthogonal basis residual in NodeElimination = 6.0419099560625608e-17
+
+initial orthogonal basis residual in NodeElimination = 1.1102230246251565e-16
+dimension = 3, current number of nodes = 168, optimal = 91, efficiency = 0.541667
+dimension = 3, current number of nodes = 167, optimal = 91, efficiency = 0.544910
+dimension = 3, current number of nodes = 166, optimal = 91, efficiency = 0.548193
+dimension = 3, current number of nodes = 165, optimal = 91, efficiency = 0.551515
+dimension = 3, current number of nodes = 164, optimal = 91, efficiency = 0.554878
+dimension = 3, current number of nodes = 163, optimal = 91, efficiency = 0.558282
+dimension = 3, current number of nodes = 162, optimal = 91, efficiency = 0.561728
+dimension = 3, current number of nodes = 161, optimal = 91, efficiency = 0.565217
+dimension = 3, current number of nodes = 160, optimal = 91, efficiency = 0.568750
+dimension = 3, current number of nodes = 159, optimal = 91, efficiency = 0.572327
+dimension = 3, current number of nodes = 158, optimal = 91, efficiency = 0.575949
+dimension = 3, current number of nodes = 157, optimal = 91, efficiency = 0.579618
+dimension = 3, current number of nodes = 156, optimal = 91, efficiency = 0.583333
+dimension = 3, current number of nodes = 155, optimal = 91, efficiency = 0.587097
+dimension = 3, current number of nodes = 154, optimal = 91, efficiency = 0.590909
+dimension = 3, current number of nodes = 153, optimal = 91, efficiency = 0.594771
+dimension = 3, current number of nodes = 152, optimal = 91, efficiency = 0.598684
+dimension = 3, current number of nodes = 151, optimal = 91, efficiency = 0.602649
+dimension = 3, current number of nodes = 150, optimal = 91, efficiency = 0.606667
+dimension = 3, current number of nodes = 149, optimal = 91, efficiency = 0.610738
+dimension = 3, current number of nodes = 148, optimal = 91, efficiency = 0.614865
+dimension = 3, current number of nodes = 147, optimal = 91, efficiency = 0.619048
+dimension = 3, current number of nodes = 146, optimal = 91, efficiency = 0.623288
+dimension = 3, current number of nodes = 145, optimal = 91, efficiency = 0.627586
+dimension = 3, current number of nodes = 144, optimal = 91, efficiency = 0.631944
+dimension = 3, current number of nodes = 143, optimal = 91, efficiency = 0.636364
+dimension = 3, current number of nodes = 142, optimal = 91, efficiency = 0.640845
+dimension = 3, current number of nodes = 141, optimal = 91, efficiency = 0.645390
+dimension = 3, current number of nodes = 140, optimal = 91, efficiency = 0.650000
+dimension = 3, current number of nodes = 139, optimal = 91, efficiency = 0.654676
+dimension = 3, current number of nodes = 138, optimal = 91, efficiency = 0.659420
+dimension = 3, current number of nodes = 137, optimal = 91, efficiency = 0.664234
+dimension = 3, current number of nodes = 136, optimal = 91, efficiency = 0.669118
+dimension = 3, current number of nodes = 135, optimal = 91, efficiency = 0.674074
+dimension = 3, current number of nodes = 134, optimal = 91, efficiency = 0.679104
+dimension = 3, current number of nodes = 133, optimal = 91, efficiency = 0.684211
+dimension = 3, current number of nodes = 132, optimal = 91, efficiency = 0.689394
+dimension = 3, current number of nodes = 131, optimal = 91, efficiency = 0.694656
+dimension = 3, current number of nodes = 130, optimal = 91, efficiency = 0.700000
+dimension = 3, current number of nodes = 129, optimal = 91, efficiency = 0.705426
+dimension = 3, current number of nodes = 128, optimal = 91, efficiency = 0.710938
+dimension = 3, current number of nodes = 127, optimal = 91, efficiency = 0.716535
+dimension = 3, current number of nodes = 126, optimal = 91, efficiency = 0.722222
+dimension = 3, current number of nodes = 125, optimal = 91, efficiency = 0.728000
+dimension = 3, current number of nodes = 124, optimal = 91, efficiency = 0.733871
+dimension = 3, current number of nodes = 123, optimal = 91, efficiency = 0.739837
+dimension = 3, current number of nodes = 122, optimal = 91, efficiency = 0.745902
+dimension = 3, current number of nodes = 121, optimal = 91, efficiency = 0.752066
+dimension = 3, current number of nodes = 120, optimal = 91, efficiency = 0.758333
+dimension = 3, current number of nodes = 119, optimal = 91, efficiency = 0.764706
+dimension = 3, current number of nodes = 118, optimal = 91, efficiency = 0.771186
+dimension = 3, current number of nodes = 117, optimal = 91, efficiency = 0.777778
+dimension = 3, current number of nodes = 116, optimal = 91, efficiency = 0.784483
+dimension = 3, current number of nodes = 115, optimal = 91, efficiency = 0.791304
+dimension = 3, current number of nodes = 114, optimal = 91, efficiency = 0.798246
+dimension = 3, current number of nodes = 113, optimal = 91, efficiency = 0.805310
+dimension = 3, current number of nodes = 112, optimal = 91, efficiency = 0.812500
+dimension = 3, current number of nodes = 111, optimal = 91, efficiency = 0.819820
+dimension = 3, current number of nodes = 110, optimal = 91, efficiency = 0.827273
+dimension = 3, current number of nodes = 109, optimal = 91, efficiency = 0.834862
+dimension = 3, current number of nodes = 108, optimal = 91, efficiency = 0.842593
+dimension = 3, current number of nodes = 107, optimal = 91, efficiency = 0.850467
+dimension = 3, current number of nodes = 106, optimal = 91, efficiency = 0.858491
+dimension = 3, current number of nodes = 105, optimal = 91, efficiency = 0.866667
+dimension = 3, current number of nodes = 104, optimal = 91, efficiency = 0.875000
+dimension = 3, current number of nodes = 103, optimal = 91, efficiency = 0.883495
+dimension = 3, current number of nodes = 102, optimal = 91, efficiency = 0.892157
+dimension = 3, current number of nodes = 101, optimal = 91, efficiency = 0.900990
+dimension = 3, current number of nodes = 100, optimal = 91, efficiency = 0.910000
+dimension = 3, current number of nodes = 99, optimal = 91, efficiency = 0.919192
+dimension = 3, current number of nodes = 98, optimal = 91, efficiency = 0.928571
+succeeded at 3->3 th iteration, with shortening at depth level 2, and damping parameter 2.5000e-01
+dimension = 3, current number of nodes = 97, optimal = 91, efficiency = 0.938144
+Last iteration did not converge
+Final orthogonal basis residual in NodeElimination = 5.5511151231257827e-17
+
+initial orthogonal basis residual in NodeElimination = 1.6653345369377348e-16
+dimension = 4, current number of nodes = 582, optimal = 273, efficiency = 0.469072
+dimension = 4, current number of nodes = 581, optimal = 273, efficiency = 0.469880
+dimension = 4, current number of nodes = 580, optimal = 273, efficiency = 0.470690
+dimension = 4, current number of nodes = 579, optimal = 273, efficiency = 0.471503
+dimension = 4, current number of nodes = 578, optimal = 273, efficiency = 0.472318
+dimension = 4, current number of nodes = 577, optimal = 273, efficiency = 0.473137
+dimension = 4, current number of nodes = 576, optimal = 273, efficiency = 0.473958
+dimension = 4, current number of nodes = 575, optimal = 273, efficiency = 0.474783
+dimension = 4, current number of nodes = 574, optimal = 273, efficiency = 0.475610
+dimension = 4, current number of nodes = 573, optimal = 273, efficiency = 0.476440
+dimension = 4, current number of nodes = 572, optimal = 273, efficiency = 0.477273
+dimension = 4, current number of nodes = 571, optimal = 273, efficiency = 0.478109
+dimension = 4, current number of nodes = 570, optimal = 273, efficiency = 0.478947
+dimension = 4, current number of nodes = 569, optimal = 273, efficiency = 0.479789
+dimension = 4, current number of nodes = 568, optimal = 273, efficiency = 0.480634
+dimension = 4, current number of nodes = 567, optimal = 273, efficiency = 0.481481
+dimension = 4, current number of nodes = 566, optimal = 273, efficiency = 0.482332
+dimension = 4, current number of nodes = 565, optimal = 273, efficiency = 0.483186
+dimension = 4, current number of nodes = 564, optimal = 273, efficiency = 0.484043
+dimension = 4, current number of nodes = 563, optimal = 273, efficiency = 0.484902
+dimension = 4, current number of nodes = 562, optimal = 273, efficiency = 0.485765
+dimension = 4, current number of nodes = 561, optimal = 273, efficiency = 0.486631
+dimension = 4, current number of nodes = 560, optimal = 273, efficiency = 0.487500
+dimension = 4, current number of nodes = 559, optimal = 273, efficiency = 0.488372
+dimension = 4, current number of nodes = 558, optimal = 273, efficiency = 0.489247
+dimension = 4, current number of nodes = 557, optimal = 273, efficiency = 0.490126
+dimension = 4, current number of nodes = 556, optimal = 273, efficiency = 0.491007
+dimension = 4, current number of nodes = 555, optimal = 273, efficiency = 0.491892
+dimension = 4, current number of nodes = 554, optimal = 273, efficiency = 0.492780
+dimension = 4, current number of nodes = 553, optimal = 273, efficiency = 0.493671
+dimension = 4, current number of nodes = 552, optimal = 273, efficiency = 0.494565
+dimension = 4, current number of nodes = 551, optimal = 273, efficiency = 0.495463
+dimension = 4, current number of nodes = 550, optimal = 273, efficiency = 0.496364
+dimension = 4, current number of nodes = 549, optimal = 273, efficiency = 0.497268
+dimension = 4, current number of nodes = 548, optimal = 273, efficiency = 0.498175
+dimension = 4, current number of nodes = 547, optimal = 273, efficiency = 0.499086
+dimension = 4, current number of nodes = 546, optimal = 273, efficiency = 0.500000
+dimension = 4, current number of nodes = 545, optimal = 273, efficiency = 0.500917
+dimension = 4, current number of nodes = 544, optimal = 273, efficiency = 0.501838
+dimension = 4, current number of nodes = 543, optimal = 273, efficiency = 0.502762
+dimension = 4, current number of nodes = 542, optimal = 273, efficiency = 0.503690
+dimension = 4, current number of nodes = 541, optimal = 273, efficiency = 0.504621
+dimension = 4, current number of nodes = 540, optimal = 273, efficiency = 0.505556
+dimension = 4, current number of nodes = 539, optimal = 273, efficiency = 0.506494
+dimension = 4, current number of nodes = 538, optimal = 273, efficiency = 0.507435
+dimension = 4, current number of nodes = 537, optimal = 273, efficiency = 0.508380
+dimension = 4, current number of nodes = 536, optimal = 273, efficiency = 0.509328
+dimension = 4, current number of nodes = 535, optimal = 273, efficiency = 0.510280
+dimension = 4, current number of nodes = 534, optimal = 273, efficiency = 0.511236
+dimension = 4, current number of nodes = 533, optimal = 273, efficiency = 0.512195
+dimension = 4, current number of nodes = 532, optimal = 273, efficiency = 0.513158
+dimension = 4, current number of nodes = 531, optimal = 273, efficiency = 0.514124
+dimension = 4, current number of nodes = 530, optimal = 273, efficiency = 0.515094
+dimension = 4, current number of nodes = 529, optimal = 273, efficiency = 0.516068
+dimension = 4, current number of nodes = 528, optimal = 273, efficiency = 0.517045
+dimension = 4, current number of nodes = 527, optimal = 273, efficiency = 0.518027
+dimension = 4, current number of nodes = 526, optimal = 273, efficiency = 0.519011
+dimension = 4, current number of nodes = 525, optimal = 273, efficiency = 0.520000
+dimension = 4, current number of nodes = 524, optimal = 273, efficiency = 0.520992
+dimension = 4, current number of nodes = 523, optimal = 273, efficiency = 0.521989
+dimension = 4, current number of nodes = 522, optimal = 273, efficiency = 0.522989
+dimension = 4, current number of nodes = 521, optimal = 273, efficiency = 0.523992
+dimension = 4, current number of nodes = 520, optimal = 273, efficiency = 0.525000
+dimension = 4, current number of nodes = 519, optimal = 273, efficiency = 0.526012
+dimension = 4, current number of nodes = 518, optimal = 273, efficiency = 0.527027
+dimension = 4, current number of nodes = 517, optimal = 273, efficiency = 0.528046
+dimension = 4, current number of nodes = 516, optimal = 273, efficiency = 0.529070
+dimension = 4, current number of nodes = 515, optimal = 273, efficiency = 0.530097
+dimension = 4, current number of nodes = 514, optimal = 273, efficiency = 0.531128
+dimension = 4, current number of nodes = 513, optimal = 273, efficiency = 0.532164
+dimension = 4, current number of nodes = 512, optimal = 273, efficiency = 0.533203
+dimension = 4, current number of nodes = 511, optimal = 273, efficiency = 0.534247
+dimension = 4, current number of nodes = 510, optimal = 273, efficiency = 0.535294
+dimension = 4, current number of nodes = 509, optimal = 273, efficiency = 0.536346
+dimension = 4, current number of nodes = 508, optimal = 273, efficiency = 0.537402
+dimension = 4, current number of nodes = 507, optimal = 273, efficiency = 0.538462
+dimension = 4, current number of nodes = 506, optimal = 273, efficiency = 0.539526
+dimension = 4, current number of nodes = 505, optimal = 273, efficiency = 0.540594
+dimension = 4, current number of nodes = 504, optimal = 273, efficiency = 0.541667
+dimension = 4, current number of nodes = 503, optimal = 273, efficiency = 0.542744
+dimension = 4, current number of nodes = 502, optimal = 273, efficiency = 0.543825
+dimension = 4, current number of nodes = 501, optimal = 273, efficiency = 0.544910
+dimension = 4, current number of nodes = 500, optimal = 273, efficiency = 0.546000
+dimension = 4, current number of nodes = 499, optimal = 273, efficiency = 0.547094
+dimension = 4, current number of nodes = 498, optimal = 273, efficiency = 0.548193
+dimension = 4, current number of nodes = 497, optimal = 273, efficiency = 0.549296
+dimension = 4, current number of nodes = 496, optimal = 273, efficiency = 0.550403
+dimension = 4, current number of nodes = 495, optimal = 273, efficiency = 0.551515
+dimension = 4, current number of nodes = 494, optimal = 273, efficiency = 0.552632
+dimension = 4, current number of nodes = 493, optimal = 273, efficiency = 0.553753
+dimension = 4, current number of nodes = 492, optimal = 273, efficiency = 0.554878
+dimension = 4, current number of nodes = 491, optimal = 273, efficiency = 0.556008
+dimension = 4, current number of nodes = 490, optimal = 273, efficiency = 0.557143
+dimension = 4, current number of nodes = 489, optimal = 273, efficiency = 0.558282
+dimension = 4, current number of nodes = 488, optimal = 273, efficiency = 0.559426
+dimension = 4, current number of nodes = 487, optimal = 273, efficiency = 0.560575
+dimension = 4, current number of nodes = 486, optimal = 273, efficiency = 0.561728
+dimension = 4, current number of nodes = 485, optimal = 273, efficiency = 0.562887
+dimension = 4, current number of nodes = 484, optimal = 273, efficiency = 0.564050
+dimension = 4, current number of nodes = 483, optimal = 273, efficiency = 0.565217
+dimension = 4, current number of nodes = 482, optimal = 273, efficiency = 0.566390
+dimension = 4, current number of nodes = 481, optimal = 273, efficiency = 0.567568
+dimension = 4, current number of nodes = 480, optimal = 273, efficiency = 0.568750
+dimension = 4, current number of nodes = 479, optimal = 273, efficiency = 0.569937
+dimension = 4, current number of nodes = 478, optimal = 273, efficiency = 0.571130
+dimension = 4, current number of nodes = 477, optimal = 273, efficiency = 0.572327
+dimension = 4, current number of nodes = 476, optimal = 273, efficiency = 0.573529
+dimension = 4, current number of nodes = 475, optimal = 273, efficiency = 0.574737
+dimension = 4, current number of nodes = 474, optimal = 273, efficiency = 0.575949
+dimension = 4, current number of nodes = 473, optimal = 273, efficiency = 0.577167
+dimension = 4, current number of nodes = 472, optimal = 273, efficiency = 0.578390
+dimension = 4, current number of nodes = 471, optimal = 273, efficiency = 0.579618
+dimension = 4, current number of nodes = 470, optimal = 273, efficiency = 0.580851
+dimension = 4, current number of nodes = 469, optimal = 273, efficiency = 0.582090
+dimension = 4, current number of nodes = 468, optimal = 273, efficiency = 0.583333
+dimension = 4, current number of nodes = 467, optimal = 273, efficiency = 0.584582
+dimension = 4, current number of nodes = 466, optimal = 273, efficiency = 0.585837
+dimension = 4, current number of nodes = 465, optimal = 273, efficiency = 0.587097
+dimension = 4, current number of nodes = 464, optimal = 273, efficiency = 0.588362
+dimension = 4, current number of nodes = 463, optimal = 273, efficiency = 0.589633
+dimension = 4, current number of nodes = 462, optimal = 273, efficiency = 0.590909
+dimension = 4, current number of nodes = 461, optimal = 273, efficiency = 0.592191
+dimension = 4, current number of nodes = 460, optimal = 273, efficiency = 0.593478
+dimension = 4, current number of nodes = 459, optimal = 273, efficiency = 0.594771
+dimension = 4, current number of nodes = 458, optimal = 273, efficiency = 0.596070
+dimension = 4, current number of nodes = 457, optimal = 273, efficiency = 0.597374
+dimension = 4, current number of nodes = 456, optimal = 273, efficiency = 0.598684
+dimension = 4, current number of nodes = 455, optimal = 273, efficiency = 0.600000
+dimension = 4, current number of nodes = 454, optimal = 273, efficiency = 0.601322
+dimension = 4, current number of nodes = 453, optimal = 273, efficiency = 0.602649
+dimension = 4, current number of nodes = 452, optimal = 273, efficiency = 0.603982
+dimension = 4, current number of nodes = 451, optimal = 273, efficiency = 0.605322
+dimension = 4, current number of nodes = 450, optimal = 273, efficiency = 0.606667
+dimension = 4, current number of nodes = 449, optimal = 273, efficiency = 0.608018
+dimension = 4, current number of nodes = 448, optimal = 273, efficiency = 0.609375
+dimension = 4, current number of nodes = 447, optimal = 273, efficiency = 0.610738
+dimension = 4, current number of nodes = 446, optimal = 273, efficiency = 0.612108
+dimension = 4, current number of nodes = 445, optimal = 273, efficiency = 0.613483
+dimension = 4, current number of nodes = 444, optimal = 273, efficiency = 0.614865
+dimension = 4, current number of nodes = 443, optimal = 273, efficiency = 0.616253
+dimension = 4, current number of nodes = 442, optimal = 273, efficiency = 0.617647
+dimension = 4, current number of nodes = 441, optimal = 273, efficiency = 0.619048
+dimension = 4, current number of nodes = 440, optimal = 273, efficiency = 0.620455
+dimension = 4, current number of nodes = 439, optimal = 273, efficiency = 0.621868
+dimension = 4, current number of nodes = 438, optimal = 273, efficiency = 0.623288
+dimension = 4, current number of nodes = 437, optimal = 273, efficiency = 0.624714
+dimension = 4, current number of nodes = 436, optimal = 273, efficiency = 0.626147
+dimension = 4, current number of nodes = 435, optimal = 273, efficiency = 0.627586
+dimension = 4, current number of nodes = 434, optimal = 273, efficiency = 0.629032
+dimension = 4, current number of nodes = 433, optimal = 273, efficiency = 0.630485
+dimension = 4, current number of nodes = 432, optimal = 273, efficiency = 0.631944
+dimension = 4, current number of nodes = 431, optimal = 273, efficiency = 0.633411
+dimension = 4, current number of nodes = 430, optimal = 273, efficiency = 0.634884
+dimension = 4, current number of nodes = 429, optimal = 273, efficiency = 0.636364
+dimension = 4, current number of nodes = 428, optimal = 273, efficiency = 0.637850
+dimension = 4, current number of nodes = 427, optimal = 273, efficiency = 0.639344
+dimension = 4, current number of nodes = 426, optimal = 273, efficiency = 0.640845
+dimension = 4, current number of nodes = 425, optimal = 273, efficiency = 0.642353
+dimension = 4, current number of nodes = 424, optimal = 273, efficiency = 0.643868
+dimension = 4, current number of nodes = 423, optimal = 273, efficiency = 0.645390
+dimension = 4, current number of nodes = 422, optimal = 273, efficiency = 0.646919
+dimension = 4, current number of nodes = 421, optimal = 273, efficiency = 0.648456
+dimension = 4, current number of nodes = 420, optimal = 273, efficiency = 0.650000
+dimension = 4, current number of nodes = 419, optimal = 273, efficiency = 0.651551
+dimension = 4, current number of nodes = 418, optimal = 273, efficiency = 0.653110
+dimension = 4, current number of nodes = 417, optimal = 273, efficiency = 0.654676
+dimension = 4, current number of nodes = 416, optimal = 273, efficiency = 0.656250
+dimension = 4, current number of nodes = 415, optimal = 273, efficiency = 0.657831
+dimension = 4, current number of nodes = 414, optimal = 273, efficiency = 0.659420
+dimension = 4, current number of nodes = 413, optimal = 273, efficiency = 0.661017
+dimension = 4, current number of nodes = 412, optimal = 273, efficiency = 0.662621
+dimension = 4, current number of nodes = 411, optimal = 273, efficiency = 0.664234
+dimension = 4, current number of nodes = 410, optimal = 273, efficiency = 0.665854
+dimension = 4, current number of nodes = 409, optimal = 273, efficiency = 0.667482
+dimension = 4, current number of nodes = 408, optimal = 273, efficiency = 0.669118
+dimension = 4, current number of nodes = 407, optimal = 273, efficiency = 0.670762
+dimension = 4, current number of nodes = 406, optimal = 273, efficiency = 0.672414
+dimension = 4, current number of nodes = 405, optimal = 273, efficiency = 0.674074
+dimension = 4, current number of nodes = 404, optimal = 273, efficiency = 0.675743
+dimension = 4, current number of nodes = 403, optimal = 273, efficiency = 0.677419
+dimension = 4, current number of nodes = 402, optimal = 273, efficiency = 0.679104
+dimension = 4, current number of nodes = 401, optimal = 273, efficiency = 0.680798
+dimension = 4, current number of nodes = 400, optimal = 273, efficiency = 0.682500
+dimension = 4, current number of nodes = 399, optimal = 273, efficiency = 0.684211
+dimension = 4, current number of nodes = 398, optimal = 273, efficiency = 0.685930
+dimension = 4, current number of nodes = 397, optimal = 273, efficiency = 0.687657
+dimension = 4, current number of nodes = 396, optimal = 273, efficiency = 0.689394
+dimension = 4, current number of nodes = 395, optimal = 273, efficiency = 0.691139
+dimension = 4, current number of nodes = 394, optimal = 273, efficiency = 0.692893
+dimension = 4, current number of nodes = 393, optimal = 273, efficiency = 0.694656
+dimension = 4, current number of nodes = 392, optimal = 273, efficiency = 0.696429
+dimension = 4, current number of nodes = 391, optimal = 273, efficiency = 0.698210
+dimension = 4, current number of nodes = 390, optimal = 273, efficiency = 0.700000
+dimension = 4, current number of nodes = 389, optimal = 273, efficiency = 0.701799
+dimension = 4, current number of nodes = 388, optimal = 273, efficiency = 0.703608
+dimension = 4, current number of nodes = 387, optimal = 273, efficiency = 0.705426
+dimension = 4, current number of nodes = 386, optimal = 273, efficiency = 0.707254
+dimension = 4, current number of nodes = 385, optimal = 273, efficiency = 0.709091
+dimension = 4, current number of nodes = 384, optimal = 273, efficiency = 0.710938
+dimension = 4, current number of nodes = 383, optimal = 273, efficiency = 0.712794
+dimension = 4, current number of nodes = 382, optimal = 273, efficiency = 0.714660
+dimension = 4, current number of nodes = 381, optimal = 273, efficiency = 0.716535
+dimension = 4, current number of nodes = 380, optimal = 273, efficiency = 0.718421
+dimension = 4, current number of nodes = 379, optimal = 273, efficiency = 0.720317
+dimension = 4, current number of nodes = 378, optimal = 273, efficiency = 0.722222
+dimension = 4, current number of nodes = 377, optimal = 273, efficiency = 0.724138
+dimension = 4, current number of nodes = 376, optimal = 273, efficiency = 0.726064
+dimension = 4, current number of nodes = 375, optimal = 273, efficiency = 0.728000
+dimension = 4, current number of nodes = 374, optimal = 273, efficiency = 0.729947
+dimension = 4, current number of nodes = 373, optimal = 273, efficiency = 0.731903
+dimension = 4, current number of nodes = 372, optimal = 273, efficiency = 0.733871
+dimension = 4, current number of nodes = 371, optimal = 273, efficiency = 0.735849
+dimension = 4, current number of nodes = 370, optimal = 273, efficiency = 0.737838
+dimension = 4, current number of nodes = 369, optimal = 273, efficiency = 0.739837
+dimension = 4, current number of nodes = 368, optimal = 273, efficiency = 0.741848
+dimension = 4, current number of nodes = 367, optimal = 273, efficiency = 0.743869
+dimension = 4, current number of nodes = 366, optimal = 273, efficiency = 0.745902
+dimension = 4, current number of nodes = 365, optimal = 273, efficiency = 0.747945
+dimension = 4, current number of nodes = 364, optimal = 273, efficiency = 0.750000
+dimension = 4, current number of nodes = 363, optimal = 273, efficiency = 0.752066
+dimension = 4, current number of nodes = 362, optimal = 273, efficiency = 0.754144
+dimension = 4, current number of nodes = 361, optimal = 273, efficiency = 0.756233
+dimension = 4, current number of nodes = 360, optimal = 273, efficiency = 0.758333
+dimension = 4, current number of nodes = 359, optimal = 273, efficiency = 0.760446
+dimension = 4, current number of nodes = 358, optimal = 273, efficiency = 0.762570
+dimension = 4, current number of nodes = 357, optimal = 273, efficiency = 0.764706
+dimension = 4, current number of nodes = 356, optimal = 273, efficiency = 0.766854
+dimension = 4, current number of nodes = 355, optimal = 273, efficiency = 0.769014
+dimension = 4, current number of nodes = 354, optimal = 273, efficiency = 0.771186
+dimension = 4, current number of nodes = 353, optimal = 273, efficiency = 0.773371
+dimension = 4, current number of nodes = 352, optimal = 273, efficiency = 0.775568
+dimension = 4, current number of nodes = 351, optimal = 273, efficiency = 0.777778
+dimension = 4, current number of nodes = 350, optimal = 273, efficiency = 0.780000
+dimension = 4, current number of nodes = 349, optimal = 273, efficiency = 0.782235
+dimension = 4, current number of nodes = 348, optimal = 273, efficiency = 0.784483
+dimension = 4, current number of nodes = 347, optimal = 273, efficiency = 0.786744
+dimension = 4, current number of nodes = 346, optimal = 273, efficiency = 0.789017
+dimension = 4, current number of nodes = 345, optimal = 273, efficiency = 0.791304
+dimension = 4, current number of nodes = 344, optimal = 273, efficiency = 0.793605
+dimension = 4, current number of nodes = 343, optimal = 273, efficiency = 0.795918
+dimension = 4, current number of nodes = 342, optimal = 273, efficiency = 0.798246
+dimension = 4, current number of nodes = 341, optimal = 273, efficiency = 0.800587
+dimension = 4, current number of nodes = 340, optimal = 273, efficiency = 0.802941
+dimension = 4, current number of nodes = 339, optimal = 273, efficiency = 0.805310
+dimension = 4, current number of nodes = 338, optimal = 273, efficiency = 0.807692
+succeeded at 0 th iteration, with shortening at depth level 1, and damping parameter 2.5000e-01
+dimension = 4, current number of nodes = 337, optimal = 273, efficiency = 0.810089
+succeeded at 0->2 th iteration, with shortening at depth level 2, and damping parameter 2.5000e-01
+dimension = 4, current number of nodes = 336, optimal = 273, efficiency = 0.812500
+succeeded at 1->2 th iteration, with shortening at depth level 2, and damping parameter 5.0000e-01
+dimension = 4, current number of nodes = 335, optimal = 273, efficiency = 0.814925
+Last iteration did not converge
+Final orthogonal basis residual in NodeElimination = 1.1102230246251565e-16
+
+Monomial basis residual = 2.2204460492503131e-16
+Exponential residual = 3.8916425637580687e-11
+
+wall clock time for least squares routine in LeastSquaresNewton = 6.768988e+02
+wall clock time for GetJacobian routine = 5.037975e+01
+wall clock time for GetFunction routine = 1.642806e+01
+wall clock time for predictor routine   = 3.430892e+02
+
+main routines took 99.175086 percent of the total computation
+total wall clock time = 1.095835e+03
+\rm -f *.o quad_c quad_cpp

@@ -4,8 +4,8 @@ debug      = 1
 
 CC  = gcc
 CXX = g++
-CFLAGS   = -O3 -mfma -march=native -isystem../plasma-17.1/include #-fsanitize=address #-fopt-info -Og
-CXXFLAGS = -O3 -mfma -march=native -isystem../plasma-17.1/include #-fsanitize=address #-fopt-info -Og
+CFLAGS   = -O3 -mfma -march=broadwell -isystem../plasma-17.1/include #-fsanitize=address #-fopt-info -Og
+CXXFLAGS = -O3 -mfma -march=broadwell -isystem../plasma-17.1/include #-fsanitize=address #-fopt-info -Og
 
 CVERSION   = -std=c11
 CPPVERSION = -std=c++11
@@ -34,7 +34,7 @@ endif
 
 #alternatively:
 #LIBSBLAS= -lblas -llapack -llapacke
-LIBSBLAS = -lopenblas -llapacke
+LIBSBLAS = -lopenblas
 MATH = -lm
 RANLIB = ranlib
 VPATH = ../src:../src/Gauss_Lib
@@ -66,7 +66,7 @@ data:
 	mkdir -p ../data
 
 clean:
-	\rm -f *.o
+	\rm -f *.o quad_c quad_cpp
 
 distclean : clean txtclean
 	\rm -f quad_c quad_cpp *~

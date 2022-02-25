@@ -39,11 +39,8 @@ TEST(GEN_QUAD_TEST, GENERAL_QUADRATURE_MACROS)
 
    ASSERT_EQ(SQRT(4.0), 2.0);
 
-   ASSERT_EQ(QUAD_TOL, pow(10, -15));
+   ASSERT_EQ(QUAD_TOL, pow(10, -14));
 
-   ASSERT_EQ(size_int, sizeof(int));
-
-   ASSERT_EQ(size_double, sizeof(double));
 
    ASSERT_EQ(SIZE_INT(5), 5*sizeof(int));
    ASSERT_EQ(SIZE_INT(3*(4+2-1)), 15*sizeof(int));
@@ -72,10 +69,10 @@ TEST(GEN_QUAD_TEST, VECTOR)
    for(int i = 0; i < v.len; ++i)
       EXPECT_EQ(v.id[i], w.id[i]);
 
-//   v.id[0] = 10.0;
-//   for(int i = 0; i < 50; ++i)
-//      v.id[0] *= v.id[0];
-//   EXPECT_EQ(V_CheckInf, true);
+   v.id[0] = 10.0;
+   for(int i = 0; i < 50; ++i)
+      v.id[0] *= v.id[0];
+   EXPECT_EQ(V_CheckInf(v), true);
 
    Vector_free(v);
    Vector_free(w);
@@ -122,9 +119,12 @@ TEST(GEN_QUAD_TEST, MATRIX)
    for(int j = 0; j < CM.cols; ++j)
       for(int i = 0; i < CM.rows; ++i)
          CM.cid[j][i] = i+j;
+   CMatrix CMCopy = CMatrix_init(CM.rows, CM.cols);
+   for(int j = 0; j < CM.cols; ++j)
+      for(int i = 0; i < CM.rows; ++i)
+         CMCopy.cid[j][i] = CM.cid[j][i];
 
-   CMatrix CM_T = CMatrix_init(CM.cols, CM.rows);
-   CMatrix_Transpose(CM, CM_T);
+   CMatrix CM_T = CMatrix_Transpose(CMCopy);
    for(int j = 0; j < CM.cols; ++j)
       for(int i = 0; i < CM.rows; ++i)
          EXPECT_EQ(CM.cid[j][i], CM_T.cid[i][j]);

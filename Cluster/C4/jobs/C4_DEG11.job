@@ -1,0 +1,21 @@
+#!/bin/bash
+#SBATCH -J C4_DEG11
+#SBATCH -o C4_DEG11.txt
+#SBATCH -e C4_DEG11.err
+#SBATCH -p development
+#SBATCH -t 30
+#SBATCH --mem=1G
+#SBATCH --nodes=1
+#SBATCH --chdir ../output
+
+cd ../../../make
+
+module purge
+module load gcc-9.2
+module load openblas/0.3.7-ai63y24
+export OMP_NUM_THREADS=28
+
+make clean
+make quadc
+./quad_c CUBE 11 4
+make clean

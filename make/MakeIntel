@@ -33,7 +33,7 @@ VPATH= ../src:../src/Gauss_Lib
 
 OBJECTS = Main.o LeastSquaresNewton.o  GeneralGaussTensor.o GENERAL_QUADRATURE.o GetJacobian.o  \
 	GetFunction.o NodeElimination.o Output.o AddDimension.o ComputeDomain.o QuadDriver.o         \
-	Constraints.o ConstrainedOptimization.o Vector.o Matrix.o Print.o Quadrature.o               \
+	Constraints.o ConstrainedOptimization.o Vector.o Matrix.o Tensor.o Print.o Quadrature.o      \
 	LINALG.o Basis.o get_time.o libgaussq.a libplasma_icc.a libcoreblas_icc.a
 
 all:quadc quadcpp
@@ -58,7 +58,7 @@ data:
 	mkdir -p ../data
 
 clean:
-	\rm -f *.o
+	\rm -f *.o quad_c quad_cpp
 
 distclean : clean txtclean
 	\rm -f quad_c quad_cpp *~

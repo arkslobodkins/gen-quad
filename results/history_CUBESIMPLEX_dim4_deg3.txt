@@ -1,0 +1,68 @@
+*********************************************************
+
+dimension                 = 2
+degree of precision       = 3
+DOMAIN_TYPE               = SIMPLEX
+number of basis functions = 10
+initial number of nodes   = 6
+final number of nodes     = 4
+total eliminations        = 2
+final residual            = 5.3523967851258147e-17
+
+total number of nodes[0] = 5
+success_node[0] = 0
+Converged in 3 iterations
+
+total number of nodes[1] = 4
+success_node[1] = 0
+Converged in 6 iterations
+
+
+*********************************************************
+
+dimension                 = 3
+degree of precision       = 3
+DOMAIN_TYPE               = CUBESIMPLEX
+number of basis functions = 20
+initial number of nodes   = 8
+final number of nodes     = 6
+total eliminations        = 2
+final residual            = 8.5361781843975489e-17
+
+total number of nodes[0] = 7
+success_node[0] = 0
+Converged in 6 iterations
+
+total number of nodes[1] = 6
+success_node[1] = 0
+Converged in 3 iterations
+
+
+*********************************************************
+
+dimension                 = 4
+degree of precision       = 3
+DOMAIN_TYPE               = CUBESIMPLEX
+number of basis functions = 35
+initial number of nodes   = 12
+final number of nodes     = 8
+total eliminations        = 4
+final residual            = 8.9047079860479251e-16
+
+total number of nodes[0] = 11
+success_node[0] = 0
+Converged in 5 iterations
+
+total number of nodes[1] = 10
+success_node[1] = 1
+Converged in 5 iterations
+
+total number of nodes[2] = 9
+success_node[2] = 0
+Converged in 7 iterations
+
+total number of nodes[3] = 8
+success_node[3] = 1
+Converged in 4 iterations
+
+

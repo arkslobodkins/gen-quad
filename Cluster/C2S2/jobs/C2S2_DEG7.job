@@ -1,0 +1,21 @@
+#!/bin/bash
+#SBATCH -J C2S2_DEG7
+#SBATCH -o C2S2_DEG7.txt
+#SBATCH -e C2S2_DEG7.err
+#SBATCH -p development
+#SBATCH -t 2
+#SBATCH --mem=1G
+#SBATCH --nodes=1
+#SBATCH --chdir ../output
+
+cd ../../../make
+
+module purge
+module load gcc-9.2
+module load openblas/0.3.7-ai63y24
+export OMP_NUM_THREADS=28
+
+make clean
+make quadc
+./quad_c CUBESIMPLEX 7 2 2
+make clean
