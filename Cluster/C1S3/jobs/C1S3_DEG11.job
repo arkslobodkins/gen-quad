@@ -1,0 +1,21 @@
+#!/bin/bash
+#SBATCH -J C1S3_DEG11
+#SBATCH -o C1S3_DEG11.txt
+#SBATCH -e C1S3_DEG11.err
+#SBATCH -p development
+#SBATCH -t 120
+#SBATCH --mem=2G
+#SBATCH --nodes=1
+#SBATCH --chdir ../output
+
+cd ../../../make
+
+module purge
+module load gcc-9.2
+module load openblas/0.3.7-ai63y24
+export OMP_NUM_THREADS=36
+
+make clean
+make quadc
+./quad_c CUBESIMPLEX 11 1 3
+make clean

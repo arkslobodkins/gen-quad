@@ -1,7 +1,3 @@
-/* Arkadijs Slobodkins
- * SMU Mathematics
- * August 2021
- */
 
 #include "AddDimension.h"
 #include "GeneralGaussTensor.h"
