@@ -126,10 +126,8 @@ void NodeElimination(const quadrature *q_initial, quadrature *q_final, history *
       {
          if(repeat == 0)                             // if failed early
             SOL_FLAG = TreeSearch(ON, q_new, hist);
-         else if(dim != MAX_DIM)
-            SOL_FLAG = TreeSearch(OFF, q_new, hist); // without boundary constraints
-         else if(dim == MAX_DIM)
-            SOL_FLAG = TreeSearch(ON, q_new, hist);  // add boundary constraints for the last dimension
+         else
+            SOL_FLAG = TreeSearch(ON, q_new, hist);
       }
 
       n_cur = q_new->num_nodes;

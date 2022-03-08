@@ -1,21 +1,64 @@
+\rm -f *.o quad_c quad_cpp
+gcc -O3 -mfma -march=broadwell -isystem../plasma-17.1/include  -fopenmp -g -Wall -Wextra   -c -o Main.o ../src/Main.c
+gcc -O3 -mfma -march=broadwell -isystem../plasma-17.1/include  -fopenmp -g -Wall -Wextra   -c -o LeastSquaresNewton.o ../src/LeastSquaresNewton.c
+gcc -O3 -mfma -march=broadwell -isystem../plasma-17.1/include  -fopenmp -g -Wall -Wextra   -c -o GeneralGaussTensor.o ../src/GeneralGaussTensor.c
+gcc -O3 -mfma -march=broadwell -isystem../plasma-17.1/include  -fopenmp -g -Wall -Wextra   -c -o GENERAL_QUADRATURE.o ../src/GENERAL_QUADRATURE.c
+gcc -O3 -mfma -march=broadwell -isystem../plasma-17.1/include  -fopenmp -g -Wall -Wextra   -c -o GetJacobian.o ../src/GetJacobian.c
+gcc -O3 -mfma -march=broadwell -isystem../plasma-17.1/include  -fopenmp -g -Wall -Wextra   -c -o GetFunction.o ../src/GetFunction.c
+gcc -O3 -mfma -march=broadwell -isystem../plasma-17.1/include  -fopenmp -g -Wall -Wextra   -c -o NodeElimination.o ../src/NodeElimination.c
+gcc -O3 -mfma -march=broadwell -isystem../plasma-17.1/include  -fopenmp -g -Wall -Wextra   -c -o Output.o ../src/Output.c
+gcc -O3 -mfma -march=broadwell -isystem../plasma-17.1/include  -fopenmp -g -Wall -Wextra   -c -o AddDimension.o ../src/AddDimension.c
+gcc -O3 -mfma -march=broadwell -isystem../plasma-17.1/include  -fopenmp -g -Wall -Wextra   -c -o ComputeDomain.o ../src/ComputeDomain.c
+gcc -O3 -mfma -march=broadwell -isystem../plasma-17.1/include  -fopenmp -g -Wall -Wextra   -c -o QuadDriver.o ../src/QuadDriver.c
+gcc -O3 -mfma -march=broadwell -isystem../plasma-17.1/include  -fopenmp -g -Wall -Wextra   -c -o Constraints.o ../src/Constraints.c
+gcc -O3 -mfma -march=broadwell -isystem../plasma-17.1/include  -fopenmp -g -Wall -Wextra   -c -o ConstrainedOptimization.o ../src/ConstrainedOptimization.c
+gcc -O3 -mfma -march=broadwell -isystem../plasma-17.1/include  -fopenmp -g -Wall -Wextra   -c -o Vector.o ../src/Vector.c
+gcc -O3 -mfma -march=broadwell -isystem../plasma-17.1/include  -fopenmp -g -Wall -Wextra   -c -o Matrix.o ../src/Matrix.c
+gcc -O3 -mfma -march=broadwell -isystem../plasma-17.1/include  -fopenmp -g -Wall -Wextra   -c -o Print.o ../src/Print.c
+gcc -O3 -mfma -march=broadwell -isystem../plasma-17.1/include  -fopenmp -g -Wall -Wextra   -c -o Quadrature.o ../src/Quadrature.c
+gcc -O3 -mfma -march=broadwell -isystem../plasma-17.1/include  -fopenmp -g -Wall -Wextra   -c -o LINALG.o ../src/LINALG.c
+gcc -O3 -mfma -march=broadwell -isystem../plasma-17.1/include  -fopenmp -g -Wall -Wextra   -c -o Basis.o ../src/Basis.c
+gcc -O3 -mfma -march=broadwell -isystem../plasma-17.1/include  -fopenmp -g -Wall -Wextra   -c -o Tensor.o ../src/Tensor.c
+gcc -O3 -mfma -march=broadwell -isystem../plasma-17.1/include  -fopenmp -g -Wall -Wextra   -c -o get_time.o ../src/get_time.c
+gcc -O3 -mfma -march=broadwell -isystem../plasma-17.1/include  -fopenmp -g -Wall -Wextra   -c -o GaussCore.o ../src/Gauss_Lib/GaussCore.c
+gcc -O3 -mfma -march=broadwell -isystem../plasma-17.1/include  -fopenmp -g -Wall -Wextra   -c -o Jacobi.o ../src/Gauss_Lib/Jacobi.c
+ar rv libgaussq.a GaussCore.o Jacobi.o
+r - GaussCore.o
+r - Jacobi.o
+ranlib libgaussq.a
+gcc -std=c11 -O3 -mfma -march=broadwell -isystem../plasma-17.1/include  -fopenmp -g -Wall -Wextra -o quad_c Main.o LeastSquaresNewton.o GeneralGaussTensor.o GENERAL_QUADRATURE.o GetJacobian.o GetFunction.o NodeElimination.o Output.o AddDimension.o ComputeDomain.o QuadDriver.o Constraints.o ConstrainedOptimization.o Vector.o Matrix.o Print.o Quadrature.o LINALG.o Basis.o Tensor.o get_time.o libgaussq.a libplasma.a libcoreblas.a -lopenblas -lm
+mkdir -p ../results
+mkdir -p ../data
 
 DEBUG MODE ON
 
 OPENMP enanbled with 36 threads
 
-
-Testing orthogonality of cube basis functions. Maximum error of basis functions = 1.4432899320127035e-15
-
-initial orthogonal basis residual in NodeElimination = 4.4408920985006262e-16
+initial orthogonal basis residual in NodeElimination = 3.3306690738754696e-16
+dimension = 2, current number of nodes = 30, optimal = 19, efficiency = 0.633333
+dimension = 2, current number of nodes = 29, optimal = 19, efficiency = 0.655172
+dimension = 2, current number of nodes = 28, optimal = 19, efficiency = 0.678571
+dimension = 2, current number of nodes = 27, optimal = 19, efficiency = 0.703704
+dimension = 2, current number of nodes = 26, optimal = 19, efficiency = 0.730769
 dimension = 2, current number of nodes = 25, optimal = 19, efficiency = 0.760000
 dimension = 2, current number of nodes = 24, optimal = 19, efficiency = 0.791667
 dimension = 2, current number of nodes = 23, optimal = 19, efficiency = 0.826087
 dimension = 2, current number of nodes = 22, optimal = 19, efficiency = 0.863636
 dimension = 2, current number of nodes = 21, optimal = 19, efficiency = 0.904762
-Last iteration did not converge
-Final orthogonal basis residual in NodeElimination = 9.4931005631726210e-17
+dimension = 2, current number of nodes = 20, optimal = 19, efficiency = 0.950000
+dimension = 2, current number of nodes = 19, optimal = 19, efficiency = 1.000000
+Final orthogonal basis residual in NodeElimination = 9.0714282203115112e-17
 
-initial orthogonal basis residual in NodeElimination = 4.4408920985006262e-16
+initial orthogonal basis residual in NodeElimination = 3.1469460848371920e-17
+dimension = 3, current number of nodes = 114, optimal = 55, efficiency = 0.482456
+dimension = 3, current number of nodes = 113, optimal = 55, efficiency = 0.486726
+dimension = 3, current number of nodes = 112, optimal = 55, efficiency = 0.491071
+dimension = 3, current number of nodes = 111, optimal = 55, efficiency = 0.495495
+dimension = 3, current number of nodes = 110, optimal = 55, efficiency = 0.500000
+dimension = 3, current number of nodes = 109, optimal = 55, efficiency = 0.504587
+dimension = 3, current number of nodes = 108, optimal = 55, efficiency = 0.509259
+dimension = 3, current number of nodes = 107, optimal = 55, efficiency = 0.514019
+dimension = 3, current number of nodes = 106, optimal = 55, efficiency = 0.518868
 dimension = 3, current number of nodes = 105, optimal = 55, efficiency = 0.523810
 dimension = 3, current number of nodes = 104, optimal = 55, efficiency = 0.528846
 dimension = 3, current number of nodes = 103, optimal = 55, efficiency = 0.533981
@@ -62,9 +105,9 @@ dimension = 3, current number of nodes = 63, optimal = 55, efficiency = 0.873016
 dimension = 3, current number of nodes = 62, optimal = 55, efficiency = 0.887097
 dimension = 3, current number of nodes = 61, optimal = 55, efficiency = 0.901639
 Last iteration did not converge
-Final orthogonal basis residual in NodeElimination = 2.2204460492503131e-16
+Final orthogonal basis residual in NodeElimination = 8.3266726846886741e-17
 
-initial orthogonal basis residual in NodeElimination = 2.8194581077479043e-16
+initial orthogonal basis residual in NodeElimination = 4.1475266899805004e-17
 dimension = 4, current number of nodes = 305, optimal = 143, efficiency = 0.468852
 dimension = 4, current number of nodes = 304, optimal = 143, efficiency = 0.470395
 dimension = 4, current number of nodes = 303, optimal = 143, efficiency = 0.471947
@@ -190,30 +233,20 @@ dimension = 4, current number of nodes = 184, optimal = 143, efficiency = 0.7771
 dimension = 4, current number of nodes = 183, optimal = 143, efficiency = 0.781421
 dimension = 4, current number of nodes = 182, optimal = 143, efficiency = 0.785714
 dimension = 4, current number of nodes = 181, optimal = 143, efficiency = 0.790055
+succeeded at 0->0 th iteration, with shortening at depth level 2, and damping parameter 5.0000e-01
 dimension = 4, current number of nodes = 180, optimal = 143, efficiency = 0.794444
 dimension = 4, current number of nodes = 179, optimal = 143, efficiency = 0.798883
-dimension = 4, current number of nodes = 178, optimal = 143, efficiency = 0.803371
-dimension = 4, current number of nodes = 177, optimal = 143, efficiency = 0.807910
-dimension = 4, current number of nodes = 176, optimal = 143, efficiency = 0.812500
-dimension = 4, current number of nodes = 175, optimal = 143, efficiency = 0.817143
-dimension = 4, current number of nodes = 174, optimal = 143, efficiency = 0.821839
-dimension = 4, current number of nodes = 173, optimal = 143, efficiency = 0.826590
-dimension = 4, current number of nodes = 172, optimal = 143, efficiency = 0.831395
-dimension = 4, current number of nodes = 171, optimal = 143, efficiency = 0.836257
-dimension = 4, current number of nodes = 170, optimal = 143, efficiency = 0.841176
-dimension = 4, current number of nodes = 169, optimal = 143, efficiency = 0.846154
-dimension = 4, current number of nodes = 168, optimal = 143, efficiency = 0.851190
-dimension = 4, current number of nodes = 167, optimal = 143, efficiency = 0.856287
 Last iteration did not converge
-Final orthogonal basis residual in NodeElimination = 1.9248187398059788e-16
+Final orthogonal basis residual in NodeElimination = 2.7755575615628914e-17
 
-Monomial basis residual = 2.2204460492503131e-16
-Exponential residual = 7.4010037209859547e-08
+Monomial basis residual = 5.5511151231257827e-17
+Exponential residual = 4.6359425187603165e-09
 
-wall clock time for least squares routine in LeastSquaresNewton = 4.705053e+01
-wall clock time for GetJacobian routine = 3.070712e+00
-wall clock time for GetFunction routine = 1.131586e+00
-wall clock time for predictor routine   = 2.835403e+01
+wall clock time for least squares routine in LeastSquaresNewton = 1.399428e+02
+wall clock time for GetJacobian routine = 3.035961e+01
+wall clock time for GetFunction routine = 8.927629e+00
+wall clock time for predictor routine   = 3.278794e+01
 
-main routines took 98.417690 percent of the total computation
-total wall clock time = 8.088674e+01
+main routines took 98.338947 percent of the total computation
+total wall clock time = 2.155992e+02
+\rm -f *.o quad_c quad_cpp

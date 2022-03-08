@@ -38,11 +38,11 @@ OBJECTS = Main.o LeastSquaresNewton.o  GeneralGaussTensor.o GENERAL_QUADRATURE.o
 
 all:quadc quadcpp
 
-quadc : quad_c results data
+quadc : quad_c results
 quad_c : $(OBJECTS)
 	$(CC) $(CVERSION) $(CFLAGS) -o $@ $^ $(LIBSBLAS) $(MATH)
 
-quadcpp : quad_cpp results data
+quadcpp : quad_cpp results
 quad_cpp : $(OBJECTS)
 	$(CXX) $(CPPVERSION) $(CXXFLAGS) -o $@ $^ $(LIBSBLAS) $(MATH)
 
@@ -54,8 +54,6 @@ libgaussq.a : $(OBJS)
 
 results:
 	mkdir -p ../results
-data:
-	mkdir -p ../data
 
 clean:
 	\rm -f *.o quad_c quad_cpp
@@ -63,7 +61,7 @@ clean:
 distclean : clean txtclean
 	\rm -f quad_c quad_cpp *~
 
-SUBDIR_ROOTS := ../results ../data
+SUBDIR_ROOTS := ../results
 DIRS := . $(shell find $(SUBDIR_ROOTS) -type d)
 PATTERNS := *.txt *.png
 TXT_FILES := $(foreach DIR,$(DIRS),$(addprefix $(DIR)/,$(PATTERNS)))

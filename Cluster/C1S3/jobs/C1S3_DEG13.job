@@ -2,7 +2,7 @@
 #SBATCH -J C1S3_DEG13
 #SBATCH -o C1S3_DEG13.txt
 #SBATCH -e C1S3_DEG13.err
-#SBATCH -p development
+#SBATCH -p standard-mem-s
 #SBATCH --exclusive
 #SBATCH --mem=8G
 #SBATCH --nodes=1

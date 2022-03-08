@@ -43,11 +43,11 @@ dimension = 2, current number of nodes = 16, optimal = 12, efficiency = 0.750000
 dimension = 2, current number of nodes = 15, optimal = 12, efficiency = 0.800000
 dimension = 2, current number of nodes = 14, optimal = 12, efficiency = 0.857143
 dimension = 2, current number of nodes = 13, optimal = 12, efficiency = 0.923077
-succeeded at 0 th iteration, with shortening at depth level 1, and damping parameter 2.5000e-01
+succeeded at 0->2 th iteration, with shortening at depth level 2, and damping parameter 5.0000e-01
 dimension = 2, current number of nodes = 12, optimal = 12, efficiency = 1.000000
-Final orthogonal basis residual in NodeElimination = 1.1102230246251565e-16
+Final orthogonal basis residual in NodeElimination = 2.7380441551137268e-15
 
-initial orthogonal basis residual in NodeElimination = 8.3266726846886741e-17
+initial orthogonal basis residual in NodeElimination = 3.0640376140521319e-16
 dimension = 3, current number of nodes = 60, optimal = 30, efficiency = 0.500000
 dimension = 3, current number of nodes = 59, optimal = 30, efficiency = 0.508475
 dimension = 3, current number of nodes = 58, optimal = 30, efficiency = 0.517241
@@ -74,12 +74,13 @@ dimension = 3, current number of nodes = 38, optimal = 30, efficiency = 0.789474
 dimension = 3, current number of nodes = 37, optimal = 30, efficiency = 0.810811
 dimension = 3, current number of nodes = 36, optimal = 30, efficiency = 0.833333
 dimension = 3, current number of nodes = 35, optimal = 30, efficiency = 0.857143
+succeeded at 1->1 th iteration, with shortening at depth level 2, and damping parameter 2.5000e-01
 dimension = 3, current number of nodes = 34, optimal = 30, efficiency = 0.882353
 dimension = 3, current number of nodes = 33, optimal = 30, efficiency = 0.909091
 Last iteration did not converge
-Final orthogonal basis residual in NodeElimination = 1.4295691196956106e-15
+Final orthogonal basis residual in NodeElimination = 2.3963362372429760e-17
 
-initial orthogonal basis residual in NodeElimination = 1.4285326489944136e-15
+initial orthogonal basis residual in NodeElimination = 2.7755575615628914e-17
 dimension = 4, current number of nodes = 132, optimal = 66, efficiency = 0.500000
 dimension = 4, current number of nodes = 131, optimal = 66, efficiency = 0.503817
 dimension = 4, current number of nodes = 130, optimal = 66, efficiency = 0.507692
@@ -138,18 +139,17 @@ dimension = 4, current number of nodes = 78, optimal = 66, efficiency = 0.846154
 dimension = 4, current number of nodes = 77, optimal = 66, efficiency = 0.857143
 dimension = 4, current number of nodes = 76, optimal = 66, efficiency = 0.868421
 dimension = 4, current number of nodes = 75, optimal = 66, efficiency = 0.880000
-dimension = 4, current number of nodes = 74, optimal = 66, efficiency = 0.891892
 Last iteration did not converge
-Final orthogonal basis residual in NodeElimination = 2.7755575615628914e-17
+Final orthogonal basis residual in NodeElimination = 4.3706534862370960e-16
 
-Monomial basis residual = 2.7755575615628914e-17
-Exponential residual = 3.7423565935057468e-07
+Monomial basis residual = 7.2858385991025898e-17
+Exponential residual = 5.4492843970521676e-07
 
-wall clock time for least squares routine in LeastSquaresNewton = 1.238043e+01
-wall clock time for GetJacobian routine = 3.823752e+00
-wall clock time for GetFunction routine = 1.566593e+00
-wall clock time for predictor routine   = 2.609079e+00
+wall clock time for least squares routine in LeastSquaresNewton = 1.513333e+01
+wall clock time for GetJacobian routine = 4.476844e+00
+wall clock time for GetFunction routine = 1.855612e+00
+wall clock time for predictor routine   = 1.966572e+00
 
-main routines took 95.518262 percent of the total computation
-total wall clock time = 2.133608e+01
+main routines took 95.633697 percent of the total computation
+total wall clock time = 2.450220e+01
 \rm -f *.o quad_c quad_cpp

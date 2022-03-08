@@ -1,5 +1,4 @@
 #include <stdlib.h>
-#include <lapacke.h>
 #include <math.h>
 #include <string.h>
 #include <omp.h>
@@ -29,83 +28,64 @@ double compute_norm(int len, double *v)
 
 int main(int argc, char *argv[])
 {
-#ifdef _OPENMP
-   printf("OPENMP enanbled with %i threads\n\n", omp_get_max_threads());
-#endif
-
-   int nrows = 4000;
+   int nrows = 3000;
    int ncols = 2000;
    int NRHS  = 1;
    int LDA   = nrows;
    int LEAD_DIM = nrows>ncols ? nrows:ncols;
 
+   double *A_plasma = (double *)malloc(nrows*ncols*sizeof(double));
+   double *b_plasma = (double *)malloc(LEAD_DIM*sizeof(double));
 
-   plasma_init(omp_get_max_threads());
-
-   int retval;
-   int IONE = 1;
-   int ISEED[4] = {0,0,0,1};
-   plasma_desc_t T;
-
-   double *A = (double *)malloc(nrows*ncols*sizeof(double));
-   retval = LAPACKE_dlarnv(IONE, ISEED, nrows*ncols, A);
-   assert(retval == 0);
-
-   double *b = (double *)malloc(nrows*sizeof(double));
-   retval = LAPACKE_dlarnv(IONE, ISEED, LEAD_DIM, b);
-   assert(retval == 0);
-
-   for(int i = 0; i < nrows; ++i)
-      for(int j = 0; j < ncols; ++j)
-         A[j*nrows+i] = (double)rand() / (double) RAND_MAX;
+   for(int i = 0; i < nrows*ncols; ++i)
+         A_plasma[i] = (double)rand() / (double) RAND_MAX;
+   for(int i = 0; i < LEAD_DIM; ++i)
+      b_plasma[i] = (double)rand() / (double) RAND_MAX;
 
    // Allocate copies so that identical problem will be solved with lapack
-   double *A_copy = (double *)malloc(nrows*ncols*sizeof(double));
-   memcpy(A_copy, A, nrows*ncols*sizeof(double));
+   double *A_lapack = (double *)malloc(nrows*ncols*sizeof(double));
+   memcpy(A_lapack, A_plasma, nrows*ncols*sizeof(double));
+   double *b_lapack = (double *)malloc(LEAD_DIM*sizeof(double));
+   memcpy(b_lapack, b_plasma, LEAD_DIM*sizeof(double));
 
-   for(int i = 0; i < nrows; ++i)
-      b[i] = (double)rand() / (double) RAND_MAX;
-
-   double *b_copy = (double *)malloc(nrows*sizeof(double));
-   memcpy(b_copy, b, nrows*sizeof(double));
-
+   #ifdef _OPENMP
+   printf("OPENMP enanbled with %i threads\n\n", omp_get_max_threads());
+   #endif
+   plasma_init(omp_get_max_threads());
+   plasma_desc_t T;
 
    double PL_START = get_cur_time();
    plasma_dgels(PlasmaNoTrans,
                 nrows, ncols, NRHS,
-                A, LDA,
-                &T,
-                b, LEAD_DIM);
+                A_plasma, LDA, &T,
+                b_plasma, LEAD_DIM);
    double PL_END = get_cur_time();
-   double pl_sol_norm = compute_norm(ncols, b);
+   double pl_sol_norm = compute_norm(ncols, b_plasma);
 
-   free(A);
-   free(b);
+   free(A_plasma);
+   free(b_plasma);
    plasma_desc_destroy(&T);
    plasma_finalize();
-
    printf("plasma time = %lf\n", PL_END-PL_START);
    printf("plasma sol norm = %lf\n", pl_sol_norm);
 
 
-
-
    char TRANS = 'N';
-   int INFO;
    int LWORK = 5*nrows;
    double *WORK = (double *)malloc(LWORK*sizeof(double));
+   int INFO = 0;
 
    double LP_START = get_cur_time();
    dgels_(&TRANS, &nrows, &ncols, &NRHS,
-          A_copy, &LDA,
-          b_copy, &LEAD_DIM,
+          A_lapack, &LDA,
+          b_lapack, &LEAD_DIM,
           WORK, &LWORK, &INFO);
    double LP_END = get_cur_time();
-   double la_sol_norm = compute_norm(ncols, b_copy);
+   double la_sol_norm = compute_norm(ncols, b_lapack);
 
    free(WORK);
-   free(A_copy);
-   free(b_copy);
+   free(A_lapack);
+   free(b_lapack);
 
    printf("lapack time = %lf\n", LP_END-LP_START);
    printf("lapack sol norm = %lf\n", la_sol_norm);

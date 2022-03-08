@@ -42,9 +42,9 @@ dimension = 2, current number of nodes = 9, optimal = 7, efficiency = 0.777778
 dimension = 2, current number of nodes = 8, optimal = 7, efficiency = 0.875000
 succeeded at 0->2 th iteration, with shortening at depth level 2, and damping parameter 5.0000e-01
 dimension = 2, current number of nodes = 7, optimal = 7, efficiency = 1.000000
-Final orthogonal basis residual in NodeElimination = 5.6914587267561909e-17
+Final orthogonal basis residual in NodeElimination = 1.1102230246251565e-16
 
-initial orthogonal basis residual in NodeElimination = 5.5511151231257827e-17
+initial orthogonal basis residual in NodeElimination = 4.7886466435820761e-17
 dimension = 3, current number of nodes = 28, optimal = 14, efficiency = 0.500000
 dimension = 3, current number of nodes = 27, optimal = 14, efficiency = 0.518519
 dimension = 3, current number of nodes = 26, optimal = 14, efficiency = 0.538462
@@ -58,13 +58,15 @@ dimension = 3, current number of nodes = 19, optimal = 14, efficiency = 0.736842
 dimension = 3, current number of nodes = 18, optimal = 14, efficiency = 0.777778
 dimension = 3, current number of nodes = 17, optimal = 14, efficiency = 0.823529
 dimension = 3, current number of nodes = 16, optimal = 14, efficiency = 0.875000
-succeeded at 0->3 th iteration, with shortening at depth level 2, and damping parameter 5.0000e-01
+succeeded at 0->2 th iteration, with shortening at depth level 2, and damping parameter 5.0000e-01
 dimension = 3, current number of nodes = 15, optimal = 14, efficiency = 0.933333
-succeeded at 0 th iteration, with shortening at depth level 1, and damping parameter 2.5000e-01
-dimension = 3, current number of nodes = 14, optimal = 14, efficiency = 1.000000
-Final orthogonal basis residual in NodeElimination = 2.2067007458003283e-17
+Last iteration did not converge
+Final orthogonal basis residual in NodeElimination = 3.2822326531359638e-17
 
-initial orthogonal basis residual in NodeElimination = 4.7292373641526317e-17
+initial orthogonal basis residual in NodeElimination = 4.5355082514806947e-17
+dimension = 4, current number of nodes = 45, optimal = 26, efficiency = 0.577778
+dimension = 4, current number of nodes = 44, optimal = 26, efficiency = 0.590909
+dimension = 4, current number of nodes = 43, optimal = 26, efficiency = 0.604651
 dimension = 4, current number of nodes = 42, optimal = 26, efficiency = 0.619048
 dimension = 4, current number of nodes = 41, optimal = 26, efficiency = 0.634146
 dimension = 4, current number of nodes = 40, optimal = 26, efficiency = 0.650000
@@ -77,21 +79,21 @@ dimension = 4, current number of nodes = 34, optimal = 26, efficiency = 0.764706
 dimension = 4, current number of nodes = 33, optimal = 26, efficiency = 0.787879
 dimension = 4, current number of nodes = 32, optimal = 26, efficiency = 0.812500
 dimension = 4, current number of nodes = 31, optimal = 26, efficiency = 0.838710
-succeeded at 0 th iteration, with shortening at depth level 1, and damping parameter 2.5000e-01
 dimension = 4, current number of nodes = 30, optimal = 26, efficiency = 0.866667
 dimension = 4, current number of nodes = 29, optimal = 26, efficiency = 0.896552
+succeeded at 2->3 th iteration, with shortening at depth level 2, and damping parameter 5.0000e-01
 dimension = 4, current number of nodes = 28, optimal = 26, efficiency = 0.928571
 Last iteration did not converge
-Final orthogonal basis residual in NodeElimination = 8.8642001106627023e-15
+Final orthogonal basis residual in NodeElimination = 2.0939453647420544e-17
 
-Monomial basis residual = 1.7347234759768071e-15
-Exponential residual = 5.8028523371334018e-05
+Monomial basis residual = 2.7755575615628914e-17
+Exponential residual = 7.0913358269031335e-05
 
-wall clock time for least squares routine in LeastSquaresNewton = 4.142070e-01
-wall clock time for GetJacobian routine = 1.787474e-01
-wall clock time for GetFunction routine = 4.971766e-02
-wall clock time for predictor routine   = 9.030247e-02
+wall clock time for least squares routine in LeastSquaresNewton = 7.480707e-01
+wall clock time for GetJacobian routine = 3.503032e-01
+wall clock time for GetFunction routine = 1.003060e-01
+wall clock time for predictor routine   = 1.501279e-01
 
-main routines took 88.416177 percent of the total computation
-total wall clock time = 8.290050e-01
+main routines took 94.310160 percent of the total computation
+total wall clock time = 1.430183e+00
 \rm -f *.o quad_c quad_cpp
