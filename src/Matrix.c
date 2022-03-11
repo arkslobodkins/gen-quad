@@ -12,6 +12,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <omp.h>
+#include <mkl_blas.h>
 
 RMatrix RMatrix_init(int nRows, int nCols)
 {
@@ -63,10 +64,10 @@ void RMatrix_free(RMatrix M)
    if(M.rid != NULL) { free(M.rid); M.rid = NULL; }
 }
 
-void RMatrix_LoadRow(int row, RMatrix M, Vector v)
+void RMatrix_LoadToRow(int row, RMatrix M, Vector v)
 {
    assert(v.len == M.cols);
-   assert(row > -1);
+   assert(row > -1  && row < M.rows);
    memcpy(M.rid[row], v.id, SIZE_DOUBLE(M.cols));
 }
 
@@ -149,14 +150,14 @@ void CMatrix_Assign(CMatrix A, CMatrix B)
    memcpy(B.id, A.id, A.len*sizeof(double));
 }
 
-void CMatrix_LoadColumn(int col, CMatrix M, Vector x)
+void CMatrix_LoadToColumn(int col, CMatrix M, Vector x)
 {
    assert(x.len == M.rows);
    assert(col > -1);
    memcpy(M.cid[col], x.id, SIZE_DOUBLE(M.rows));
 }
 
-void CMatrix_LoadColumnDD(int col, CMatrix M, double *x)
+void CMatrix_LoadToColumnDD(int col, CMatrix M, double *x)
 {
    assert(col > -1);
    memcpy(M.cid[col], x, SIZE_DOUBLE(M.rows));
@@ -165,14 +166,14 @@ void CMatrix_LoadColumnDD(int col, CMatrix M, double *x)
 void CMatrix_GetRow(int row, CMatrix M, Vector x)
 {
    assert(x.len == M.cols);
-   assert(row > -1);
+   assert(row > -1  && row < M.rows);
    for(int j = 0; j < M.cols; ++j)
       x.id[j] = C_ELEM_ID(M, row, j);
 }
 
 void CMatrix_GetColumn(int col, CMatrix M, Vector x)
 {
-   assert(col > -1);
+   assert(col > -1  && col < M.cols);
    assert(x.len == M.rows);
    memcpy(x.id, M.cid[col], SIZE_DOUBLE(M.rows));
 }
@@ -180,10 +181,10 @@ void CMatrix_GetColumn(int col, CMatrix M, Vector x)
 void CMatrix_ColumnScale(int col, double c, CMatrix M)
 {
    int spacing = 1;
-   dscal_(&M.rows, &c, M.cid[col], &spacing);
+   dscal(&M.rows, &c, M.cid[col], &spacing);
 }
 
-CMatrix CMatrix_Transpose(CMatrix A)
+CMatrix CMatrix_Transpose(CMatrix A, trans_type tt)
 {
    CMatrix A_TR = CMatrix_init(A.cols, A.rows);
    int Acols = A.cols;
@@ -193,9 +194,10 @@ CMatrix CMatrix_Transpose(CMatrix A)
       for(int i = 0; i < Arows; ++i)
          A_TR.cid[i][j] = A.cid[j][i];
 
-   CMatrix_free(A);
+   if(tt == move) CMatrix_free(A);
    return A_TR;
 }
+
 
 void CMatVec(CMatrix M, Vector x, Vector y)
 {

@@ -4,6 +4,8 @@
 #include "Matrix.h"
 #include "Vector.h"
 #include "Tensor.h"
+#include "Gauss_Lib/Jacobi.h"
+
 #include <stdbool.h>
 #include <stdint.h>
 #include <math.h>
@@ -57,6 +59,7 @@ typedef enum { INTERVAL, CUBE, SIMPLEX, CUBESIMPLEX, SIMPLEXSIMPLEX } DOMAIN_TYP
 
 char *get_domain_string(DOMAIN_TYPE D);
 bool string_to_domain(const char *shape, DOMAIN_TYPE *D);
+bool CompareDouble(double x, double y);
 int IntPower(int x, int power);
 int factorial(int n);
 int binomial(int k, int n);
@@ -68,7 +71,6 @@ void OpenNewtonCotes(int n, double *w, double *x);
 double IthLagrange(int i, double t, int nx, double *x);
 #ifdef _OPENMP
 GQ_BOOL OMP_CONDITION(int deg, int dim);
-GQ_BOOL PLASMA_CONDITION();
 #endif
 
 typedef struct

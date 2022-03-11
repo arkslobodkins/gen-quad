@@ -45,6 +45,10 @@ struct quadrature
 
 quadrature* quadrature_init_basic(int n, int dim, int *dims, int deg, DOMAIN_TYPE D);
 quadrature* quadrature_init_full(int n, int dim, int *dims, int deg, DOMAIN_TYPE D);
+quadrature* quadrature_gauss_legendre(int deg);
+quadrature* quadrature_gauss_jacobi(int deg, double alpha, double beta);
+quadrature* quadrature_full_cube_tensor(int deg, int dim);
+quadrature* quadrature_full_simplex_tensor(int deg, int dim);
 void quadrature_reinit_basic(int n, int dim, int *dims, int deg, quadrature *q);
 void quadrature_realloc_array(int n, quadrature *q);
 

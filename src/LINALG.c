@@ -4,6 +4,8 @@
 #include <stdlib.h>
 #include <omp.h>
 #include <plasma.h>
+#include <mkl_blas.h>
+#include <mkl_lapacke.h>
 
 int DGEMM_LAPACK(CMatrix A, CMatrix B, CMatrix C)
 {
@@ -19,7 +21,7 @@ int DGEMM_LAPACK(CMatrix A, CMatrix B, CMatrix C)
    int K = A.cols;
    int N = B.cols;
 
-   dgemm_(&TRANS1, &TRANS2, &M, &N, &K, &alpha, A.id, &M, B.id, &K, &beta, C.id, &M);
+   dgemm( &TRANS1, &TRANS2, &M, &N, &K, &alpha, A.id, &M, B.id, &K, &beta, C.id, &M );
    return GQ_SUCCESS;
 }
 
@@ -27,11 +29,8 @@ int DGEQR2_LAPACK(CMatrix A, Vector TAU)
 {
    assert(TAU.len == MIN(A.rows, A.cols));
 
-   int INFO;
    int LDA = A.rows;
-   double *WORK = (double *)malloc(SIZE_DOUBLE(2*A.cols));
-   dgeqr2_(&A.rows, &A.cols, A.id, &LDA, TAU.id, WORK, &INFO);
-   free(WORK);
+   int INFO = LAPACKE_dgeqr2( LAPACK_COL_MAJOR, A.rows, A.cols, A.id, LDA, TAU.id );
 
    if(INFO != 0) return LAPACK_ERR;
    else          return GQ_SUCCESS;
@@ -41,12 +40,8 @@ int DGEQRF_LAPACK(CMatrix A, Vector TAU)
 {
    assert(TAU.len == MIN(A.rows, A.cols));
 
-   int INFO;
    int LDA = A.rows;
-   int LWORK = 4*MAX(A.cols, A.rows);
-   double *WORK = (double *)malloc(SIZE_DOUBLE(LWORK));
-   dgeqrf_(&A.rows, &A.cols, A.id, &LDA, TAU.id, WORK, &LWORK, &INFO);
-   free(WORK);
+   int INFO = LAPACKE_dgeqrf( LAPACK_COL_MAJOR, A.rows, A.cols, A.id, LDA, TAU.id );
 
    if(INFO != 0) return LAPACK_ERR;
    else          return GQ_SUCCESS;
@@ -54,13 +49,13 @@ int DGEQRF_LAPACK(CMatrix A, Vector TAU)
 
 int DORMQR_LAPACK(char SIDE, char TRANS, Vector TAU, CMatrix Q, CMatrix A)
 {
-   int INFO;
+   assert(TAU.len == MIN(Q.rows, Q.cols));
+
    int LDA = A.rows;
    int LDQ = Q.rows;
-   int lworkQR = SIDE == 'L' ? 2*A.cols : 2*A.rows;
-   double *workQR = (double *)malloc(SIZE_DOUBLE(lworkQR));
-   dormqr_(&SIDE, &TRANS, &A.rows, &A.cols, &TAU.len, Q.id, &LDQ, TAU.id, A.id, &LDA, workQR, &lworkQR, &INFO);
-   free(workQR);
+   int INFO = LAPACKE_dormqr( LAPACK_COL_MAJOR, SIDE, TRANS,
+                              A.rows, A.cols, TAU.len,
+                              Q.id, LDQ, TAU.id, A.id, LDA );
 
    if(INFO != 0) return LAPACK_ERR;
    else          return GQ_SUCCESS;
@@ -68,15 +63,9 @@ int DORMQR_LAPACK(char SIDE, char TRANS, Vector TAU, CMatrix Q, CMatrix A)
 
 int DORGQR_LAPACK(CMatrix Q, Vector TAU)
 {
-   int INFO;
    int LDA = Q.rows;
-   int LWORK = 2*Q.cols;
-   double *WORK = (double *)malloc(LWORK*sizeof(LWORK));
-
-   dorgqr_(&Q.rows, &Q.cols, &TAU.len, Q.id, &LDA,
-           TAU.id, WORK, &LWORK, &INFO);
-
-   free(WORK);
+   int INFO = LAPACKE_dorgqr( LAPACK_COL_MAJOR, Q.rows, Q.cols,
+                              TAU.len, Q.id, LDA, TAU.id );
    if(INFO != 0) return LAPACK_ERR;
    else          return GQ_SUCCESS;
 }
@@ -100,12 +89,9 @@ int DGESVD_LAPACK(CMatrix A, CMatrix VT)
    int LDVT = MIN(M, N);    // expected to be N in general
    int LWORK = 8*MIN(M, N); // assumes M is larger than N, 5*MIN is the minimum work required
    Vector WORK = Vector_init(LWORK);
-   int INFO;
-
-   dgesvd_(&JOBU, &JOBVT, &M, &N, A.id, &LDA,
-           SINGV.id, U, &LDU, VT.id, &LDVT,
-           WORK.id, &LWORK, &INFO);
-
+    int INFO = LAPACKE_dgesvd( LAPACK_COL_MAJOR, JOBU, JOBVT,
+                               M, N, A.id, LDA, SINGV.id, U, LDU,
+                               VT.id, LDVT, WORK.id );
    Vector_free(SINGV);
    Vector_free(WORK);
 
@@ -117,20 +103,18 @@ int DGELS_LAPACK(CMatrix A, Vector RHS_TO_X)
 {
    assert(RHS_TO_X.len == MAX(A.rows, A.cols));
 
-   int INFO;
    char TRANS = 'N';
    int NRHS = 1;
    int LDA = A.rows;
    int LEAD_DIM = MAX(A.rows, A.cols);
-   int LWORK = 5*A.cols;
-   Vector WORK = Vector_init(LWORK);
-
-   dgels_(&TRANS, &A.rows, &A.cols, &NRHS, A.id, &LDA,
-          RHS_TO_X.id, &LEAD_DIM, WORK.id, &WORK.len, &INFO);
-   Vector_free(WORK);
+   int INFO = LAPACKE_dgels( LAPACK_COL_MAJOR, TRANS, A.rows,
+                             A.cols, NRHS, A.id, LDA, RHS_TO_X.id, LEAD_DIM );
+   if(INFO > 0)
+      PRINT_WARN("LAPACK encountered 0 pivot", __LINE__, __FILE__);
 
    if(INFO != 0) return LAPACK_ERR;
    else          return GQ_SUCCESS;
+
 }
 
 #ifdef _OPENMP
@@ -144,10 +128,10 @@ int DGELS_PLASMA(CMatrix A, Vector RHS_TO_X)
 
    plasma_init();
    plasma_desc_t T;
-   int INFO = plasma_dgels(PlasmaNoTrans,
-                           A.rows, A.cols, NRHS,
-                           A.id, LDA, &T,
-                           RHS_TO_X.id, LEAD_DIM);
+   int INFO = plasma_dgels( PlasmaNoTrans,
+                            A.rows, A.cols, NRHS,
+                            A.id, LDA, &T,
+                            RHS_TO_X.id, LEAD_DIM );
    plasma_desc_destroy(&T);
    plasma_finalize();
 
@@ -165,8 +149,8 @@ int DGEMM_PLASMA(CMatrix A, CMatrix B, CMatrix C)
    int M = A.rows;
    int K = A.cols;
    int N = B.cols;
-   int INFO = plasma_dgemm(TRANS1, TRANS2, M, N, K, alpha, A.id, M,
-                           B.id, K, beta, C.id, M);
+   int INFO = plasma_dgemm( TRANS1, TRANS2, M, N, K, alpha, A.id, M,
+                            B.id, K, beta, C.id, M );
    plasma_finalize();
    if(INFO != 0) return PLASMA_ERR;
    else          return GQ_SUCCESS;

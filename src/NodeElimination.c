@@ -21,13 +21,14 @@
 #include <string.h>
 #include <omp.h>
 #include <plasma.h>
+#include <mkl_blas.h>
 
 extern int MAX_DIM;
 
 #define SEARCH_DIM 3
-#define MAX_FAILS_LEVEL_1 4
-#define MAX_FAILS_LEVEL_2 6
-#define MAX_FAILS_ELIM 12
+#define MAX_FAILS_LEVEL_1 8
+#define MAX_FAILS_LEVEL_2 5
+#define MAX_FAILS_ELIM 15
 
 #define PASSED true
 #define FAILED false
@@ -118,17 +119,11 @@ void NodeElimination(const quadrature *q_initial, quadrature *q_final, history *
    int n_opt             = ceil(1.0*numFuncs/(dim+1));
    double efficiency     = (double)n_opt/nodesInitial;
    PrintElimInfo( dim, n_cur , n_opt, efficiency);
-   int repeat = 0;
    while( (n_cur > n_opt)  && (n_cur >= 2) )
    {
       SOL_FLAG = LsqSearch(OFF, q_new, hist);        // perform regular search first
       if(SOL_FLAG == SOL_NOT_FOUND)                  // perform deeper search
-      {
-         if(repeat == 0)                             // if failed early
             SOL_FLAG = TreeSearch(ON, q_new, hist);
-         else
-            SOL_FLAG = TreeSearch(ON, q_new, hist);
-      }
 
       n_cur = q_new->num_nodes;
       efficiency = (double)n_opt/n_cur;
@@ -139,7 +134,6 @@ void NodeElimination(const quadrature *q_initial, quadrature *q_final, history *
          Print("Last iteration did not converge");
          break; // break while loop
       }
-      ++repeat;
    }// end while loop
 
    // save nodes and weights
@@ -156,10 +150,8 @@ static bool LsqSearch(bool_enum CONSTR_FLAG, quadrature *q_new, history *hist)
 {
    RMatrix(*Predictor_Ptr)(quadrature *, DistanceStruct *);
    #ifdef _OPENMP
-      if(PLASMA_CONDITION()
-         && OMP_CONDITION(q_new->deg, q_new->dim))
-            Predictor_Ptr = &PredictorPlasma;
-      else  Predictor_Ptr = &PredictorLapack;
+      if(OMP_CONDITION(q_new->deg, q_new->dim)) Predictor_Ptr = &PredictorPlasma;
+      else                                      Predictor_Ptr = &PredictorLapack;
    #else
       Predictor_Ptr = &PredictorLapack;
    #endif
@@ -214,10 +206,8 @@ static bool TreeSearch(bool_enum CONSTR_FLAG, quadrature *q_new, history *hist)
 {
    RMatrix(*Predictor_Ptr)(quadrature *, DistanceStruct *);
    #ifdef _OPENMP
-      if(PLASMA_CONDITION()
-         && OMP_CONDITION(q_new->deg, q_new->dim))
-           Predictor_Ptr = &PredictorPlasma;
-      else Predictor_Ptr = &PredictorLapack;
+      if(OMP_CONDITION(q_new->deg, q_new->dim)) Predictor_Ptr = &PredictorPlasma;
+      else                                      Predictor_Ptr = &PredictorLapack;
    #else
       Predictor_Ptr = &PredictorLapack;
    #endif
@@ -231,24 +221,30 @@ static bool TreeSearch(bool_enum CONSTR_FLAG, quadrature *q_new, history *hist)
 
    quadrature *qnewtemp__1 = quadrature_make_full_copy(q_new);
    quadrature *qsearch__1  = quadrature_make_full_copy(q_new);
+   quadrature *qstart__1  = quadrature_make_full_copy(q_new);
    Vector dz__1 = Vector_init(n_cur*(dim+1));
    int failCount__1 = 0;
    for(int i1 = 0; i1 < n_cur; ++i1)
    {
-
       // level 1 search
+      ExtractFromPredictorFull(Z__1, distance__1[i1].index, qstart__1);
+      if(V_InfNorm(qstart__1->z) >= QUAD_HUGE) continue;
+
       quadrature_assign(q_new, qnewtemp__1);
-      ExtractFromPredictorFull(Z__1, distance__1[i1].index, qsearch__1);
+      ExtractFromPredictorFull(Z__1, distance__1[i1].index, qstart__1);
+
       bool searchElimFlag__1 = SOL_NOT_FOUND;
       bool earlyConstraint   = false;
       LSQ_out searchNewGuessFlag__1;
       int sd1;
+      // level1 stage1
       for(sd1 = 0; sd1 < SEARCH_DIM; ++sd1)
       {
-         VectorAddScale(1.0, qsearch__1->z, -1.0, qnewtemp__1->z, dz__1);
-         VectorAddScale(1.0, qnewtemp__1->z, shortParams.t[sd1], dz__1, qsearch__1->z);
-         searchNewGuessFlag__1 = LeastSquaresNewton(CONSTR_FLAG, qsearch__1);
+         VectorAddScale(1.0, qstart__1->z, -1.0, qnewtemp__1->z, dz__1);                     // dz1 = qstart1 - qnew
+         VectorAddScale(1.0, qnewtemp__1->z, shortParams.t[sd1], dz__1, qsearch__1->z);      // qsearch1 = qnew + α*dz1
+         searchNewGuessFlag__1 = LeastSquaresNewton(CONSTR_FLAG, qsearch__1);                // update qsearch1 if success
 
+         // update q_new and break if eliminated node/nodes
          if(qsearch__1->num_nodes != n_cur)
          {
             quadrature_assign_resize(qsearch__1, q_new);
@@ -262,16 +258,16 @@ static bool TreeSearch(bool_enum CONSTR_FLAG, quadrature *q_new, history *hist)
             break; // break sd1 loop
          }
 
-
-         if(searchNewGuessFlag__1.SOL_FLAG)
-            break; // break sd1 loop
+         // typical case: no nodes eliminated but converged
+         if(searchNewGuessFlag__1.SOL_FLAG) break; // break sd1 loop
       }
+      // break i1 loop if eliminated node/nodes
+      if(earlyConstraint) break;
 
-      if(earlyConstraint)
-         break; // break i1 loop
-
+      // level1 stage 2
       if(searchNewGuessFlag__1.SOL_FLAG)
       {
+         assert(qsearch__1->num_nodes = n_cur);
          searchElimFlag__1 = LsqSearch(CONSTR_FLAG, qsearch__1, hist);
 
          // if eliminated a node, save solution and break all loops
@@ -302,23 +298,25 @@ static bool TreeSearch(bool_enum CONSTR_FLAG, quadrature *q_new, history *hist)
       assert(searchNewGuessFlag__1.SOL_FLAG  && !searchElimFlag__1);
 
       quadrature *qsearch__2 = quadrature_make_full_copy(qnewtemp__1);
-      DistanceStruct *distance__2 = distance_init(n_cur);
+      quadrature *qstart__2  = quadrature_make_full_copy(q_new);
       Vector dz__2 = Vector_init(n_cur*(dim+1));
+      DistanceStruct *distance__2 = distance_init(n_cur);
       RMatrix Z__2  = Predictor_Ptr(qnewtemp__1, distance__2);
 
       bool searchElimFlag__2 = SOL_NOT_FOUND;
       int failCount__2 = 0;
       for(int i2 = 0; i2 < n_cur; ++i2)
       {
-         ExtractFromPredictorFull(Z__2, distance__2[i2].index, qsearch__2);
+         ExtractFromPredictorFull(Z__2, distance__2[i2].index, qstart__2);
          LSQ_out searchNewGuessFlag__2;
 
          int sd2 = 0;
+         // level2 stage1
          for(sd2 = 0; sd2 < SEARCH_DIM; ++sd2)
          {
-            VectorAddScale(1.0, qsearch__2->z, -1.0, qnewtemp__1->z, dz__2);
-            VectorAddScale(1.0, qnewtemp__1->z, shortParams.t[sd2], dz__2, qsearch__2->z);
-            searchNewGuessFlag__2 = LeastSquaresNewton(CONSTR_FLAG, qsearch__2);
+            VectorAddScale(1.0, qstart__2->z, -1.0, qnewtemp__1->z, dz__2);                        // dz2 = qstart12 - qnewtemp
+            VectorAddScale(1.0, qnewtemp__1->z, shortParams.t[sd2], dz__2, qsearch__2->z);         // qsearch2 = qnewtemp + α*dz2
+            searchNewGuessFlag__2 = LeastSquaresNewton(CONSTR_FLAG, qsearch__2);                   // update qsearch2 if success
 
             if(qsearch__2->num_nodes != n_cur)
             {
@@ -339,8 +337,11 @@ static bool TreeSearch(bool_enum CONSTR_FLAG, quadrature *q_new, history *hist)
          if(earlyConstraint)
             break; // break i2 loop
 
+
+         // level2 stage2
          if(searchNewGuessFlag__2.SOL_FLAG)
          {
+            assert(qsearch__2->num_nodes = n_cur);
             searchElimFlag__2 = LsqSearch(CONSTR_FLAG, qsearch__2, hist);
             // if eliminated a node, save solution and break all loops
             if(searchElimFlag__2)
@@ -356,15 +357,13 @@ static bool TreeSearch(bool_enum CONSTR_FLAG, quadrature *q_new, history *hist)
             break;
       }
       quadrature_free(qsearch__2);
+      quadrature_free(qstart__2);
       RMatrix_free(Z__2);
       Vector_free(dz__2);
       free(distance__2);
 
-      if(earlyConstraint)
-         break;
-
-      if(searchElimFlag__2)
-         break;
+      if(earlyConstraint)   break;
+      if(searchElimFlag__2) break;
 
       if(++failCount__1 >= MAX_FAILS_LEVEL_1)
       {
@@ -376,6 +375,7 @@ static bool TreeSearch(bool_enum CONSTR_FLAG, quadrature *q_new, history *hist)
 
    quadrature_free(qnewtemp__1);
    quadrature_free(qsearch__1);
+   quadrature_free(qstart__1);
    RMatrix_free(Z__1);
    Vector_free(dz__1);
    free(distance__1);
@@ -396,7 +396,7 @@ static RMatrix PredictorLapack(quadrature *q, DistanceStruct *distance)
    CMatrix J = CMatrix_init(nrows, ncols);
    GetJacobian(q, J);
    double start_time__1 = get_cur_time();
-   CMatrix J_TR = CMatrix_Transpose(J);
+   CMatrix J_TR = CMatrix_Transpose(J, move);
 
    // construct QR factorization of transpose of the Jacobian
    int N_REFL   = MIN(J_TR.rows, J_TR.cols);
@@ -415,7 +415,6 @@ static RMatrix PredictorLapack(quadrature *q, DistanceStruct *distance)
    for(int i = 0; i < QFull.rows; ++i) C_ELEM_ID(QFull, i, i) = 1.0;
    if(DORMQR_LAPACK('L',  'N', REFL, J_TR, QFull) != 0)
       PRINT_ERR(STR_LAPACK_ERR, __LINE__, __FILE__);
-
 //   COND_TEST_3;
 
    // loop over columns for more efficient access(although marginal compared to QR)
@@ -437,7 +436,7 @@ static RMatrix PredictorLapack(quadrature *q, DistanceStruct *distance)
    }
 
    // multiply Q2 by its weights rows, product goes to columns
-   Q2Weight = CMatrix_Transpose(Q2Weight);
+   Q2Weight = CMatrix_Transpose(Q2Weight, move);
 
    int LA_FLAG;
    if((LA_FLAG = DGEMM_LAPACK(Q2, Q2Weight, Q2Mult)) != 0)
@@ -497,7 +496,7 @@ static RMatrix PredictorPlasma(quadrature *q, DistanceStruct *distance)
    GetJacobianOmp(q, J);
    QuadFreeBasisOmp(q, omp_get_max_threads());
    double start_time__1 = get_cur_time();
-   CMatrix J_TR = CMatrix_Transpose(J);
+   CMatrix J_TR = CMatrix_Transpose(J, move);
    int LDJ = J_TR.rows;
    plasma_init();
    plasma_desc_t T;
@@ -509,9 +508,9 @@ static RMatrix PredictorPlasma(quadrature *q, DistanceStruct *distance)
    for(int i = 0; i < QFull.rows; ++i) C_ELEM_ID(QFull, i, i) = 1.0;
    int n_refl = MIN(J_TR.rows, J_TR.cols);
    INFO = plasma_dormqr(PlasmaRight, PlasmaNoTrans,
-                 QFull.rows, QFull.cols,
-                 n_refl, J_TR.id, LDJ, T,
-                 QFull.id, QFull.rows);
+                        QFull.rows, QFull.cols,
+                        n_refl, J_TR.id, LDJ, T,
+                        QFull.id, QFull.rows);
    if(INFO != 0)
       PRINT_ERR(STR_PLASMA_ERR, __LINE__, __FILE__);
 //   COND_TEST_3;
@@ -536,7 +535,7 @@ static RMatrix PredictorPlasma(quadrature *q, DistanceStruct *distance)
    plasma_finalize();
 
    // multiply Q2 by its weights rows, product goes to columns
-   Q2Weight = CMatrix_Transpose(Q2Weight);
+   Q2Weight = CMatrix_Transpose(Q2Weight, move);
    DGEMM_PLASMA(Q2, Q2Weight, Q2Mult);
 
    double *w = q->w;
@@ -735,7 +734,7 @@ static double TwoNorm(int n, double *z)
 {
    assert(n >= 1);
    int incz = 1;
-   double norm = dnrm2_(&n, z, &incz);
+   double norm = dnrm2(&n, z, &incz);
    return norm;
 }
 
@@ -751,9 +750,7 @@ static bool TestQR(const CMatrix Q)
    CMatrix Q_COPY = CMatrix_init(rows, cols);
    memcpy(Q_COPY.id, Q.id, SIZE_DOUBLE(Q.len));
 
-   CMatrix Q_COPY_TR = CMatrix_init(cols, rows);
-   Transpose(cols, rows, Q_COPY.id, Q_COPY_TR.id);
-
+   CMatrix Q_COPY_TR = CMatrix_Transpose(Q_COPY, copy);
    CMatrix Identity = CMatrix_init(rows, rows);
    DGEMM_LAPACK(Q_COPY, Q_COPY_TR, Identity);
 

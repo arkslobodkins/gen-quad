@@ -1417,83 +1417,25 @@ void SimplexFuncsPolytopicTwo(MixedPolytopeBasis *basis, const double *x, Vector
 }
 
 
-
-
 double orthogonal_cube_basis_test(int deg, int dim)
 {
-   int numFuncs = BasisSize(deg, dim);
-   int n = ceil( (deg+1)/2.0 )+1; // make n large enough to get exact quadrature
-   int dims_1D[1] = {1};
-   quadrature *quad_1D = quadrature_init_basic(n, 1, dims_1D, deg, INTERVAL);
-   Jacobi(quad_1D->num_nodes, 0.0, 0.0, quad_1D->x, quad_1D->w);
-
-   int N = POW_INT(n, dim);
-   quadrature *quad_C = quadrature_init_full(N, dim, &dim, deg, CUBE);
-   GeneralizedNodesTensor(quad_1D, quad_C);
-   GeneralizedWeightsTensor(quad_1D, quad_C);
-   Vector functions = quad_C->basis->functions;
-
-   double *quad_integrals = (double *)calloc(numFuncs, sizeof(double));
-   Basis *basis = quad_C->basis;
-   BasisIntegrals(basis, basis->integrals);
-
-   for(int i = 0; i < N; ++i) {
-      BasisFuncs(basis, &quad_C->x[dim*i], functions);
-      for(int j = 0; j < numFuncs; ++j)
-         quad_integrals[j] += functions.id[j]*quad_C->w[i];
-   }
-
-   double max_res = fabs(quad_integrals[0] - basis->integrals.id[0]);
-   for(int j = 1; j < numFuncs; ++j) {
-      double res = fabs(quad_integrals[j]-basis->integrals.id[j]);
-      max_res = MAX(max_res, res);
-   }
-   printf("\nTesting orthogonality of cube basis functions. Maximum error of basis functions = %.16e\n\n", max_res);
-
-   free(quad_integrals); quad_integrals = NULL;
-   quadrature_free(quad_1D);
+   quadrature *quad_C = quadrature_full_cube_tensor(deg, dim);
+   double res = QuadTestIntegral(quad_C, orthogonal);
+   printf("\nTesting orthogonality of cube basis functions."
+          "Maximum error of basis functions = %.16e\n\n", res);
    quadrature_free(quad_C);
-
-   return max_res;
+   return res;
 }
 
 
 double orthogonal_simplex_basis_test(int deg, int dim)
 {
-   int numFuncs = BasisSize(deg, dim);
-   int n = ceil( (deg+dim)/2.0 )+2; // make n large enough to get exact quadrature
-   int dims_1D[1] = {1};
-   quadrature *quad_1D = quadrature_init_basic(n, 1, dims_1D, deg, INTERVAL);
-   Jacobi(quad_1D->num_nodes, 0.0, 0.0, quad_1D->x, quad_1D->w);
-
-   int N = POW_INT(n, dim);
-   quadrature *quad_S = quadrature_init_full(N, dim, &dim, deg, SIMPLEX);
-   GeneralizedNodesTensor(quad_1D, quad_S);
-   GeneralizedWeightsTensor(quad_1D, quad_S);
-   GeneralDuffy(quad_S);
-   Vector functions = quad_S->basis->functions;
-
-   double *quad_integrals = (double *)calloc(numFuncs, sizeof(double));
-   Basis *basis = quad_S->basis;
-   BasisIntegrals(basis, basis->integrals);
-
-   for(int i = 0; i < N; ++i) {
-      BasisFuncs(basis, &quad_S->x[dim*i], functions);
-      for(int j = 0; j < numFuncs; ++j)
-         quad_integrals[j] += functions.id[j]*quad_S->w[i];
-   }
-
-   double max_res = fabs(quad_integrals[0] - basis->integrals.id[0]);
-   for(int j = 1; j < numFuncs; ++j) {
-      double res = fabs(quad_integrals[j]-basis->integrals.id[j]);
-      max_res = MAX(max_res, res);
-   }
-   printf("\nTesting orthogonality of simplex basis functions. Maximum error of basis functions = %.16e\n\n", max_res);
-
-   free(quad_integrals); quad_integrals = NULL;
-   quadrature_free(quad_1D);
+   quadrature *quad_S = quadrature_full_simplex_tensor(deg, dim);
+   double res = QuadTestIntegral(quad_S, orthogonal);
+   printf("\nTesting orthogonality of simplex basis functions."
+          "Maximum error of basis functions = %.16e\n\n", res);
    quadrature_free(quad_S);
-   return max_res;
+   return res;
 }
 
 

@@ -7,32 +7,8 @@
 extern "C" {
 #endif
 
-// LAPACK prototypes
-
-void dorgqr_(int *M, int *N, int *K, double *Q, int *LDA,
-             double *TAU, double *WORK, int *LWORK, int *INFO);
 void dgemm_(char *TRANSA, char *TRANSB, int *M, int *N, int *K, double *ALPHA,
             double *A, int *LDA, double *B, int *LDB, double *BETA, double *C, int *LDC);
-
-void dgels_(char *TRANS, int *M, int *N, int *NRHS,
-            double *A, int *LDA, double *B, int *LDB,
-            double *WORK, int *LWORK, int *INFO);
-
-void dgeqr2_(int *M, int *N, double *A, int *LDA,
-             double *TAU, double *WORK, int *INFO);
-
-void dgeqrf_(int *M, int *N, double *A, int *LDA,
-             double *TAU, double *WORK, int *LWORK, int *INFO);
-
-void dormqr_(char *SIDE, char *TRANS, int *M, int *N,
-             int *SIZE_TAU, double *Q, int *LDQ, double *TAU,
-             double *C, int *LDC,
-             double *WORK, int *LWORK, int *INFO);
-
-void dgesvd_(char *JOBU, char *JOBVT,
-		       int *M, int *N, double *A, int *LDA,
-             double *S, double *U, int *LDU, double *VT, int *LDVT,
-             double *WORK, int *LWORK, int *INFO);
 
 
 // Wrappers for LAPACK and PLASMA. All LAPACK routines are

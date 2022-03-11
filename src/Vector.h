@@ -7,13 +7,6 @@
 extern "C" {
 #endif
 
-// Level-1 BLAS
-void dcopy_(int *N, double *DX, int *INCX, double *DY, int *INCY);
-void dscal_(int *n, double *c, double *x, int *incx);
-void daxpy_(int *n, double *c, double *x, int *incx, double *y, int *incy);
-double dnrm2_(int *n, double *x, int *incx);
-int idamax_(int *n, double *x, int *incx);
-
 typedef struct
 {
    int *id;

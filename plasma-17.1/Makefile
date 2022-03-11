@@ -33,8 +33,8 @@ CFLAGS    ?= -std=c99 -fopenmp -O3 -Wall -Wno-unused-variable -Wno-unused-functi
 LDFLAGS   ?= -fopenmp
 
 # INC and LIBS indicate where to find LAPACK, and LAPACKE, and CBLAS
-INC       ?= -I$(LAPACKDIR)/LAPACKE/include -I$(CBLASDIR)/include
-LIBS      ?= -L$(LAPACKDIR) -llapack -llapacke -L$(CBLASDIR)/lib -lopenblas #commented -lcblas
+INC       ?= -I$(LAPACKDIR)/LAPACKE/include -I$(CBLASDIR)/include -I/opt/intel/mkl/include/
+LIBS      ?= -L$(LAPACKDIR) -llapack -llapacke -L$(CBLASDIR)/lib -lcblas
 
 prefix    ?= /usr/local/plasma
 

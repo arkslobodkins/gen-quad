@@ -11,7 +11,9 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
+
 #include <omp.h>
+#include <mkl_blas.h>
 
 VectorInt VectorInt_init(int n)
 {
@@ -121,7 +123,7 @@ void VSetToOne(Vector v)
 void VectorScale(double c, Vector V)
 {
    int spacing = 1;
-   dscal_(&V.len, &c, V.id, &spacing);
+   dscal(&V.len, &c, V.id, &spacing);
 }
 
 void Vector_daxpy(double a, Vector x, Vector y)
@@ -129,14 +131,14 @@ void Vector_daxpy(double a, Vector x, Vector y)
    assert(x.len == y.len);
    int incx = 1;
    int incy = 1;
-   daxpy_(&x.len, &a, x.id, &incx, y.id, &incy);
+   daxpy(&x.len, &a, x.id, &incx, y.id, &incy);
 }
 
 void double_daxpy(int len, double a, double *x, double *y)
 {
    int incx = 1;
    int incy = 1;
-   daxpy_(&len, &a, x, &incx, y, &incy);
+   daxpy(&len, &a, x, &incx, y, &incy);
 }
 
 void VectorAddScale(double c1, Vector V1, double c2, Vector V2, Vector V3)
@@ -164,7 +166,7 @@ VMin VectorMin(Vector v)
 
 void VectorRemoveElement(int index, Vector *z)
 {
-   assert(index <= z->len-1);
+   assert(index >= 0 && index <= z->len-1);
 
    for(int i = index; i < z->len-1; ++i)
       z->id[i] = z->id[i+1];
@@ -176,21 +178,21 @@ double V_ScaledTwoNorm(Vector z)
 {
    assert(z.len > 0);
    int incz = 1;
-   return dnrm2_(&z.len, z.id, &incz)/sqrt(z.len);
+   return dnrm2(&z.len, z.id, &incz)/sqrt(z.len);
 }
 
 double V_TwoNorm(Vector z)
 {
    assert(z.len > 0);
    int incz = 1;
-   return dnrm2_(&z.len, z.id, &incz);
+   return dnrm2(&z.len, z.id, &incz);
 }
 
 double V_InfNorm(Vector z)
 {
    assert(z.len > 0);
    int incz = 1;
-   int maxIndex = idamax_(&z.len, z.id, &incz)-1; // subtract 1 (converting from FORTRAN)
+   int maxIndex = idamax(&z.len, z.id, &incz)-1; // subtract 1 (converting from FORTRAN)
    return fabs(z.id[maxIndex]);
 }
 
@@ -219,7 +221,7 @@ bool V_CheckInf(Vector z)
 void double_dcopy(int n, double *x, double *y)
 {
    int incx = 1, incy = 1;
-   dcopy_(&n, x, &incx, y, &incy);
+   dcopy(&n, x, &incx, y, &incy);
 }
 
 

@@ -4,7 +4,9 @@
  */
 
 #include "Quadrature.h"
+#include "AddDimension.h"
 #include "Basis.h"
+#include "GeneralGaussTensor.h"
 #include "Constraints.h"
 #include "Print.h"
 
@@ -131,6 +133,91 @@ quadrature* quadrature_init_full(int n, int dim, int *dims, int deg, DOMAIN_TYPE
    q->free_ptr = &quadrature_free_full;
    q->isFullyInitialized = GQ_TRUE;
    return q;
+}
+
+
+quadrature* quadrature_gauss_legendre(int deg)
+{
+   double p1 = 0.0, p2 = 0.0;
+   int d_gauss[1] = {1};
+   int n = ceil( (deg+1)/2.0 );
+   quadrature *q_gauss = quadrature_init_basic(n, 1,  d_gauss, 2*n-1, INTERVAL);
+   Jacobi(q_gauss->num_nodes, p1, p2, q_gauss->x, q_gauss->w);
+
+   return q_gauss;
+}
+
+
+quadrature* quadrature_gauss_jacobi(int deg, double alpha, double beta)
+{
+   int d_gauss[1] = {1};
+   int nn = ceil( (deg+1)/2.0 );
+   quadrature *q_gauss = quadrature_init_basic(nn, 1,  d_gauss, 2*nn-1, INTERVAL);
+   Jacobi(q_gauss->num_nodes, alpha, beta, q_gauss->x, q_gauss->w);
+
+   // scale by a factor corresponding to G-L weights
+   double c = exp(lgamma(1.0+alpha)) *
+              exp(lgamma(1.0+beta)) /
+              exp(lgamma(2.0+alpha+beta));
+   for(int i = 0; i < q_gauss->num_nodes; ++i)
+      q_gauss->w[i] *= c;
+
+   return q_gauss;
+}
+
+
+quadrature* quadrature_full_cube_tensor(int deg, int dim)
+{
+   assert(dim > 1);
+   assert(deg >= 1);
+
+   quadrature *q1D = quadrature_gauss_legendre(deg);
+
+   int nnt = POW_INT(q1D->num_nodes, dim);
+   int d_init[1] = {dim};
+   quadrature *qt = quadrature_init_full(nnt, dim, d_init, deg, CUBE);
+
+   GeneralizedNodesTensor(q1D, qt);
+   GeneralizedWeightsTensor(q1D, qt);
+
+   quadrature_free(q1D);
+   return qt;
+}
+
+
+quadrature* quadrature_full_simplex_tensor(int deg, int dim)
+{
+   assert(dim > 1);
+   assert(deg >= 1);
+
+   quadrature *qj = quadrature_gauss_jacobi(deg, 1, 0.0);
+   quadrature *ql = quadrature_gauss_legendre(deg);
+
+   int dims[1] = {2};
+   quadrature *q_next = quadrature_init_full(qj->num_nodes * ql->num_nodes, 2, dims, deg, SIMPLEX);
+   AddLineSimplex(qj, ql, q_next);
+
+   quadrature *q_prev = quadrature_make_full_copy(q_next);
+   for(int d = 3; d <= dim; ++d)
+   {
+      quadrature *q1D = quadrature_gauss_jacobi(deg, d-1, 0);
+
+      quadrature_free(q_next);
+      dims[0] = d;
+      q_next = quadrature_init_full(q1D->num_nodes * q_prev->num_nodes, d, dims, deg, SIMPLEX);
+      AddLineSimplex(q1D, q_prev, q_next);
+
+      quadrature_free(q_prev);
+      q_prev = quadrature_make_full_copy(q_next);
+
+      quadrature_free(q1D);
+   }
+
+   quadrature_free(qj);
+   quadrature_free(ql);
+   quadrature_free(q_prev);
+
+   return q_next;
 }
 
 
@@ -274,7 +361,6 @@ void quadrature_remove_element(int index, quadrature *q)
    for(int i = index; i < k-1; ++i)
       w[i] = w[i+1];
 
-   #pragma omp simd
    for(int i = index; i < k-1; ++i)
       for(int d = 0; d < dim; ++d)
          x[i*dim+d] = x[(i+1)*dim+d];
@@ -657,6 +743,25 @@ static inline bool QuadPosWeightsElem(const quadrature *q, int elem)
 }
 
 
+bool QuadIsEqual(const quadrature *a, const quadrature *b)
+{
+   if(a->dim != b->dim)             return false;
+   if(a->num_dims != b->num_dims)   return false;
+   if(a->num_nodes != b->num_nodes) return false;
+   if(a->D != b->D)                 return false;
+
+   int dim = a->dim;
+   int numNodes = a->num_nodes;
+   for(int i = 0; i < a->num_dims; ++i)
+      if(a->dims[i] != b->dims[i])  return false;
+
+   for(int i = 0; i < numNodes*(dim+1); ++i)
+         if(!CompareDouble(a->z.id[i], b->z.id[i]))
+            return false;
+   return true;
+}
+
+
 double QuadTestIntegral(const quadrature *q, BASIS_TYPE btype)
 {
    if(q->isFullyInitialized == GQ_FALSE)
@@ -690,7 +795,6 @@ double QuadTestIntegral(const quadrature *q, BASIS_TYPE btype)
    for(int i = 0; i < k; ++i)
    {
       basisPtr(q->basis, &x[dim*i], functions);
-      #pragma omp simd
       for(int j = 0; j < numFuncs; ++j)
          IQuad.id[j] += functions.id[j] * w[i];
    }

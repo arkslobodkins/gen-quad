@@ -1,41 +1,31 @@
-assertions = 1
 OPENMP     = 1
+assertions = 1
 debug      = 1
 
-CC  = gcc
-CXX = g++
-CFLAGS   = -O3 -mfma -march=broadwell -isystem../plasma-17.1/include #-fsanitize=address #-fopt-info -Og
-CXXFLAGS = -O3 -mfma -march=broadwell -isystem../plasma-17.1/include #-fsanitize=address #-fopt-info -Og
+LPATH = -L /opt/intel/mkl/lib/intel64/
+IPATH = -I /opt/intel/mkl/include/ -I ../plasma-17.1/include/
 
-CVERSION   = -std=c11
-CPPVERSION = -std=c++11
+CC  = gcc
+CVERSION = -std=c11
+LFLAGS = -lm -lmkl_rt
+CFLAGS = -O3 -march=native $(LPATH) $(IPATH) #-fsanitize=address #-fopt-info -Og
 
 ifeq ($(OPENMP), 1)
-CFLAGS   += -fopenmp
-CXXFLAGS += -fopenmp
+CFLAGS += -fopenmp
 else
-CFLAGS   += -Wno-unknown-pragmas
-CXXFLAGS += -Wno-unknown-pragmas
+CFLAGS += -Wno-unknown-pragmas
 endif
 
 ifeq ($(assertions), 0)
-CFLAGS   += -DNDEBUG
-CXXFLAGS += -DNDEBUG
+CFLAGS += -DNDEBUG
 endif
 
 ifeq ($(debug), 0)
 CFLAGS   += -DQUAD_DEBUG_OFF
-CXXFLAGS += -DQUAD_DEBUG_OFF
 else
 CFLAGS   += -g -Wall -Wextra
-CXXFLAGS += -g -Wall -Wextra
-
 endif
 
-#alternatively:
-#LIBSBLAS= -lblas -llapack -llapacke
-LIBSBLAS = -lopenblas
-MATH = -lm
 RANLIB = ranlib
 VPATH = ../src:../src/Gauss_Lib
 
@@ -44,16 +34,11 @@ OBJECTS = Main.o LeastSquaresNewton.o  GeneralGaussTensor.o GENERAL_QUADRATURE.o
    Constraints.o ConstrainedOptimization.o Vector.o Matrix.o Print.o Quadrature.o               \
 	LINALG.o Basis.o Tensor.o get_time.o libgaussq.a libplasma.a libcoreblas.a
 
-all : quadc quadcpp
+all : quad_c
 
-quadc : quad_c results
-quad_c : $(OBJECTS)
-	$(CC) $(CVERSION) $(CFLAGS) -o $@ $^ $(LIBSBLAS) $(MATH)
-
-quadcpp : quad_cpp results
-quad_cpp : $(OBJECTS)
-	$(CXX) $(CPPVERSION) $(CXXFLAGS) -o $@ $^ $(LIBSBLAS) $(MATH)
-
+quad_c : quad results
+quad : $(OBJECTS)
+	$(CC) $(CVERSION) $(CFLAGS) -o $@ $^ $(LFLAGS)
 
 OBJS = GaussCore.o Jacobi.o
 libgaussq.a : $(OBJS)
@@ -64,10 +49,10 @@ results:
 	mkdir -p ../results
 
 clean:
-	\rm -f *.o quad_c quad_cpp
+	\rm -f *.o quad quad_cpp
 
 distclean : clean txtclean
-	\rm -f quad_c quad_cpp *~
+	\rm -f quad quad_cpp *~
 
 SUBDIR_ROOTS := ../results
 DIRS := . $(shell find $(SUBDIR_ROOTS) -type d)

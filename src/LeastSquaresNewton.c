@@ -40,7 +40,6 @@ LSQ_out LeastSquaresNewton(const bool_enum CONSTR_OPT, quadrature *q_orig)
    assert(q_orig->num_nodes >= 1);
    LSQ_out lsq_out = {0, SOL_NOT_FOUND};
 
-   int deg       = q_orig->deg;
    int dim       = q_orig->dim;
    int num_nodes = q_orig->num_nodes;
    int numFuncs  = q_orig->basis->numFuncs;
@@ -73,10 +72,8 @@ LSQ_out LeastSquaresNewton(const bool_enum CONSTR_OPT, quadrature *q_orig)
    AllocVectorOmpData(&RHS);
    getFunc_ptr = &GetFunctionOmp;
    getFunctionAndJacobian_ptr = &GetFunctionAndJacobianOmp;
-   if(PLASMA_CONDITION()
-      && OMP_CONDITION(deg, dim))
-         leastsquares_ptr = DGELS_PLASMA;
-   else  leastsquares_ptr = DGELS_LAPACK;
+   if(OMP_CONDITION(q_orig->deg, dim)) leastsquares_ptr = DGELS_PLASMA;
+   else                                leastsquares_ptr = DGELS_LAPACK;
 #else
    leastsquares_ptr = &DGELS_LAPACK;
    getFunc_ptr      = &GetFunction;
@@ -127,6 +124,8 @@ LSQ_out LeastSquaresNewton(const bool_enum CONSTR_OPT, quadrature *q_orig)
 
       double start_time = get_cur_time();
       int INFO = leastsquares_ptr(JACOBIAN, LEAST_SQ_SOL);
+      if(INFO != 0)
+         PRINT_ERR(STR_LAPACK_ERR, __LINE__, __FILE__);
       LSQ_TIME += get_cur_time() - start_time;
 
       for(int i = 0; i < ncols; ++i)

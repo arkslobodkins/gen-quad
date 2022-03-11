@@ -4,6 +4,7 @@
 
 #include <assert.h>
 
+
 void AddLineFirst(const quadrature *q1D, const quadrature *quad_prev, quadrature *quad_new)
 {
    assert(q1D->dim == 1);
@@ -41,16 +42,10 @@ void AddLineSimplex(const quadrature *q1D, const quadrature *quad_prev, quadratu
    const int dim = quad_new->dim;
    const int n_new = quad_new->num_nodes;
    double *x_new = quad_new->x;
-   double *w_new = quad_new->w;
 
    AddLineFirst(q1D, quad_prev, quad_new);
-   WeightsTensor2D(q1D, quad_prev, quad_new);
 
    // apply one level of Duffy Transformation
-   for(int i = 0; i < n_new; ++i)
-      for(int d = 1; d < dim; ++d)
-         w_new[i] *= x_new[i*dim];
-
    for(int i = 0; i < n_new; ++i)
       for(int d = 1; d < dim; ++d)
          x_new[i*dim+d] *= x_new[i*dim];
@@ -106,3 +101,7 @@ void MixedTensor(const quadrature *q1, const quadrature *q2, quadrature *q_tp)
    }
    WeightsTensor2D(q1, q2, q_tp);
 }
+
+
+
+

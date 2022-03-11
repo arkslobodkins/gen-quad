@@ -1,5 +1,4 @@
 #include "GENERAL_QUADRATURE.h"
-#include "Gauss_Lib/Jacobi.h"
 #include <strings.h>
 #include <assert.h>
 #include <omp.h>
@@ -35,6 +34,13 @@ bool string_to_domain(const char *shape, DOMAIN_TYPE *D)
    return true;
 }
 
+bool CompareDouble(double x, double y)
+{
+   if( (x < y + QUAD_TOL) && (x > y - QUAD_TOL) )
+      return true;
+   else
+      return false;
+}
 
 int IntPower(int x, int power)
 {
@@ -137,11 +143,5 @@ GQ_BOOL OMP_CONDITION(int deg, int dim)
    else if(dim == 6  && deg  >= 5) return GQ_TRUE;
    else if(dim > 6)                return GQ_TRUE;
    else                            return GQ_FALSE;
-}
-
-GQ_BOOL PLASMA_CONDITION()
-{
-   if(omp_get_max_threads() > 4) return GQ_TRUE;
-   else                          return GQ_FALSE;
 }
 #endif

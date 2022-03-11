@@ -6,7 +6,7 @@
  *  University of Tennessee, US,
  *  University of Manchester, UK.
  *
- * @generated from compute/zgetrs.c, normal z -> d, Sun Feb 20 23:41:17 2022
+ * @generated from compute/zgetrs.c, normal z -> d, Thu Mar 10 18:58:02 2022
  *
  **/
 
@@ -18,7 +18,7 @@
 #include "plasma_types.h"
 #include "plasma_workspace.h"
 
-//#include "mkl_lapacke.h"
+#include "mkl_lapacke.h"
 
 /***************************************************************************//**
  *

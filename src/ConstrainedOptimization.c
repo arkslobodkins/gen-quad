@@ -7,6 +7,7 @@
 #include <assert.h>
 #include <string.h>
 #include <stdlib.h>
+#include <lapacke.h>
 
 
 int ConstrainedProjection(const quadrature *q_prev, quadrature *q_next)
@@ -248,79 +249,46 @@ ConstrNodeData ShortenNode(const RMatrix A, const Vector b_bound, const Vector z
 
 int ProjectNode(const CMatrix eqn_matrix, const Vector dx, Vector x_projected)
 {
-   int i, j, l, k;
    int M = eqn_matrix.rows;
    int N = eqn_matrix.cols;
-   int LDA = M;
-   int INFO;
-   double TAU[MIN(M, N)];
-   double WORK[N];
 
-   dgeqr2_(&M, &N, eqn_matrix.id, &LDA, TAU, WORK, &INFO);
-   if(INFO != 0)
-      return CONSTR_FAIL;
+   StaticVectorInit(TAU, MIN(M, N));
 
-   double Q_EXPL[M][M], Q_TEMP[M][M];
-   for(i = 0; i < M; ++i) for(j = 0; j < M; ++j) Q_TEMP[i][j] = 0.0;
-   for(i = 0; i < M; ++i) Q_TEMP[i][i] = 1.0;
+   int INFO = DGEQR2_LAPACK(eqn_matrix, TAU);
+   if(INFO != 0) return CONSTR_FAIL;
 
-   // manually extract QR from LAPACK
-   for(k = 0; k < N; ++k)
-   {
-      double H[M][M], v[M];
-      for(i = 0; i < M; ++i) for(j = 0; j < M; ++j) Q_EXPL[i][j] = 0.0;
-      for(i = 0; i < M; ++i) for(j = 0; j < M; ++j) H[i][j] = 0.0;
-
-      for(i = 0; i < k; ++i)   v[i] = 0.0;
-      for(i = k+1; i < M; ++i) v[i] = C_ELEM_ID(eqn_matrix, i, k);
-      v[k] = 1.0;
-
-      for(i = 0; i < M; ++i)
-         for(j = 0; j < M; ++j)
-            H[i][j] = -TAU[k]*v[i]*v[j];
-
-      for(i = 0; i < M; ++i) ++H[i][i];
-
-      for(i = 0; i < M; ++i)
-         for(l = 0; l < M; ++l)
-            for(j = 0; j < M; ++j)
-               Q_EXPL[i][j] += Q_TEMP[i][l]*H[l][j];
-
-      for(i = 0; i < M; ++i)
-         for(j = 0; j < M; ++j)
-            Q_TEMP[i][j] = Q_EXPL[i][j];
-   }
-
+   INFO = DORGQR_LAPACK(eqn_matrix, TAU);
+   if(INFO != 0) return CONSTR_FAIL;
 
    /******************************************
    \* Obtain P = I - Q_REDUCED x Q_REDUCED^ \*
    ******************************************/
+
    double Q_REDUCED[M][N];
-   for(i = 0; i < M; ++i)
-      for(j = 0; j < N; ++j)
-         Q_REDUCED[i][j] = Q_EXPL[i][j];
+   for(int i = 0; i < M; ++i)
+      for(int j = 0; j < N; ++j)
+         Q_REDUCED[i][j] = eqn_matrix.cid[j][i];
 
    double Q_TRANS[N][M];
-   for(i = 0; i < M; ++i)
-      for(j = 0; j < N; ++j)
+   for(int i = 0; i < M; ++i)
+      for(int j = 0; j < N; ++j)
          Q_TRANS[j][i] = Q_REDUCED[i][j];
 
    RMatrix PROJECTOR = RMatrix_init(M, M);
-   for(i = 0; i < M; ++i)
-      for(l = 0; l < N; ++l)
-         for(j = 0; j < M; ++j)
-            PROJECTOR.rid[i][j] += Q_REDUCED[i][l]*Q_TRANS[l][j];
+   for(int i = 0; i < M; ++i)
+      for(int k = 0; k < N; ++k)
+         for(int j = 0; j < M; ++j)
+            PROJECTOR.rid[i][j] += Q_REDUCED[i][k]*Q_TRANS[k][j];
 
-   for(i = 0; i < M; ++i)
-      for(j = 0; j < M; ++j)
+   for(int i = 0; i < M; ++i)
+      for(int j = 0; j < M; ++j)
          PROJECTOR.rid[i][j] = -PROJECTOR.rid[i][j];
-   for(i = 0; i < M; ++i) ++PROJECTOR.rid[i][i];
+   for(int i = 0; i < M; ++i) ++PROJECTOR.rid[i][i];
 
    memset(x_projected.id, 0, x_projected.len*sizeof(double));
    RMatVec(PROJECTOR, dx, x_projected);
 
    RMatrix_free(PROJECTOR);
-
    return CONSTR_SUCCESS;
 }
 

@@ -2,14 +2,11 @@
 #include <math.h>
 #include <string.h>
 #include <omp.h>
+#include <mkl.h>
 
 #include "get_time.h"
 #include "../../plasma-17.1/include/plasma.h"
 
-void dgels_(char *TRANS, int *M, int *N, int* nrhs,
-            double* A, int* LDA,
-            double* B, int* LDB,
-            double *WORK, int *LWORK, int *INFO);
 
 int plasma_dgels(plasma_enum_t trans,
                  int m, int n, int nrhs,
@@ -28,8 +25,8 @@ double compute_norm(int len, double *v)
 
 int main(int argc, char *argv[])
 {
-   int nrows = 3000;
-   int ncols = 2000;
+   int nrows = 2000;
+   int ncols = 1000;
    int NRHS  = 1;
    int LDA   = nrows;
    int LEAD_DIM = nrows>ncols ? nrows:ncols;
@@ -48,9 +45,10 @@ int main(int argc, char *argv[])
    double *b_lapack = (double *)malloc(LEAD_DIM*sizeof(double));
    memcpy(b_lapack, b_plasma, LEAD_DIM*sizeof(double));
 
-   #ifdef _OPENMP
+#ifdef _OPENMP
+   mkl_set_num_threads(1);
    printf("OPENMP enanbled with %i threads\n\n", omp_get_max_threads());
-   #endif
+#endif
    plasma_init(omp_get_max_threads());
    plasma_desc_t T;
 
@@ -76,7 +74,7 @@ int main(int argc, char *argv[])
    int INFO = 0;
 
    double LP_START = get_cur_time();
-   dgels_(&TRANS, &nrows, &ncols, &NRHS,
+   dgels(&TRANS, &nrows, &ncols, &NRHS,
           A_lapack, &LDA,
           b_lapack, &LEAD_DIM,
           WORK, &LWORK, &INFO);
