@@ -7,7 +7,6 @@
 #include <assert.h>
 #include <string.h>
 #include <stdlib.h>
-#include <lapacke.h>
 
 
 int ConstrainedProjection(const quadrature *q_prev, quadrature *q_next)

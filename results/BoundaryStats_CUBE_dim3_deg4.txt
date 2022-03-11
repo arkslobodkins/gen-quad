@@ -1,0 +1,13 @@
+*********************************************************
+
+dimension                   = 3
+degree of precision         = 4
+number of nodes             = 11
+close to the boundary count = 7
+node 0 contains 1 coordinates on the boundary
+node 2 contains 1 coordinates on the boundary
+node 3 contains 2 coordinates on the boundary
+node 4 contains 1 coordinates on the boundary
+node 7 contains 2 coordinates on the boundary
+node 9 contains 2 coordinates on the boundary
+node 10 contains 2 coordinates on the boundary

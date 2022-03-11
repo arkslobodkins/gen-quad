@@ -1,0 +1,6 @@
+*********************************************************
+
+dimension                   = 3
+degree of precision         = 3
+number of nodes             = 7
+close to the boundary count = 0

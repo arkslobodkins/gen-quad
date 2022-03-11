@@ -2,8 +2,8 @@ OPENMP     = 1
 assertions = 1
 debug      = 1
 
-LPATH = -L /opt/intel/mkl/lib/intel64/
-IPATH = -I /opt/intel/mkl/include/ -I ../plasma-17.1/include/
+LPATH = -L /opt/intel/oneapi/mkl/2022.0.2/lib/intel64/
+IPATH = -I /opt/intel/oneapi/mkl/2022.0.2/include/ -I ../plasma-17.1/include/
 
 CC  = gcc
 CVERSION = -std=c11

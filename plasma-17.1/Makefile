@@ -23,7 +23,7 @@ all: lib test
 
 #include make.inc
 
-CC        ?= cc
+CC        ?= cc -fPIC
 
 ARCH      ?= ar
 ARCHFLAGS ?= cr
@@ -33,7 +33,7 @@ CFLAGS    ?= -std=c99 -fopenmp -O3 -Wall -Wno-unused-variable -Wno-unused-functi
 LDFLAGS   ?= -fopenmp
 
 # INC and LIBS indicate where to find LAPACK, and LAPACKE, and CBLAS
-INC       ?= -I$(LAPACKDIR)/LAPACKE/include -I$(CBLASDIR)/include -I/opt/intel/mkl/include/
+INC       ?= -I$(LAPACKDIR)/LAPACKE/include -I$(CBLASDIR)/include -I /opt/intel/oneapi/mkl/2022.0.2/include/
 LIBS      ?= -L$(LAPACKDIR) -llapack -llapacke -L$(CBLASDIR)/lib -lcblas
 
 prefix    ?= /usr/local/plasma

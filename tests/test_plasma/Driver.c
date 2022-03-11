@@ -26,7 +26,7 @@ double compute_norm(int len, double *v)
 int main(int argc, char *argv[])
 {
    int nrows = 2000;
-   int ncols = 1000;
+   int ncols = 3000;
    int NRHS  = 1;
    int LDA   = nrows;
    int LEAD_DIM = nrows>ncols ? nrows:ncols;
@@ -46,7 +46,7 @@ int main(int argc, char *argv[])
    memcpy(b_lapack, b_plasma, LEAD_DIM*sizeof(double));
 
 #ifdef _OPENMP
-   mkl_set_num_threads(1);
+   mkl_set_threading_layer(MKL_THREADING_SEQUENTIAL);
    printf("OPENMP enanbled with %i threads\n\n", omp_get_max_threads());
 #endif
    plasma_init(omp_get_max_threads());

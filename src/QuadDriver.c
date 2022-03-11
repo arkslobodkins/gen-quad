@@ -12,7 +12,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <omp.h>
-#include <mkl.h>
+#include <mkl_service.h>
 
 static void TimesToScreen(double total_time);
 static void TimesToFile(DOMAIN_TYPE D, int deg, int dim, double total_time);
@@ -100,7 +100,7 @@ void QuadDriver(int argc, char **argv)
    printf("DEBUG MODE OFF\n\n");
 #endif
 #ifdef _OPENMP
-   mkl_set_num_threads(1);
+   mkl_set_threading_layer(MKL_THREADING_SEQUENTIAL);
    printf("OPENMP enanbled with %i threads\n\n", omp_get_max_threads());
 #endif
 
