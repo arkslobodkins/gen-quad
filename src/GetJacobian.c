@@ -18,6 +18,8 @@ double JACOBIAN_TIME = 0.0;
 void GetJacobianOmp(quadrature *q, CMatrix JACOBIAN)
 {
    double time_start = get_cur_time();
+   assert(q->basis->numFuncs == JACOBIAN.rows);
+   assert(q->z.len == JACOBIAN.cols);
 
    int dim = q->dim;
    int deg = q->deg;
@@ -50,7 +52,7 @@ void GetJacobianOmp(quadrature *q, CMatrix JACOBIAN)
          CMatrix_LoadToColumn(j, JACOBIAN, basisFuncsLoc);
          int colId = j*dim+cols;
          for(int d = 0; d < dim; ++d)
-            CMatrix_LoadToColumnDD(colId+d, JACOBIAN, &basisDerLoc.id[d*rows]);
+            CMatrix_LoadToColumnRange(d*rows, colId+d, JACOBIAN, basisDerLoc);
       }
    } // end omp parallel
 
@@ -61,6 +63,8 @@ void GetJacobianOmp(quadrature *q, CMatrix JACOBIAN)
 void GetFunctionAndJacobianOmp(quadrature *q, Vector f, CMatrix JACOBIAN)
 {
    double time_start = get_cur_time();
+   assert(q->basis->numFuncs == JACOBIAN.rows);
+   assert(q->z.len == JACOBIAN.cols);
 
    int dim = q->dim;
    int deg = q->deg;
@@ -102,7 +106,7 @@ void GetFunctionAndJacobianOmp(quadrature *q, Vector f, CMatrix JACOBIAN)
          CMatrix_LoadToColumn(j, JACOBIAN, basisFuncsLoc);
          int colId = j*dim+cols;
          for(int d = 0; d < dim; ++d)
-            CMatrix_LoadToColumnDD(colId+d, JACOBIAN, &basisDerLoc.id[d*rows]);
+            CMatrix_LoadToColumnRange(d*rows, colId+d, JACOBIAN, basisDerLoc);
       }
       #pragma omp critical(UpdateFunction)
       double_daxpy(len, 1.0, fLoc, f.id);
@@ -116,6 +120,8 @@ void GetFunctionAndJacobianOmp(quadrature *q, Vector f, CMatrix JACOBIAN)
 void GetJacobian(quadrature *q, CMatrix JACOBIAN)
 {
    double time_start = get_cur_time();
+   assert(q->basis->numFuncs == JACOBIAN.rows);
+   assert(q->z.len == JACOBIAN.cols);
 
    int dim = q->dim;
    int rows = q->basis->numFuncs;
@@ -136,7 +142,7 @@ void GetJacobian(quadrature *q, CMatrix JACOBIAN)
       CMatrix_LoadToColumn(j, JACOBIAN, functions);
       int colId = j*dim+cols;
       for(int d = 0; d < dim; ++d)
-         CMatrix_LoadToColumnDD(colId+d, JACOBIAN, &derivatives.id[d*rows]);
+         CMatrix_LoadToColumnRange(d*rows, colId+d, JACOBIAN, derivatives);
    }
    JACOBIAN_TIME += get_cur_time() - time_start;
 }
@@ -145,6 +151,8 @@ void GetJacobian(quadrature *q, CMatrix JACOBIAN)
 void GetFunctionAndJacobian(quadrature *q, Vector f, CMatrix JACOBIAN)
 {
    double time_start = get_cur_time();
+   assert(q->basis->numFuncs == JACOBIAN.rows);
+   assert(q->z.len == JACOBIAN.cols);
    int dim = q->dim;
    int rows = q->basis->numFuncs;
    int cols = q->num_nodes;
@@ -171,7 +179,7 @@ void GetFunctionAndJacobian(quadrature *q, Vector f, CMatrix JACOBIAN)
       VectorScale(w[j], derivatives);
       int colId = j*dim+cols;
       for(int d = 0; d < dim; ++d)
-         CMatrix_LoadToColumnDD(colId+d, JACOBIAN, &derivatives.id[d*rows]);
+         CMatrix_LoadToColumnRange(d*rows, colId+d, JACOBIAN, derivatives);
    }
    JACOBIAN_TIME += get_cur_time() - time_start;
 }

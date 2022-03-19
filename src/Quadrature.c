@@ -16,6 +16,7 @@
 
 static inline int GetNumDims(DOMAIN_TYPE D);
 static inline bool QuadPosWeightsElem(const quadrature *q, int elem);
+static inline double QuadDistAlphaEqn(const quadrature *q, int elem, int eqn);
 
 static void CopyBasis(const quadrature *q1, quadrature *q2);
 static void SetIntervalFuncs(quadrature *q);
@@ -562,7 +563,7 @@ bool QuadInDomainEqnElemEps(const quadrature *q, int elem, int eqn)
    double eps = POW_DOUBLE(10, -12);
    RMatrix M = q->constr->M;
    Vector b = q->constr->b;
-   assert(eqn >= 0  && eqn < M.rows);
+   assert(eqn >= 0 && eqn < M.rows);
 
    const double *xi = &q->x[elem*dim];
    double lhs = 0;
@@ -740,6 +741,50 @@ double QuadDistFromTheBoundaryTwoNorm(const quadrature *q)
 static inline bool QuadPosWeightsElem(const quadrature *q, int elem)
 {
    return is_greater_than_zero(q->w[elem]);
+}
+
+
+static inline double QuadDistAlphaEqn(const quadrature *q, int elem, int eqn)
+{
+   assert(q->dim == q->constr->M.cols);
+
+   int dim = q->dim;
+   RMatrix C = q->constr->M;
+   Vector b = q->constr->b;
+   Tensor1D w = DoubleToTensor1D(q->num_nodes, q->w);
+   Tensor2D x = DoubleToTensor2D(q->num_nodes, dim, q->x);
+
+   double rhs = 0.0;
+   for(int j = 0; j < dim; ++j)
+      rhs += C.rid[eqn][j] * TID2(x, elem, j);
+
+   double alpha = (b.id[eqn] - rhs) / TID1(w, elem);
+   return alpha;
+}
+
+double QuadDistAlphaElem(const quadrature *q, int elem)
+{
+   int numEqns = q->constr->M.rows;
+   double minAlpha = QuadDistAlphaEqn(q, elem, 0);
+
+   for(int j = 1; j < numEqns; ++j)
+      minAlpha = MIN(minAlpha, QuadDistAlphaEqn(q, elem, j));
+   return minAlpha;
+}
+
+
+VMin QuadMinAlpha(const quadrature *q)
+{
+   int numNodes = q->num_nodes;
+   Vector minAlpha = Vector_init(numNodes);
+
+   for(int i = 0; i < numNodes; ++i)
+      minAlpha.id[i] = QuadDistAlphaElem(q, i);
+
+   VMin min = VectorMin(minAlpha);
+   Vector_free(minAlpha);
+
+   return min;
 }
 
 

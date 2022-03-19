@@ -159,7 +159,6 @@ void BasisMonomial(Basis *basis, const double *x, Vector phi)
    }
 }
 
-
 /////////////////////////////////////////////////////////////////////////////
 BasisInterface SetCubeBasisInterface()
 {
@@ -189,6 +188,7 @@ CubeBasis* CubeBasisInit(CubeParams *cubeParams)
    basis->dim         = dim;
    basis->numFuncs    = BasisSize(deg, dim);
    basis->addData     = NULL;
+   memset(&basis->table, 0, sizeof(Table3d));
 
    int numFuncs = basis->numFuncs;
    basis->indices = (INT_8 *)malloc(numFuncs*dim*sizeof(INT_8));
@@ -1048,24 +1048,27 @@ void SimplexSimplexBasisDer(SimplexSimplexBasis *basis, const double *x, Vector 
    double diffFact = 1.0/(2.0*h);
    Vector phi_backw1 = basis->addData->phi_backw1;
    Vector phi_forw1  = basis->addData->phi_forw1;
-   Vector basis_polytopic = basis->addData->basis_polytopic;
 
    double x_backw1[dim];
    double x_forw1[dim];
 
    VSetToOne(v);
-   Vector phiPrime = v;
+   Vector phiPrime             = v;
+   Vector basis_polytopic      = basis->addData->basis_polytopic;
+   Tensor2D  phiPrime2D        = VectorToTensor2D(dim, numFuncs, phiPrime);
+   Tensor1D  basis_polytopic1D = VectorToTensor1D(basis_polytopic);
+
    SimplexFuncsPolytopicTwo((MixedPolytopeBasis *)basis, x, basis_polytopic);
    for(int d = 0; d < dim1; ++d) {
       #pragma omp simd
       for(int k = 0; k < numFuncs; ++k)
-         phiPrime.id[d*numFuncs+k] *= basis_polytopic.id[k];
+         TID2(phiPrime2D, d, k) *= TID1(basis_polytopic1D, k);
    }
    SimplexFuncsPolytopicOne((MixedPolytopeBasis *)basis, x, basis_polytopic);
    for(int d = 0; d < dim2; ++d) {
       #pragma omp simd
       for(int k = 0; k < numFuncs; ++k)
-         phiPrime.id[(d+dim1)*numFuncs+k] *= basis_polytopic.id[k];
+         TID2(phiPrime2D, d+dim1, k) *= TID1(basis_polytopic1D, k);
    }
 
    for(int d = 0; d < dim2; ++d)
@@ -1083,7 +1086,7 @@ void SimplexSimplexBasisDer(SimplexSimplexBasis *basis, const double *x, Vector 
 
       #pragma omp simd
       for(int k = 0; k < numFuncs; ++k)
-         phiPrime.id[(d+dim1)*numFuncs+k] *= (phi_forw1.id[k] - phi_backw1.id[k]) * diffFact;
+         TID2(phiPrime2D, d+dim1, k) *= (phi_forw1.id[k] - phi_backw1.id[k]) * diffFact;
    }
 
    for(int d = 0; d < dim1; ++d)
@@ -1101,7 +1104,7 @@ void SimplexSimplexBasisDer(SimplexSimplexBasis *basis, const double *x, Vector 
 
       #pragma omp simd
       for(int k = 0; k < numFuncs; ++k)
-         phiPrime.id[(d*numFuncs+k)] *= (phi_forw1.id[k] - phi_backw1.id[k]) * diffFact;
+         TID2(phiPrime2D, d, k) *= (phi_forw1.id[k] - phi_backw1.id[k]) * diffFact;
    }
 }
 
@@ -1209,6 +1212,7 @@ static Table3d Table3dCreate(int deg, int dim)
       table.size[0] = 2*deg+2;
    table.size[1] = deg+2;
    table.size[2] = 3;
+
    table.id = (double ***)malloc(table.size[0]*sizeof(double **));
    for(int i = 0; i < table.size[0]; ++i)
       table.id[i] = (double **)malloc(table.size[1]*sizeof(double *));
@@ -1249,6 +1253,9 @@ static void ComputeTable(Table3d table)
 // asumes order is at least 2 or greater, i.e. polynomial degree is at least 1
 static void JacobiPolyWithTable(int order, double x, int alpha, double *p, Table3d table)
 {
+#ifdef QUAD_DEBUG_ON
+   assert(order >= 2);
+#endif
    p[0] = 1.0;
    p[1] = 0.5*(x-1.0) * (alpha+2.0) + alpha+1.0;
    for(int k = 1; k < order-1; ++k)
@@ -1265,7 +1272,8 @@ static void IntegralsCubePolyhedralMonomial(MixedPolytopeBasis *basis, Vector v)
    INT_8 *indices   = basis->indices;
 
    for(int i = 0; i < numFuncs; ++i)
-   { double val = 1.0;
+   {
+      double val = 1.0;
       for(int d = 0; d < dimCube; ++d)
          val = val/(indices[i*dim+d] + 1);
       integrals.id[i] = val;

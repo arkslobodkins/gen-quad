@@ -109,7 +109,7 @@ void ComputeCube(int deg, int dim)
 
    HistoryToFile(q_new, dim-1, hist_cube);
    QuadratureToFile(q_new);
-   BoundaryCubeStats(q_new);
+//   BoundaryCubeStats(q_new);
 
    quadrature_free(q_gauss);
    quadrature_free(q_new);

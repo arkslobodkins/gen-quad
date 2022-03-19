@@ -91,6 +91,10 @@ double QuadDistFromTheBoundaryElem(const quadrature *q, int elem);
 double QuadMinDistFromTheBoundary(const quadrature *q);
 double QuadDistFromTheBoundaryTwoNorm(const quadrature *q);
 
+double QuadDistAlphaElem(const quadrature *q, int elem);
+VMin QuadMinAlpha(const quadrature *q);
+
+bool QuadIsEqual(const quadrature *a, const quadrature *b);
 double QuadTestIntegral(const quadrature *q, BASIS_TYPE btype);
 double QuadTestIntegralExp(const quadrature *q);
 

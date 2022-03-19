@@ -150,17 +150,28 @@ void CMatrix_Assign(CMatrix A, CMatrix B)
    memcpy(B.id, A.id, A.len*sizeof(double));
 }
 
+void CMatrix_Identity(CMatrix M)
+{
+   assert(M.rows == M.cols);
+   memset(M.id, 0, M.len*sizeof(double));
+   for(int i = 0; i < M.rows; ++i)
+      C_ELEM_ID(M, i, i) = 1.0;
+}
+
 void CMatrix_LoadToColumn(int col, CMatrix M, Vector x)
 {
    assert(x.len == M.rows);
-   assert(col > -1);
+   assert(col > -1 && col < M.cols);
    memcpy(M.cid[col], x.id, SIZE_DOUBLE(M.rows));
 }
 
-void CMatrix_LoadToColumnDD(int col, CMatrix M, double *x)
+void CMatrix_LoadToColumnRange(int begin, int col, CMatrix M, Vector x)
 {
-   assert(col > -1);
-   memcpy(M.cid[col], x, SIZE_DOUBLE(M.rows));
+   assert(col > -1 && col < M.cols);
+   assert(begin > -1);
+   assert(begin + M.rows <= x.len);
+   assert(x.len >= M.rows);
+   memcpy(M.cid[col], x.id+begin, SIZE_DOUBLE(M.rows));
 }
 
 void CMatrix_GetRow(int row, CMatrix M, Vector x)

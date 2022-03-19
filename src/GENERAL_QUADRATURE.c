@@ -138,8 +138,8 @@ double IthLagrange(int i, double t, int nx, double *x)
 GQ_BOOL OMP_CONDITION(int deg, int dim)
 {
    if(dim == 3  && deg >= 11)      return GQ_TRUE;
-   else if(dim == 4  && deg  >= 6) return GQ_TRUE;
-   else if(dim == 5  && deg  >= 5) return GQ_TRUE;
+   else if(dim == 4  && deg  >= 7) return GQ_TRUE;
+   else if(dim == 5  && deg  >= 6) return GQ_TRUE;
    else if(dim == 6  && deg  >= 5) return GQ_TRUE;
    else if(dim > 6)                return GQ_TRUE;
    else                            return GQ_FALSE;

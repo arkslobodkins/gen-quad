@@ -8,7 +8,7 @@ IPATH = -I /opt/intel/oneapi/mkl/2022.0.2/include/ -I ../plasma-17.1/include/
 CC  = gcc
 CVERSION = -std=c11
 LFLAGS = -lm -lmkl_rt
-CFLAGS = -O3 -march=native $(LPATH) $(IPATH) #-fsanitize=address #-fopt-info -Og
+CFLAGS = -O3 -march=native $(IPATH) -fsanitize=address #-fopt-info -Og
 
 ifeq ($(OPENMP), 1)
 CFLAGS += -fopenmp
@@ -38,7 +38,7 @@ all : quad_c
 
 quad_c : quad results
 quad : $(OBJECTS)
-	$(CC) $(CVERSION) $(CFLAGS) -o $@ $^ $(LFLAGS)
+	$(CC) $(CVERSION) $(CFLAGS) -o $@ $^ $(LFLAGS) $(LPATH)
 
 OBJS = GaussCore.o Jacobi.o
 libgaussq.a : $(OBJS)

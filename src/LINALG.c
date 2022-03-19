@@ -51,7 +51,11 @@ int DORMQR_LAPACK(char SIDE, char TRANS, Vector TAU, CMatrix Q, CMatrix A)
 {
    assert(TAU.len == MIN(Q.rows, Q.cols));
 
-   int LDA = A.rows;
+   int LDA;
+   if(SIDE == 'L') LDA = A.rows;
+   else if(SIDE == 'R') LDA = A.cols;
+   else            return INV_INPUT;
+
    int LDQ = Q.rows;
    int INFO = LAPACKE_dormqr( LAPACK_COL_MAJOR, SIDE, TRANS,
                               A.rows, A.cols, TAU.len,
@@ -89,7 +93,7 @@ int DGESVD_LAPACK(CMatrix A, CMatrix VT)
    int LDVT = MIN(M, N);    // expected to be N in general
    int LWORK = 8*MIN(M, N); // assumes M is larger than N, 5*MIN is the minimum work required
    Vector WORK = Vector_init(LWORK);
-    int INFO = LAPACKE_dgesvd( LAPACK_COL_MAJOR, JOBU, JOBVT,
+   int INFO = LAPACKE_dgesvd( LAPACK_COL_MAJOR, JOBU, JOBVT,
                                M, N, A.id, LDA, SINGV.id, U, LDU,
                                VT.id, LDVT, WORK.id );
    Vector_free(SINGV);
@@ -141,6 +145,10 @@ int DGELS_PLASMA(CMatrix A, Vector RHS_TO_X)
 
 int DGEMM_PLASMA(CMatrix A, CMatrix B, CMatrix C)
 {
+   if(A.rows != C.rows) return INV_INPUT;
+   if(A.cols != B.rows) return INV_INPUT;
+   if(B.cols != C.cols) return INV_INPUT;
+
    plasma_init();
    char TRANS1  = PlasmaNoTrans;
    char TRANS2  = PlasmaNoTrans;
