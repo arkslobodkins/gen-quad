@@ -243,7 +243,6 @@ static bool WideLsqSearch(bool_enum CONSTR_FLAG, quadrature *q_new, history *his
          ++count;
       else if(lsq_out[count].SOL_FLAG == SOL_NOT_FOUND)
       {
-         quadrature_realloc_array(n_cur-1, q_temp[count]);
          if(++failCount >= MAX_FAILS_ELIM)
             break;
       }
@@ -259,7 +258,6 @@ static bool WideLsqSearch(bool_enum CONSTR_FLAG, quadrature *q_new, history *his
       RMatrix_free(Z);
       return SOL_NOT_FOUND;
    }
-
 
    VMin alphas[count];
    for(int i = 0; i < count; ++i)
