@@ -124,7 +124,10 @@ void NodeElimination(const quadrature *q_initial, quadrature *q_final, history *
    {
       SOL_FLAG = WideLsqSearch(OFF, q_new, hist);        // perform regular search first
       if(SOL_FLAG == SOL_NOT_FOUND)                  // perform deeper search
-            SOL_FLAG = TreeSearch(ON, q_new, hist);
+      {
+         if(dim != MAX_DIM) SOL_FLAG = TreeSearch(OFF, q_new, hist);
+         else               SOL_FLAG = TreeSearch(ON, q_new, hist);
+      }
 
       n_cur = q_new->num_nodes;
       efficiency = (double)n_opt/n_cur;
@@ -315,9 +318,7 @@ static bool TreeSearch(bool_enum CONSTR_FLAG, quadrature *q_new, history *hist)
       // level 1 search
       ExtractFromPredictorFull(Z__1, distance__1[i1].index, qstart__1);
       if(V_InfNorm(qstart__1->z) >= QUAD_HUGE) continue;
-
       quadrature_assign(q_new, qnewtemp__1);
-      ExtractFromPredictorFull(Z__1, distance__1[i1].index, qstart__1);
 
       bool searchElimFlag__1 = SOL_NOT_FOUND;
       bool earlyConstraint   = false;

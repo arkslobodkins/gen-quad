@@ -15,6 +15,9 @@
 #include <omp.h>
 #include <mkl_blas.h>
 
+
+static bool comparedouble(double x, double y);
+
 VectorInt VectorInt_init(int n)
 {
    assert(n >= 1);
@@ -53,6 +56,21 @@ Vector Vector_init(int n)
    Vector V = {0};
    V.len = n;
    V.id = (double *)calloc(n, sizeof(double));
+   V.ompId = NULL;
+
+   return V;
+}
+
+
+Vector Vector_uninitialized(int n)
+{
+   assert(n >= 1);
+
+   Vector V = {0};
+   V.len = n;
+   V.id = (double *)malloc(n*sizeof(double));
+   for(int i = 0; i < n; ++i)
+      V.id[i] = -100.;
    V.ompId = NULL;
 
    return V;
@@ -218,10 +236,27 @@ bool V_CheckInf(Vector z)
    return false;
 }
 
+bool V_IsUninitialized(Vector v)
+{
+   for(int i = 0; i < v.len; ++i)
+      if(comparedouble(v.id[i], -100.))
+         return true;
+   return false;
+}
+
 void double_dcopy(int n, double *x, double *y)
 {
    int incx = 1, incy = 1;
    dcopy(&n, x, &incx, y, &incy);
+}
+
+static bool comparedouble(double x, double y)
+{
+   double tol = pow(10, -14);
+   if( (x < y + tol) && (x > y - tol) )
+      return true;
+   else
+      return false;
 }
 
 

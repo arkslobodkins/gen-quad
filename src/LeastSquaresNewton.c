@@ -43,6 +43,8 @@ LSQ_out LeastSquaresNewton(const bool_enum CONSTR_OPT, quadrature *q_orig)
       PRINT_ERR(STR_QUAD_NOT_FULL_INIT, __LINE__, __FILE__);
       return lsq_out;
    }
+   if(V_IsUninitialized(q_orig->z))
+      PRINT_ERR(STR_INV_INPUT, __LINE__, __FILE__);
    if(V_InfNorm(q_orig->z) >= QUAD_HUGE) {
       PRINT_ERR(STR_QUAD_HUGE_ERR, __LINE__, __FILE__);
       return lsq_out;

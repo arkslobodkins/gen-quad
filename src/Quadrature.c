@@ -504,6 +504,7 @@ bool QuadInDomainElemEps(const quadrature *q, int elem)
    Vector b = q->constr->b;
    Vector vnode = DToVec(q->dim, qnode(q, elem));
    StaticVectorInit(M.rows, lhs);
+
    RMatVec(M, vnode, lhs);
    for(int r = 0; r < M.rows; ++r)
       if(lhs.id[r] > b.id[r] + eps)

@@ -70,6 +70,7 @@ void VectorInt_Assign(VectorInt v1, VectorInt v2);
 void VectorInt_free(VectorInt V);
 
 Vector Vector_init(int n);
+Vector Vector_uninitialized(int n);
 void Vector_realloc(int n, Vector *V);
 void Vector_Assign(Vector v1, Vector v2);
 void Vector_free(Vector V);
@@ -93,6 +94,7 @@ double V_TwoNorm(Vector z);
 double V_InfNorm(Vector z);
 bool V_CheckNan(Vector z);
 bool V_CheckInf(Vector z);
+bool V_IsUninitialized(Vector v);
 void double_dcopy(int n, double *x, double *y);
 
 #ifdef __cplusplus
