@@ -481,8 +481,8 @@ bool QuadInDomainElem(const quadrature *q, int elem)
    Vector b = q->constr->b;
    Vector vnode = DToVec(q->dim, qnode(q, elem));
    StaticVectorInit(M.rows, lhs);
-   RMatVec(M, vnode, lhs);
 
+   RMatVec(M, vnode, lhs);
    for(int r = 0; r < M.rows; ++r)
       if(lhs.id[r] > b.id[r])
          return false;
@@ -629,17 +629,15 @@ bool QuadOnTheBoundary(const quadrature *q, int elem)
       PRINT_ERR(STR_QUAD_NOT_FULL_INIT, __LINE__, __FILE__);
       return false;
    }
-   int node_loc = elem*q->dim;
+
    Vector b = q->constr->b;
    RMatrix A = q->constr->M;
+   Vector vnode = DToVec(q->dim, qnode(q, elem));
    double tol = POW_DOUBLE(10.0, -12);
 
    for(int i = 0; i < A.rows; ++i)
    {
-      double b_elem = 0.0;
-      for(int d = 0; d < A.cols; ++d)
-         b_elem += A.rid[i][d] * q->x[node_loc+d];
-
+      double b_elem = RDotRow(i, A, vnode);
       if( fabs(b_elem - b.id[i]) <= tol )
          return true;
    }
