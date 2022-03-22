@@ -82,6 +82,15 @@ void RMatVec(RMatrix M, Vector x, Vector y)
          y.id[i] += R_ELEM_ID(M, i, j) * x.id[j];
 }
 
+double RDotRow(int row, RMatrix M, Vector x)
+{
+   assert(M.cols == x.len);
+   double dot = 0.;
+   for(int i = 0; i < M.cols; ++i)
+      dot += M.rid[row][i] * x.id[i];
+   return dot;
+}
+
 void RMatrixPrint(RMatrix M)
 {
    for(int i = 0; i < M.rows; ++i)

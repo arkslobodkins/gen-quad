@@ -259,7 +259,6 @@ void quadrature_shrink_array(int n, quadrature *q)
    assert(q->num_nodes >= n);
    if(q->num_nodes == n) return;
 
-   q->num_nodes = n;
    int dim = q->dim;
    double *x = (double *)malloc(SIZE_DOUBLE(n*dim));
    double *w = (double *)malloc(SIZE_DOUBLE(n));
@@ -268,6 +267,7 @@ void quadrature_shrink_array(int n, quadrature *q)
    memcpy(x, q->x, SIZE_DOUBLE(n*dim));
 
    Vector_realloc(n*(dim+1), &q->z);
+   q->num_nodes = n;
    q->w = &q->z.id[0];
    q->x = &q->z.id[n];
 
@@ -385,7 +385,7 @@ void quadrature_get_elem(const quadrature *q, int i, Vector v)
    assert(v.len == q->dim+1);
    int dim = q->dim;
    memcpy(&v.id[0], &q->w[i], SIZE_DOUBLE(1));
-   memcpy(&v.id[1], &q->x[i*dim], SIZE_DOUBLE(dim));
+   memcpy(&v.id[1], qnode(q, i), SIZE_DOUBLE(dim));
 }
 
 
@@ -477,18 +477,14 @@ bool QuadInDomainElem(const quadrature *q, int elem)
       return false;
    }
 
-   int dim = q->dim;
    RMatrix M = q->constr->M;
    Vector b = q->constr->b;
-   const double *X_ixdim = &q->x[elem*dim];
-   double lhs[M.rows]; memset(lhs, 0, M.rows*sizeof(double));
+   Vector vnode = DToVec(q->dim, qnode(q, elem));
+   StaticVectorInit(M.rows, lhs)
+   RMatVec(M, vnode, lhs);
 
    for(int r = 0; r < M.rows; ++r)
-      for(int c = 0; c < M.cols; ++c)
-         lhs[r] += M.rid[r][c] * X_ixdim[c];
-
-   for(int r = 0; r < M.rows; ++r)
-      if(lhs[r] > b.id[r])
+      if(lhs.id[r] > b.id[r])
          return false;
 
    return true;
@@ -504,18 +500,13 @@ bool QuadInDomainElemEps(const quadrature *q, int elem)
    }
 
    double eps = POW_DOUBLE(10, -12);
-   int dim = q->dim;
    RMatrix M = q->constr->M;
    Vector b = q->constr->b;
-   const double *X_ixdim = &q->x[elem*dim];
-   double lhs[M.rows]; memset(lhs, 0, M.rows*sizeof(double));
-
+   Vector vnode = DToVec(q->dim, qnode(q, elem));
+   StaticVectorInit(M.rows, lhs);
+   RMatVec(M, vnode, lhs);
    for(int r = 0; r < M.rows; ++r)
-      for(int c = 0; c < M.cols; ++c)
-         lhs[r] += M.rid[r][c] * X_ixdim[c];
-
-   for(int r = 0; r < M.rows; ++r)
-      if(lhs[r] > b.id[r] + eps)
+      if(lhs.id[r] > b.id[r] + eps)
          return false;
 
    return true;
@@ -559,16 +550,13 @@ bool QuadInDomainEqnElemEps(const quadrature *q, int elem, int eqn)
       PRINT_ERR(STR_QUAD_NOT_FULL_INIT, __LINE__, __FILE__);
       return false;
    }
-   int dim = q->dim;
    double eps = POW_DOUBLE(10, -12);
    RMatrix M = q->constr->M;
    Vector b = q->constr->b;
    assert(eqn >= 0 && eqn < M.rows);
 
-   const double *xi = &q->x[elem*dim];
-   double lhs = 0;
-   for(int c = 0; c < M.cols; ++c)
-      lhs += M.rid[eqn][c] * xi[c];
+   double *node = qnode(q, elem);
+   double lhs   = DDot(M.cols, M.rid[eqn], node);
    if(lhs > b.id[eqn] + eps) return false;
    return true;
 }
@@ -665,16 +653,11 @@ bool QuadEqnOnTheBoundary(const quadrature *q, int elem, int eqn)
       PRINT_ERR(STR_QUAD_NOT_FULL_INIT, __LINE__, __FILE__);
       return false;
    }
-   int dim = q->dim;
-   int node_index = elem*dim;
+   double *node = qnode(q, elem);
    Vector b = q->constr->b;
    RMatrix A = q->constr->M;
-   int cols = A.cols;
 
-   double b_elem = 0.0;
-   for(int d = 0; d < cols; ++d)
-      b_elem += A.rid[eqn][d] * q->x[node_index+d];
-
+   double b_elem = DDot(A.cols, A.rid[eqn], node);
    if(fabs(b_elem - b.id[eqn]) <= BOUND_TOL)
       return true;
 
@@ -689,16 +672,14 @@ double QuadDistFromTheBoundaryElem(const quadrature *q, int elem)
       PRINT_ERR(STR_QUAD_NOT_FULL_INIT, __LINE__, __FILE__);
       return -1.0;
    }
-   int node_loc = elem*q->dim;
+   double *node = qnode(q, elem);
    Vector b = q->constr->b;
    RMatrix A = q->constr->M;
 
    double minDist = 0.0;
    for(int i = 0; i < A.rows; ++i)
    {
-      double b_elem = 0.0;
-      for(int d = 0; d < A.cols; ++d)
-         b_elem += A.rid[i][d] * q->x[node_loc+d];
+      double b_elem = DDot(A.cols, A.rid[i], node);
       if(i == 0) minDist = fabs( fabs(b_elem) - b.id[0] );
       else       minDist = MIN( fabs( fabs(b_elem) - b.id[i] ), minDist );
    }
@@ -751,14 +732,11 @@ static inline double QuadDistAlphaEqn(const quadrature *q, int elem, int eqn)
    int dim = q->dim;
    RMatrix C = q->constr->M;
    Vector b = q->constr->b;
-   Tensor1D w = DoubleToTensor1D(q->num_nodes, q->w);
-   Tensor2D x = DoubleToTensor2D(q->num_nodes, dim, q->x);
+   double weight = qweight(q, elem);
+   double *node = qnode(q, elem);
 
-   double rhs = 0.0;
-   for(int j = 0; j < dim; ++j)
-      rhs += C.rid[eqn][j] * TID2(x, elem, j);
-
-   double alpha = (b.id[eqn] - rhs) / TID1(w, elem);
+   double rhs   = DDot(dim, C.rid[eqn], node);
+   double alpha = (b.id[eqn] - rhs) / weight;
    return alpha;
 }
 
@@ -775,6 +753,7 @@ double QuadDistAlphaElem(const quadrature *q, int elem)
 
 VMin QuadMinAlpha(const quadrature *q)
 {
+   if(QuadInDomain(q) == false) PRINT_ERR(STR_INV_INPUT, __LINE__, __FILE__);
    int numNodes = q->num_nodes;
    Vector minAlpha = Vector_init(numNodes);
 
@@ -795,12 +774,10 @@ bool QuadIsEqual(const quadrature *a, const quadrature *b)
    if(a->num_nodes != b->num_nodes) return false;
    if(a->D != b->D)                 return false;
 
-   int dim = a->dim;
-   int numNodes = a->num_nodes;
    for(int i = 0; i < a->num_dims; ++i)
       if(a->dims[i] != b->dims[i])  return false;
 
-   for(int i = 0; i < numNodes*(dim+1); ++i)
+   for(int i = 0; i < a->z.len; ++i)
          if(!CompareDouble(a->z.id[i], b->z.id[i]))
             return false;
    return true;
@@ -814,10 +791,6 @@ double QuadTestIntegral(const quadrature *q, BASIS_TYPE btype)
       PRINT_ERR(STR_QUAD_NOT_FULL_INIT, __LINE__, __FILE__);
       return -1.0;
    }
-   int k = q->num_nodes;
-   int dim = q->dim;
-   double *x = q->x;
-   double *w = q->w;
    int numFuncs = q->basis->numFuncs;
 
    Vector IQuad   = Vector_init(numFuncs);
@@ -837,11 +810,11 @@ double QuadTestIntegral(const quadrature *q, BASIS_TYPE btype)
    }
    Vector functions = q->basis->functions;
 
-   for(int i = 0; i < k; ++i)
+   for(int i = 0; i < q->num_nodes; ++i)
    {
-      basisPtr(q->basis, &x[dim*i], functions);
+      basisPtr(q->basis, qnode(q, i), functions);
       for(int j = 0; j < numFuncs; ++j)
-         IQuad.id[j] += functions.id[j] * w[i];
+         IQuad.id[j] += functions.id[j] * qweight(q, i);
    }
 
    #pragma omp simd
@@ -861,17 +834,13 @@ double QuadTestIntegralExp(const quadrature *q)
       PRINT_ERR(STR_QUAD_NOT_FULL_INIT, __LINE__, __FILE__);
       return -1.0;
    }
-   int k = q->num_nodes;
-   int dim = q->dim;
-   double *x = q->x;
-   double *w = q->w;
-   double IQuad = 0.0;
 
    double IExact = q->expIntegralExact(q);
-   for(int i = 0; i < k; ++i)
-      IQuad += expNDim(dim, &x[dim*i]) * w[i];
+   double IQuad = 0.0;
+   for(int i = 0; i < q->num_nodes; ++i)
+      IQuad += expNDim(q->dim, qnode(q, i)) * qweight(q, i);
 
-   double res = IQuad > IExact ? IQuad - IExact : IExact - IQuad;
+   double res = fabs(IQuad - IExact);
    return res;
 }
 

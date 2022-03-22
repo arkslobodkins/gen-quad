@@ -177,6 +177,10 @@ const char *ERR_STRING(int return_val)
       break;
    case CONSTR_ERROR:
       return STR_CONSTR_ERROR;
+   case BOUND_ERROR:
+      return STR_BOUND_ERROR;
+   case LINALG_ERROR:
+      return STR_LINALG_ERROR;
    default:
       return "OTHER";
    }

@@ -7,8 +7,8 @@
 extern "C" {
 #endif
 
-#define R_ELEM_ID(A, i, j) ( (A.rid)[i][j] )
-#define C_ELEM_ID(A, i, j) ( (A.cid)[j][i] )
+#define R_ELEM_ID(A, i, j) ( A.id[(i)*(A.cols)+(j)] )
+#define C_ELEM_ID(A, i, j) ( A.id[(j)*(A.rows)+(i)] )
 
 typedef enum { move, copy } trans_type;
 
@@ -36,6 +36,7 @@ void RMatrix_realloc(int nRows, int nCols, RMatrix *M);
 void RMatrix_free(RMatrix M);
 void RMatrix_LoadToRow(int row, RMatrix M, Vector v);
 void RMatVec(RMatrix M, Vector x, Vector y);
+double RDotRow(int row, RMatrix M, Vector x);
 void RMatrixPrint(RMatrix M);
 
 CMatrix CMatrix_init(int nRows, int nCols);

@@ -42,6 +42,18 @@ struct quadrature
    FreePtr free_ptr;
 };
 
+static inline double qweight(const quadrature *q, int i)
+{
+   assert(i >= 0 && i <= q->num_nodes-1);
+   return q->w[i];
+}
+
+static inline double* qnode(const quadrature *q, int i)
+{
+   assert(i >= 0 && i <= q->num_nodes-1);
+   return &q->x[q->dim*i];
+}
+
 
 quadrature* quadrature_init_basic(int n, int dim, int *dims, int deg, DOMAIN_TYPE D);
 quadrature* quadrature_init_full(int n, int dim, int *dims, int deg, DOMAIN_TYPE D);

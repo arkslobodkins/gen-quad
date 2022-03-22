@@ -2,6 +2,8 @@
 #define VECTOR_H
 
 #include <stdbool.h>
+#include <stdlib.h>
+#include <assert.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -26,11 +28,41 @@ typedef struct
    double min_value;
 } VMin;
 
-#define StaticVectorInit(vecName, __len)  \
-   Vector vecName;                        \
-   double __ ##vecName[__len];            \
-   vecName.len = __len;                   \
+#define StaticVectorInit(size, vecName)           \
+   Vector vecName;                                \
+   double __##vecName[size];                      \
+   memset(__##vecName, 0, (size)*sizeof(double)); \
+   vecName.len = size;                            \
    vecName.id = __##vecName;
+
+static inline double get_elem(Vector v, int i)
+{
+   assert(i >= 0 && i <= v.len-1);
+   return v.id[i];
+}
+
+static inline void set_elem(Vector v, int i, double x)
+{
+   assert(i >= 0 && i <= v.len-1);
+   v.id[i] = x;
+}
+
+static inline double DDot(int len, double *a, double *b)
+{
+   double d = 0.0;
+   for(int i = 0; i < len; ++i)
+      d += a[i] * b[i];
+   return d;
+}
+
+static inline Vector DToVec(int len, double *x)
+{
+   Vector v;
+   v.ompId = NULL;
+   v.len = len;
+   v.id = x;
+   return v;
+}
 
 VectorInt VectorInt_init(int n);
 void VectorInt_realloc(int n, VectorInt *V);

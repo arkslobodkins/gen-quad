@@ -108,6 +108,8 @@ typedef struct
 #define DIVERGE_ERR    -11
 #define LARGE_RES      -12
 #define CONSTR_ERROR   -13
+#define BOUND_ERROR    -14
+#define LINALG_ERROR   -15
 
 #define STR_GQ_SUCCESS "GQ_SUCCESS"
 #define STR_NULL_VAL "NULL_VAL"
@@ -123,6 +125,8 @@ typedef struct
 #define STR_DIVERGE_ERR "DIVERGE_ERR"
 #define STR_LARGE_RES "LARGE_RES"
 #define STR_CONSTR_ERROR "CONSTR_ERROR"
+#define STR_BOUND_ERROR "BOUND_ERROR"
+#define STR_LINALG_ERROR "STR_LINALG_ERROR"
 
 #define STR_QUAD_NOT_FULL_INIT "supplied quadrature object was not fully initialized"
 

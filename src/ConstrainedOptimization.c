@@ -21,8 +21,8 @@ int ConstrainedProjection(const quadrature *q_prev, quadrature *q_next)
    Tensor2D x_next_T = DoubleToTensor2D(k, dim, q_next->x);
    Tensor2D x_prev_T = DoubleToTensor2D(k, dim, q_prev->x);
 
-   StaticVectorInit(node_change, dim);
-   StaticVectorInit(node_projected, dim);
+   StaticVectorInit(dim, node_change);
+   StaticVectorInit(dim, node_projected);
    Tensor1D node_change_T = VectorToTensor1D(node_change);
    Tensor1D node_projected_T = VectorToTensor1D(node_projected);
 
@@ -137,8 +137,8 @@ int ShortenVector(const quadrature *q_prev, const quadrature *q_next, ConstrVect
       cNodeDataArr[i] = ConstrNodeDataInit();
 
    // allocate vectors on the stack
-   StaticVectorInit(z_prev_node, dim+1);
-   StaticVectorInit(z_next_node, dim+1);
+   StaticVectorInit(dim+1, z_prev_node);
+   StaticVectorInit(dim+1, z_next_node);
 
    int count = 0;
    for(int i = 0; i < k; ++i)
@@ -194,11 +194,11 @@ ConstrNodeData ShortenNode(const RMatrix A, const Vector b_bound, const Vector z
    int ncols = A.cols;
 
    // Allocate vectors on stack
-   StaticVectorInit(b_old, nrows);
-   StaticVectorInit(b_new, nrows);
-   StaticVectorInit(b_diff, nrows);
-   StaticVectorInit(t, nrows);
-   StaticVectorInit(dz, ncols);
+   StaticVectorInit(nrows, b_old);
+   StaticVectorInit(nrows, b_new);
+   StaticVectorInit(nrows, b_diff);
+   StaticVectorInit(nrows, t);
+   StaticVectorInit(ncols, dz);
 
    int outEqn[nrows];
    memset(outEqn, -1, nrows*sizeof(int));
@@ -251,7 +251,7 @@ int ProjectNode(const CMatrix eqn_matrix, const Vector dx, Vector x_projected)
    int M = eqn_matrix.rows;
    int N = eqn_matrix.cols;
 
-   StaticVectorInit(TAU, MIN(M, N));
+   StaticVectorInit(MIN(M, N), TAU);
 
    int INFO = DGEQR2_LAPACK(eqn_matrix, TAU);
    if(INFO != 0) return CONSTR_FAIL;

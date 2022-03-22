@@ -39,6 +39,14 @@ LSQ_out LeastSquaresNewton(const bool_enum CONSTR_OPT, quadrature *q_orig)
 {
    assert(q_orig->num_nodes >= 1);
    LSQ_out lsq_out = {0, SOL_NOT_FOUND};
+   if(q_orig->isFullyInitialized != GQ_TRUE) {
+      PRINT_ERR(STR_QUAD_NOT_FULL_INIT, __LINE__, __FILE__);
+      return lsq_out;
+   }
+   if(V_InfNorm(q_orig->z) >= QUAD_HUGE) {
+      PRINT_ERR(STR_QUAD_HUGE_ERR, __LINE__, __FILE__);
+      return lsq_out;
+   }
 
    int dim       = q_orig->dim;
    int num_nodes = q_orig->num_nodes;
@@ -84,7 +92,7 @@ LSQ_out LeastSquaresNewton(const bool_enum CONSTR_OPT, quadrature *q_orig)
    // return if input is a satisfactory quadrature
    getFunc_ptr(q_prev, RHS);
    double eNorm = V_InfNorm(RHS);
-   if( (eNorm < q_tol) && (QuadInConstraint(q_prev) == true) )
+   if( (eNorm <= q_tol) && (QuadInConstraint(q_next) == true) )
    {
       lsq_out.SOL_FLAG = SOL_FOUND;
       lsq_out.its = 0;
@@ -119,23 +127,24 @@ LSQ_out LeastSquaresNewton(const bool_enum CONSTR_OPT, quadrature *q_orig)
       }
 
       getFunctionAndJacobian_ptr(q_prev, RHS, JACOBIAN); // computes RHS at essentially zero cost
-      for(int i = 0; i < LEAST_SQ_SOL.len; ++i) LEAST_SQ_SOL.id[i] = 0.0;
-      for(int i = 0; i < RHS.len; ++i)          LEAST_SQ_SOL.id[i] = RHS.id[i];
+      for(int i = 0; i < LEAST_SQ_SOL.len; ++i) set_elem( LEAST_SQ_SOL, i, 0.0 );
+      for(int i = 0; i < RHS.len; ++i)          set_elem( LEAST_SQ_SOL, i, get_elem(RHS, i) );
 
       double start_time = get_cur_time();
       int INFO = leastsquares_ptr(JACOBIAN, LEAST_SQ_SOL);
-      if(INFO != 0)
-         PRINT_ERR(STR_LAPACK_ERR, __LINE__, __FILE__);
+      char errString[60] = STR_LINALG_ERROR;
+      strcat(errString, ", may happen");
+      if(INFO != 0) PRINT_WARN(errString, __LINE__, __FILE__);
       LSQ_TIME += get_cur_time() - start_time;
 
       for(int i = 0; i < ncols; ++i)
-         z_next.id[i] = z_prev.id[i] - LEAST_SQ_SOL.id[i];
+         set_elem( z_next, i, get_elem(z_prev, i) - get_elem(LEAST_SQ_SOL, i) );
 
       if(CONSTR_OPT == OFF && lsq_out.its < 5) {
          double alpha = ComputePenalty(q_prev, q_next);
          if(alpha < 1.0)
             for(int i = 0; i < ncols; ++i)
-               z_next.id[i] = z_prev.id[i] - alpha * LEAST_SQ_SOL.id[i];
+               set_elem( z_next, i, get_elem(z_prev, i) - alpha * get_elem(LEAST_SQ_SOL, i) );
       }
 
       errorNormPrev = errorNorm;
@@ -147,7 +156,7 @@ LSQ_out LeastSquaresNewton(const bool_enum CONSTR_OPT, quadrature *q_orig)
          goto FREERETURN;
       }
 
-      if(!QuadInConstraint(q_next) && lsq_out.its >= 7) {
+      if(!QuadInConstraint(q_next) && lsq_out.its >= 10) {
          lsq_out.SOL_FLAG = SOL_NOT_FOUND;
          goto FREERETURN;
       }
@@ -184,9 +193,9 @@ LSQ_out LeastSquaresNewton(const bool_enum CONSTR_OPT, quadrature *q_orig)
    }
 
 
-   if( (lsq_out.its < maxiter)
-    && (isnan(errorNormUpdate) == 0)
-    && (isinf(errorNormUpdate) == 0)
+   if( (lsq_out.its <= maxiter)
+    && (isnan(errorNormUpdate) == false)
+    && (isinf(errorNormUpdate) == false)
     && (errorNormUpdate <= q_tol)
     && QuadInConstraint(q_next) )
    {
@@ -236,15 +245,15 @@ static errInfo CheckForStop(int INFO, double errorNorm, double errorNormPrev, co
    info.errors[2] = GQ_SUCCESS;
    info.errors[3] = GQ_SUCCESS;
 
-   if(INFO != 0) {                       // fail if LAPACK routine has failed
+   if(INFO != 0) {                       // fail if LAPACK/PLASMA routine did not return success
       info.succeeded = false;
       info.errors[0] = LAPACK_ERR;
    }
-   if(errorNorm > errorNormPrev+4) {     // fail if method is not converging
+   if(errorNorm > 10*errorNormPrev) {    // fail if method is not converging
       info.succeeded = false;
       info.errors[1] =  NOT_CONVERGE;
    }
-   if(V_InfNorm(least_sq_sol) > 100) {   // fail if solution is exploding
+   if(V_InfNorm(least_sq_sol) > 10) {    // fail if solution is exploding
       info.succeeded = false;
       info.errors[2] = DIVERGE_ERR;
    }
@@ -252,10 +261,12 @@ static errInfo CheckForStop(int INFO, double errorNorm, double errorNormPrev, co
    if(V_CheckInf(least_sq_sol)) {
       info.succeeded = false;
       info.errors[3] = INF_VAL;
+      PRINT_ERR(STR_INF_VAL, __LINE__, __FILE__);
    }
    if(V_CheckNan(least_sq_sol)) {
       info.succeeded = false;
       info.errors[3] = NAN_VAL;
+      PRINT_ERR(STR_NAN_VAL, __LINE__, __FILE__);
    }
 
    return info;
