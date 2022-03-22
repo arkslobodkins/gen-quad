@@ -182,7 +182,6 @@ LSQ_out LeastSquaresNewton(const bool_enum CONSTR_OPT, quadrature *q_orig)
             lsq_out.SOL_FLAG = SOL_NOT_FOUND;
             goto FREERETURN;
          }
-
       }
 
       getFunc_ptr(q_next, RHS);
