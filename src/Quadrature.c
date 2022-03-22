@@ -480,7 +480,7 @@ bool QuadInDomainElem(const quadrature *q, int elem)
    RMatrix M = q->constr->M;
    Vector b = q->constr->b;
    Vector vnode = DToVec(q->dim, qnode(q, elem));
-   StaticVectorInit(M.rows, lhs)
+   StaticVectorInit(M.rows, lhs);
    RMatVec(M, vnode, lhs);
 
    for(int r = 0; r < M.rows; ++r)
