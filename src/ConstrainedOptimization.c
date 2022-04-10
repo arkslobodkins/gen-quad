@@ -1,3 +1,9 @@
+/* Arkadijs Slobodkins
+ * SMU Mathematics
+ * Copyright 2022
+ */
+
+
 #include "ConstrainedOptimization.h"
 #include "Quadrature.h"
 #include "Constraints.h"
@@ -203,7 +209,7 @@ ConstrNodeData ShortenNode(const RMatrix A, const Vector b_bound, const Vector z
    int outEqn[nrows];
    memset(outEqn, -1, nrows*sizeof(int));
 
-   VectorAddScale(1.0, z_new, -1.0, z_old, dz);
+   VAddScale(1.0, z_new, -1.0, z_old, dz);
    RMatVec(A, dz, b_diff);
    RMatVec(A, z_new, b_new);
    RMatVec(A, z_old, b_old);

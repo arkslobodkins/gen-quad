@@ -1,6 +1,6 @@
 /* Arkadijs Slobodkins
  * SMU Mathematics
- * August 2021
+ * Copyright 2022
  */
 
 
@@ -51,29 +51,28 @@ LSQ_out LeastSquaresNewton(const bool_enum CONSTR_OPT, quadrature *q_orig)
    }
 
    int dim       = q_orig->dim;
-   int num_nodes = q_orig->num_nodes;
    int numFuncs  = q_orig->basis->numFuncs;
+   int num_nodes = q_orig->num_nodes;
 
    int maxiter  = 25;
    double q_tol = QUAD_TOL; // 10^(-14);
 
    int nrows    = numFuncs;
    int ncols    = (dim+1)*num_nodes;
-   int LEAD_DIM = MAX(nrows, ncols);
    CMatrix JACOBIAN    = CMatrix_init(nrows, ncols);
-   Vector LEAST_SQ_SOL = Vector_init(LEAD_DIM);
+   Vector LEAST_SQ_SOL = Vector_init(ncols);
    Vector RHS          = Vector_init(nrows);
 
    quadrature *q_prev = quadrature_make_full_copy(q_orig);
    quadrature *q_next = quadrature_make_full_copy(q_orig);
-   Vector z_prev = q_prev->z;
-   Vector z_next = q_next->z;
+   Vector *z_prev = &q_prev->z;
+   Vector *z_next = &q_next->z;
 
    int elim_weights = 0;
    double errorNorm = 1.0, errorNormPrev = 1.0, errorNormUpdate = 1.0;
    ConstrVectData cVectData = ConstrVectDataInit();
 
-   int (*leastsquares_ptr)(CMatrix A, Vector RHS_TO_X);
+   int (*leastsquares_ptr)(CMatrix A, Vector b, Vector x);
    void (*getFunc_ptr)(quadrature *q, Vector f);
    void (*getFunctionAndJacobian_ptr)(quadrature *q, Vector f, CMatrix JACOBIAN);
 #ifdef _OPENMP
@@ -118,36 +117,24 @@ LSQ_out LeastSquaresNewton(const bool_enum CONSTR_OPT, quadrature *q_orig)
          else
          {
             ncols = (dim+1) * --num_nodes;
-            LEAD_DIM = MAX(nrows, ncols);
             CMatrix_realloc(nrows, ncols, &JACOBIAN);
-            Vector_realloc(LEAD_DIM, &LEAST_SQ_SOL);
+            Vector_realloc(ncols, &LEAST_SQ_SOL);
             quadrature_remove_element(cVectData.boundaryNodeId, q_prev);
             quadrature_remove_element(cVectData.boundaryNodeId, q_next);
-            z_prev = q_prev->z;
-            z_next = q_next->z;
          }
       }
 
-      getFunctionAndJacobian_ptr(q_prev, RHS, JACOBIAN); // computes RHS at essentially zero cost
-      for(int i = 0; i < LEAST_SQ_SOL.len; ++i) set_elem( LEAST_SQ_SOL, i, 0.0 );
-      for(int i = 0; i < RHS.len; ++i)          set_elem( LEAST_SQ_SOL, i, get_elem(RHS, i) );
+      getFunctionAndJacobian_ptr(q_prev, RHS, JACOBIAN);
 
       double start_time = get_cur_time();
-      int INFO = leastsquares_ptr(JACOBIAN, LEAST_SQ_SOL);
+      int INFO = leastsquares_ptr(JACOBIAN, RHS, LEAST_SQ_SOL);
+      LSQ_TIME += get_cur_time() - start_time;
+
       char errString[60] = STR_LINALG_ERROR;
       strcat(errString, ", may happen");
       if(INFO != 0) PRINT_WARN(errString, __LINE__, __FILE__);
-      LSQ_TIME += get_cur_time() - start_time;
 
-      for(int i = 0; i < ncols; ++i)
-         set_elem( z_next, i, get_elem(z_prev, i) - get_elem(LEAST_SQ_SOL, i) );
-
-      if(CONSTR_OPT == OFF && lsq_out.its < 5) {
-         double alpha = ComputePenalty(q_prev, q_next);
-         if(alpha < 1.0)
-            for(int i = 0; i < ncols; ++i)
-               set_elem( z_next, i, get_elem(z_prev, i) - alpha * get_elem(LEAST_SQ_SOL, i) );
-      }
+      VAddScale(1.0, *z_prev, -1.0, LEAST_SQ_SOL, *z_next);
 
       errorNormPrev = errorNorm;
       getFunc_ptr(q_next, RHS);
@@ -161,6 +148,12 @@ LSQ_out LeastSquaresNewton(const bool_enum CONSTR_OPT, quadrature *q_orig)
       if(!QuadInConstraint(q_next) && lsq_out.its >= 10) {
          lsq_out.SOL_FLAG = SOL_NOT_FOUND;
          goto FREERETURN;
+      }
+
+      if(CONSTR_OPT == OFF && lsq_out.its < 5) {
+         double alpha = ComputePenalty(q_prev, q_next);
+         if(alpha < 1.0)
+            VAddScale(1.0, *z_prev, -1.0*alpha, LEAST_SQ_SOL, *z_next);
       }
 
       if(CONSTR_OPT == ON)
@@ -189,7 +182,7 @@ LSQ_out LeastSquaresNewton(const bool_enum CONSTR_OPT, quadrature *q_orig)
       if(CONSTR_OPT == ON) errorNormUpdate = V_InfNorm(RHS);
       else errorNormUpdate = errorNorm;
 
-      quadrature_assign(q_next, q_prev);
+      Vector_Assign(*z_next, *z_prev);
       ++lsq_out.its;
    }
 
@@ -221,8 +214,6 @@ FREERETURN:
    return lsq_out;
 }// end LeastSquaresNewton
 
-#undef MAX_ELIM_WEIGHTS
-
 
 static double ComputePenalty(const quadrature *q_prev, const quadrature *q_next)
 {
@@ -235,6 +226,224 @@ static double ComputePenalty(const quadrature *q_prev, const quadrature *q_next)
    if(distNext > distPrev) return 1.0;
    else                    return distNext / distPrev;
 }
+
+
+LSQ_out LevenbergMarquardt(const bool_enum CONSTR_OPT, quadrature *q_orig)
+{
+   assert(q_orig->num_nodes >= 1);
+   LSQ_out lsq_out = {0, SOL_NOT_FOUND};
+   if(q_orig->isFullyInitialized != GQ_TRUE) {
+      PRINT_ERR(STR_QUAD_NOT_FULL_INIT, __LINE__, __FILE__);
+      return lsq_out;
+   }
+   if(V_IsUninitialized(q_orig->z))
+      PRINT_ERR(STR_INV_INPUT, __LINE__, __FILE__);
+   if(V_InfNorm(q_orig->z) >= QUAD_HUGE) {
+      PRINT_ERR(STR_QUAD_HUGE_ERR, __LINE__, __FILE__);
+      return lsq_out;
+   }
+
+   const int dim       = q_orig->dim;
+   const int num_nodes = q_orig->num_nodes;
+   const int numFuncs  = q_orig->basis->numFuncs;
+
+   const int maxiter  = 60;
+   const double q_tol = QUAD_TOL; // 10^(-14);
+
+   const int nrows    = numFuncs;
+   const int ncols    = (dim+1)*num_nodes;
+
+   CMatrix JACOBIAN     = CMatrix_init(nrows, ncols);
+   CMatrix JACOBIAN_TR  = CMatrix_init(ncols, nrows);
+   CMatrix JT_J_lmd     = CMatrix_init(ncols, ncols);
+
+   Vector FPrev         = Vector_init(nrows);
+   Vector FCur          = Vector_init(nrows);
+   Vector FNext         = Vector_init(nrows);
+   Vector LevMarRHS     = Vector_init(ncols);
+   Vector dz            = Vector_init(ncols);
+
+   quadrature *q_prev = quadrature_make_full_copy(q_orig);
+   quadrature *q_cur  = quadrature_make_full_copy(q_orig);
+   quadrature *q_next = quadrature_make_full_copy(q_orig);
+   Vector *z_prev = &q_prev->z;
+   Vector *z_cur  = &q_cur->z;
+   Vector *z_next = &q_next->z;
+
+   int (*leastsquares_ptr)(CMatrix A, Vector b, Vector x);
+   void (*getFunc_ptr)(quadrature *q, Vector f);
+   void (*getFunctionAndJacobian_ptr)(quadrature *q, Vector f, CMatrix JACOBIAN);
+
+   bool is_alloc_omp = false;
+#ifdef _OPENMP
+   if(OMP_CONDITION(q_orig->deg, dim))
+   {
+      QuadAllocBasisOmp(q_prev, omp_get_max_threads());
+      QuadAllocBasisOmp(q_cur, omp_get_max_threads());
+      QuadAllocBasisOmp(q_next, omp_get_max_threads());
+      AllocVectorOmpData(&FPrev);
+      AllocVectorOmpData(&FCur);
+      AllocVectorOmpData(&FNext);
+      is_alloc_omp = true;
+
+      leastsquares_ptr           = DGELS_PLASMA;
+      getFunc_ptr                = &GetFunctionOmp;
+      getFunctionAndJacobian_ptr = &GetFunctionAndJacobianOmp;
+
+   }
+   else
+   {
+      leastsquares_ptr           = DGELS_LAPACK;
+      getFunc_ptr                = &GetFunction;
+      getFunctionAndJacobian_ptr = &GetFunctionAndJacobian;
+   }
+#else
+   leastsquares_ptr = &DGELS_LAPACK;
+   getFunc_ptr      = &GetFunction;
+   getFunctionAndJacobian_ptr = &GetFunctionAndJacobian;
+#endif
+
+   // return if input is a satisfactory quadrature
+   getFunc_ptr(q_prev, FPrev);
+   double errorNormUpdate = V_InfNorm(FPrev);
+   if( (errorNormUpdate <= q_tol) && (QuadInConstraint(q_prev) == true) )
+   {
+      lsq_out.SOL_FLAG = SOL_FOUND;
+      lsq_out.its = 0;
+      goto FREERETURN;
+   }
+
+   double alpha_lvmr = 0.;
+   if(CONSTR_OPT == OFF)     alpha_lvmr = 0.0001;                 // more local initial guess, consider other values
+   else if(CONSTR_OPT == ON) alpha_lvmr = 0.01;                   // more global search when solution is harder to find, consider other values
+
+   while( (lsq_out.its < maxiter) && (errorNormUpdate > q_tol) )  // while infinity norm > q_tol
+   {
+      const double alpha_lvmr_down = alpha_lvmr / 3.0;            // consider dividing by 5
+
+      getFunctionAndJacobian_ptr(q_prev, FPrev, JACOBIAN);                                           // J(xp)                            m x n
+      CMatrix_Assign_Transpose(JACOBIAN, JACOBIAN_TR);                                               // JT(xp)                           n x m
+      DGEMM_LAPACK(JACOBIAN_TR, JACOBIAN, JT_J_lmd);                                                 // JT_J_lmd = JT * J                n x n
+      for(int i = 0; i < JT_J_lmd.rows; ++i) JT_J_lmd.cid[i][i] += alpha_lvmr * JT_J_lmd.cid[i][i];  // JT_J_lmd += λ*D                  n x n
+
+      CMatVec(JACOBIAN_TR, FPrev, LevMarRHS);                                                        // LevMarRHS = JT * F               n x m * m -> n
+      VScale(-1.0, LevMarRHS);
+
+      double start_time = get_cur_time();
+      int INFO = leastsquares_ptr(JT_J_lmd, LevMarRHS, dz);                                          // dz = -(JT * J + λD) \ (JT * F)   n x n * n -> n
+      LSQ_TIME += get_cur_time() - start_time;
+
+      if(INFO != 0)                                                                                  // \\\\\ return if could not solve the system /////
+      {
+         char errString[60] = STR_LINALG_ERROR;
+         strcat(errString, ", may happen");
+         PRINT_WARN(errString, __LINE__, __FILE__);
+         lsq_out.SOL_FLAG = SOL_NOT_FOUND;
+         goto FREERETURN;
+      }
+
+      VAddScale(1.0, *z_prev, 1.0, dz, *z_cur);                                                      // z_cur = z_prev + dz -> q_cur = q_prev + dz
+
+      // |||||||||| start region for updating q_next === z_next and alpha_lvmr ||||||||||
+      getFunc_ptr(q_cur, FCur);                                                                      // F(q_cur) === F(z_cur)
+      if( ( V_InfNorm(FCur) > V_InfNorm(FPrev) ) || (INFO != GQ_SUCCESS) ) {                         // if F(q_cur) > F(q_prev) : alpha *= 2, keep z_next = z_prev
+         alpha_lvmr = MIN(alpha_lvmr*2.0, POW_DOUBLE(10.0, 7));
+      }
+      else {                                                                                         // else if F(q_cur) < F(q_prev) : alpha /= 3, update z_next
+         alpha_lvmr = MAX(alpha_lvmr_down, POW_DOUBLE(10.0, -7));
+         Vector_Assign(*z_cur, *z_next);                                                             // z_next = z_cur, z_next might be updated below
+
+         if( CONSTR_OPT == OFF && !QuadInConstraint(q_next) )                                        // \\\\\ return if not inside the boundary in UNCONSTRAINED mode /////
+         {
+            lsq_out.SOL_FLAG = SOL_NOT_FOUND;
+            goto FREERETURN;
+
+         }
+         else if( CONSTR_OPT == ON && !QuadInConstraint(q_next) && lsq_out.its >= 30 ) {             // \\\\\ return if not inside the boundary after 30 iterations in CONSTRAINED mode /////
+            lsq_out.SOL_FLAG = SOL_NOT_FOUND;
+            goto FREERETURN;
+         }
+
+         if(CONSTR_OPT == ON)
+         {
+            if(!QuadInConstraint(q_next))
+            {
+               ConstrVectData cVectData = ConstrVectDataInit();
+               ConstrOptData *data = ConstrainedOptimizationInit(q_next);
+               int C_FLAG = ConstrainedOptimization(data, q_prev, q_next, &cVectData);               // q_next -> q_next_b === z_next -> z_next_b
+               ConstrainedOptimizationFree(data);
+               if(C_FLAG < 0) {                                                                      // \\\\\ return if did not shorten to the boundary /////
+                  COND_PRINT_ERR(CONSTR_ERROR);
+                  lsq_out.SOL_FLAG = SOL_NOT_FOUND;
+                  goto FREERETURN;
+               }
+               else if(C_FLAG == CONSTR_SUCCESS)
+               {
+                  Vector dz_short = Vector_init(ncols);
+                  VAddScale(1.0, *z_next, -1.0, *z_prev, dz_short);                                  // dz_short_b = z_next_b - z_prev
+                  VAddScale(1.0, *z_prev, 0.5, dz_short, *z_next);                                   // z_next = z_prev + 0.5 * dz_short_b
+                  Vector_free(dz_short);
+               }
+            }
+         }
+         else if(lsq_out.its < 20) {                                                                 // add boundary penalty
+            double alpha = ComputePenalty(q_prev, q_next);                                           //
+            if(alpha < 1.0)                                                                          //
+               VAddScale(1.0, *z_prev, alpha, dz, *z_next);                                          // z_next = z_prev + alpha * dz
+         }
+      }
+      // |||||||||| end region for updating q_next === z_next and alpha_lvmr ||||||||||
+
+      getFunc_ptr(q_next, FNext);                                                                    // F(q_next) === F(z_next)
+      errorNormUpdate = V_InfNorm(FNext);
+
+      Vector_Assign(*z_next, *z_prev);                                                               // z_prev = z_next
+      ++lsq_out.its;
+   }
+
+
+   if( (lsq_out.its <= maxiter)
+    && (isnan(errorNormUpdate) == false)
+    && (isinf(errorNormUpdate) == false)
+    && (errorNormUpdate <= q_tol)
+    && QuadInConstraint(q_next) )
+   {
+      quadrature_assign_resize(q_next, q_orig);
+      lsq_out.SOL_FLAG = SOL_FOUND;
+   }
+   else lsq_out.SOL_FLAG = SOL_NOT_FOUND;
+
+
+FREERETURN:
+#ifdef _OPENMP
+   if(is_alloc_omp)
+   {
+      QuadFreeBasisOmp(q_prev, omp_get_max_threads());
+      QuadFreeBasisOmp(q_cur, omp_get_max_threads());
+      QuadFreeBasisOmp(q_next, omp_get_max_threads());
+      FreeVectorOmpData(FPrev);
+      FreeVectorOmpData(FCur);
+      FreeVectorOmpData(FNext);
+   }
+#endif
+   CMatrix_free(JACOBIAN);
+   CMatrix_free(JACOBIAN_TR);
+   CMatrix_free(JT_J_lmd);
+
+   Vector_free(FPrev);
+   Vector_free(FCur);
+   Vector_free(FNext);
+   Vector_free(LevMarRHS);
+   Vector_free(dz);
+
+   quadrature_free(q_prev);
+   quadrature_free(q_cur);
+   quadrature_free(q_next);
+
+   return lsq_out;
+}// end LeastSquaresNewton
+
+#undef MAX_ELIM_WEIGHTS
 
 
 static errInfo CheckForStop(int INFO, double errorNorm, double errorNormPrev, const Vector least_sq_sol)
@@ -272,4 +481,5 @@ static errInfo CheckForStop(int INFO, double errorNorm, double errorNormPrev, co
 
    return info;
 }
+
 

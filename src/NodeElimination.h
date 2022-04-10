@@ -1,3 +1,9 @@
+/* Arkadijs Slobodkins
+ * SMU Mathematics
+ * Copyright 2022
+ */
+
+
 #ifndef NODE_ELIMINATION_H
 #define NODE_ELIMINATION_H
 
@@ -11,9 +17,9 @@ extern "C" {
 
 /***************************************************************************************************
  * A new node elimination scheme that eliminates one node at a time and computes
- * the initial guess for constrained Newton's method. Subsequently, Newton's method is called
- * to obtain quadrature rule with fewer nodes. The procedure is repeated
- * until no more nodes can be eliminated.
+ * the initial guess for constrained Newton's method. Subsequently, Newton's method
+ * is called to obtain quadrature rule with fewer nodes. History stats are saved at
+ * each successful elimination. The procedure is repeated until no more nodes can be eliminated.
  ***************************************************************************************************/
 void NodeElimination(const quadrature *quad_initial, quadrature *quad_final, history *hist);
 

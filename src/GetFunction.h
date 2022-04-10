@@ -1,3 +1,9 @@
+/* Arkadijs Slobodkins
+ * SMU Mathematics
+ * Copyright 2022
+ */
+
+
 #ifndef GET_FUNCTION_H
 #define GET_FUNCTION_H
 

@@ -1,4 +1,9 @@
-#include "Basis.h"
+/* Arkadijs Slobodkins
+ * SMU Mathematics
+ * Copyright 2022
+ */
+
+
 #include "Quadrature.h"
 #include "Gauss_Lib/Jacobi.h"
 #include "GeneralGaussTensor.h"
@@ -540,7 +545,7 @@ void SimplexBasisDer(SimplexBasis *basis, const double *x, Vector v)
       for(int k = 0; k < numFuncs; ++k)
          basisDer[d*numFuncs+k] = phi_forw1.id[k] - phi_backw1.id[k];
    }
-   VectorScale(1.0/(2.0*h), v);
+   VScale(1.0/(2.0*h), v);
 }
 
 

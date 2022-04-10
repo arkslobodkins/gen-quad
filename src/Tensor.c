@@ -1,3 +1,9 @@
+/* Arkadijs Slobodkins
+ * SMU Mathematics
+ * Copyright 2022
+ */
+
+
 #include "Tensor.h"
 #include <stdlib.h>
 
@@ -42,9 +48,8 @@ Tensor2D Tensor2D_init(int dim1, int dim2)
 
 Tensor2D VectorToTensor2D(int dim1, int dim2, Vector V)
 {
+   assert(dim1*dim2 == V.len);
    Tensor2D T = {0};
-   if(dim1*dim2 != V.len)
-      return T;
 
    T.dim1 = dim1;
    T.dim2 = dim2;

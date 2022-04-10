@@ -1,3 +1,9 @@
+/* Arkadijs Slobodkins
+ * SMU Mathematics
+ * Copyright 2022
+ */
+
+
 #ifndef CONDITIONAL_DEBUG_H
 #define CONDITIONAL_DEBUG_H
 
@@ -42,8 +48,8 @@ if(cVectData->ACTIVE == ON)                                                   \
 
 #define COND_TEST_3                                                           \
 bool TEST_QR = TestQR(QFull);                                                 \
-if(TEST_QR == FAILED)                                                         \
-   PRINT_ERR("FAILED QR TEST", __LINE__, __FILE__);
+if(TEST_QR == QR_FAILED)                                                      \
+   PRINT_ERR("QR_FAILED QR TEST", __LINE__, __FILE__);
 
 
 #define COND_TEST_4                                                                        \

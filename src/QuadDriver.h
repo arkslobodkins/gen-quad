@@ -1,3 +1,9 @@
+/* Arkadijs Slobodkins
+ * SMU Mathematics
+ * Copyright 2022
+ */
+
+
 #ifndef QUAD_DRIVER_H
 #define QUAD_DRIVER_H
 

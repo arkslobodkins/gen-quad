@@ -1,7 +1,8 @@
 /* Arkadijs Slobodkins
  * SMU Mathematics
- * August 2021
+ * Copyright 2022
  */
+
 
 #include "NodeElimination.h"
 
@@ -30,8 +31,10 @@ extern int MAX_DIM;
 #define MAX_FAILS_LEVEL_2 5
 #define MAX_FAILS_ELIM 15
 
-#define PASSED true
-#define FAILED false
+#define QR_PASSED true
+#define QR_FAILED false
+
+typedef enum { lsq, lev_mar } solver_type;
 
 typedef struct
 {
@@ -53,9 +56,10 @@ static DistanceStruct* distance_init(int n)
    return distanceStr;
 }
 
-static bool LsqSearch(bool_enum CONSTR_FLAG, quadrature *q_new, history *hist);
-static bool WideLsqSearch(bool_enum CONSTR_FLAG, quadrature *q_new, history *hist);
-static bool TreeSearch(bool_enum CONSTR_FLAG, quadrature *q_new, history *hist);
+
+static bool LsqSearch(bool_enum CONSTR_FLAG, quadrature *q_new, history *hist, solver_type st);
+static bool WideLsqSearch(bool_enum CONSTR_FLAG, quadrature *q_new, history *hist, solver_type st);
+static bool TreeSearch(bool_enum CONSTR_FLAG, quadrature *q_new, history *hist, solver_type st);
 
 static RMatrix PredictorLapack(quadrature *q, DistanceStruct *distance);
 #ifdef _OPENMP
@@ -75,6 +79,36 @@ __attribute__unused static bool TestQR(const CMatrix Q);
 __attribute__unused static void QuadSavePlots(quadrature *q);
 
 
+typedef LSQ_out(*Nonlinear_Solve_Ptr)(const bool_enum, quadrature *);
+static Nonlinear_Solve_Ptr
+set_nonlinear_solve_ptr(solver_type st)
+{
+   switch(st)
+   {
+      case lsq:
+         return &LeastSquaresNewton;
+         break;
+      case lev_mar:
+         return &LevenbergMarquardt;
+      default:
+         PRINT_WARN(STR_INV_INPUT, __LINE__, __FILE__);
+         return &LeastSquaresNewton;
+   }
+}
+
+
+typedef RMatrix(*Predictor_Ptr)(quadrature *, DistanceStruct *);
+Predictor_Ptr set_predictor_ptr(quadrature *q)
+{
+   #ifdef _OPENMP
+      if(OMP_CONDITION(q->deg, q->dim))  return &PredictorPlasma;
+      else                               return &PredictorLapack;
+   #else
+      return &PredictorLapack;
+   #endif
+}
+
+
 double PREDICTOR_TIME = 0.0;
 void NodeElimination(const quadrature *q_initial, quadrature *q_final, history *hist)
 {
@@ -86,11 +120,13 @@ void NodeElimination(const quadrature *q_initial, quadrature *q_final, history *
       PRINT_ERR(STR_QUAD_NOT_FULL_INIT, __LINE__, __FILE__);
       return;
    }
-   int nodesInitial = q_initial->num_nodes;
-   int numFuncs     = q_initial->basis->numFuncs;
-   int dim          = q_initial->dim;
-   double tol       = QUAD_TOL; // 10^(-14);
+
+
+   const int numFuncs = q_initial->basis->numFuncs;
+   const int dim      = q_initial->dim;
+   const double tol   = QUAD_TOL; // 10^(-14);
    quadrature *q_new  = quadrature_make_full_copy(q_initial);
+
 
    // test accuracy of the initial quadrature
    // if residual is too large, attempt to find quadrature using Newton's method.
@@ -115,18 +151,18 @@ void NodeElimination(const quadrature *q_initial, quadrature *q_final, history *
 
    // run Node Elimination Algorithm. Theoretical optimum is reached when
    // (dim+1)*k = numFuncs, at which point elimination is pursued no further.
-   int n_cur             = nodesInitial;
+   int n_cur             = q_new->num_nodes;
    bool SOL_FLAG         = SOL_NOT_FOUND;
    int n_opt             = ceil(1.0*numFuncs/(dim+1));
-   double efficiency     = (double)n_opt/nodesInitial;
-   PrintElimInfo( dim, n_cur , n_opt, efficiency);
-   while( (n_cur > n_opt)  && (n_cur >= 2) )
+   double efficiency     = (double)n_opt/q_new->num_nodes;
+   PrintElimInfo(dim, n_cur , n_opt, efficiency);
+   while( (n_cur > n_opt) && (n_cur >= 2) )
    {
-      SOL_FLAG = WideLsqSearch(OFF, q_new, hist);        // perform regular search first
-      if(SOL_FLAG == SOL_NOT_FOUND)                  // perform deeper search
+      SOL_FLAG = WideLsqSearch(OFF, q_new, hist, lev_mar);
+      if(SOL_FLAG == SOL_NOT_FOUND)
       {
-         if(dim != MAX_DIM) SOL_FLAG = TreeSearch(OFF, q_new, hist);
-         else               SOL_FLAG = TreeSearch(ON, q_new, hist);
+         if(dim != MAX_DIM) SOL_FLAG = TreeSearch(OFF, q_new, hist, lev_mar);
+         else               SOL_FLAG = TreeSearch(ON, q_new, hist, lev_mar);
       }
 
       n_cur = q_new->num_nodes;
@@ -139,6 +175,7 @@ void NodeElimination(const quadrature *q_initial, quadrature *q_final, history *
          break; // break while loop
       }
    }// end while loop
+   hist->efficiency = efficiency;
 
    // save nodes and weights
    quadrature_assign_resize(q_new, q_final);
@@ -150,20 +187,14 @@ void NodeElimination(const quadrature *q_initial, quadrature *q_final, history *
 }// end NodeElimination
 
 
-static bool LsqSearch(bool_enum CONSTR_FLAG, quadrature *q_new, history *hist)
+static bool LsqSearch(bool_enum CONSTR_FLAG, quadrature *q_new, history *hist, solver_type st)
 {
-   RMatrix(*Predictor_Ptr)(quadrature *, DistanceStruct *);
-   #ifdef _OPENMP
-      if(OMP_CONDITION(q_new->deg, q_new->dim)) Predictor_Ptr = &PredictorPlasma;
-      else                                      Predictor_Ptr = &PredictorLapack;
-   #else
-      Predictor_Ptr = &PredictorLapack;
-   #endif
+   Predictor_Ptr predictor_ptr             = set_predictor_ptr(q_new);
+   Nonlinear_Solve_Ptr nonlinear_solve_ptr = set_nonlinear_solve_ptr(st);
 
    int n_cur = q_new->num_nodes;
-
    DistanceStruct *distanceWeight = distance_init(n_cur);
-   RMatrix Z = Predictor_Ptr(q_new, distanceWeight);
+   RMatrix Z = predictor_ptr(q_new, distanceWeight);
 
    int failCount = 0;
    LSQ_out lsq_out = {0, SOL_NOT_FOUND};
@@ -178,7 +209,7 @@ static bool LsqSearch(bool_enum CONSTR_FLAG, quadrature *q_new, history *hist)
       if(V_InfNorm(q_temp->z) >= QUAD_HUGE) continue;
       if(!QuadInConstraint(q_temp))         continue;
 
-      lsq_out = LeastSquaresNewton(CONSTR_FLAG, q_temp);
+      lsq_out = nonlinear_solve_ptr(CONSTR_FLAG, q_temp);
       // store nodes and weights if Newton's method succeeded, update history
       if(lsq_out.SOL_FLAG == SOL_FOUND)
       {
@@ -206,20 +237,15 @@ static bool LsqSearch(bool_enum CONSTR_FLAG, quadrature *q_new, history *hist)
 }
 
 
-static bool WideLsqSearch(bool_enum CONSTR_FLAG, quadrature *q_new, history *hist)
+static bool WideLsqSearch(bool_enum CONSTR_FLAG, quadrature *q_new, history *hist, solver_type st)
 {
-   RMatrix(*Predictor_Ptr)(quadrature *, DistanceStruct *);
-   #ifdef _OPENMP
-      if(OMP_CONDITION(q_new->deg, q_new->dim)) Predictor_Ptr = &PredictorPlasma;
-      else                                      Predictor_Ptr = &PredictorLapack;
-   #else
-      Predictor_Ptr = &PredictorLapack;
-   #endif
+   Predictor_Ptr predictor_ptr             = set_predictor_ptr(q_new);
+   Nonlinear_Solve_Ptr nonlinear_solve_ptr = set_nonlinear_solve_ptr(st);
 
    int n_cur = q_new->num_nodes;
 
    DistanceStruct *distanceWeight = distance_init(n_cur);
-   RMatrix Z = Predictor_Ptr(q_new, distanceWeight);
+   RMatrix Z = predictor_ptr(q_new, distanceWeight);
 
    int search_size = MIN(10, q_new->num_nodes);
 
@@ -238,7 +264,7 @@ static bool WideLsqSearch(bool_enum CONSTR_FLAG, quadrature *q_new, history *his
       if(V_InfNorm(q_temp[count]->z) >= QUAD_HUGE) continue;
       if(!QuadInConstraint(q_temp[count]))         continue;
 
-      lsq_out[count] = LeastSquaresNewton(CONSTR_FLAG, q_temp[count]);
+      lsq_out[count] = nonlinear_solve_ptr(CONSTR_FLAG, q_temp[count]);
       if(lsq_out[count].SOL_FLAG == SOL_FOUND)
          ++count;
       else if(lsq_out[count].SOL_FLAG == SOL_NOT_FOUND)
@@ -278,6 +304,7 @@ static bool WideLsqSearch(bool_enum CONSTR_FLAG, quadrature *q_new, history *his
    hist->hist_array[hist->total_elims].nodes_tot    = n_cur;
    hist->hist_array[hist->total_elims].success_node = successQuad;
    hist->hist_array[hist->total_elims].success_its  = lsq_out[successQuad].its;
+   hist->hist_array[hist->total_elims].num_solutions  = count;
    ++hist->total_elims;
 
    for(int i = 0; i < search_size; ++i)
@@ -289,22 +316,17 @@ static bool WideLsqSearch(bool_enum CONSTR_FLAG, quadrature *q_new, history *his
 }
 
 
-static bool TreeSearch(bool_enum CONSTR_FLAG, quadrature *q_new, history *hist)
+static bool TreeSearch(bool_enum CONSTR_FLAG, quadrature *q_new, history *hist, solver_type st)
 {
-   RMatrix(*Predictor_Ptr)(quadrature *, DistanceStruct *);
-   #ifdef _OPENMP
-      if(OMP_CONDITION(q_new->deg, q_new->dim)) Predictor_Ptr = &PredictorPlasma;
-      else                                      Predictor_Ptr = &PredictorLapack;
-   #else
-      Predictor_Ptr = &PredictorLapack;
-   #endif
+   Predictor_Ptr predictor_ptr = set_predictor_ptr(q_new);
+   Nonlinear_Solve_Ptr nonlinear_solve_ptr = set_nonlinear_solve_ptr(st);
 
    int n_cur = q_new->num_nodes;
    int dim = q_new->dim;
    bool SOL_FLAG = SOL_NOT_FOUND;
 
    DistanceStruct *distance__1 = distance_init(n_cur);
-   RMatrix Z__1 = Predictor_Ptr(q_new, distance__1);
+   RMatrix Z__1 = predictor_ptr(q_new, distance__1);
 
    quadrature *qnewtemp__1 = quadrature_make_full_copy(q_new);
    quadrature *qsearch__1  = quadrature_make_full_copy(q_new);
@@ -325,9 +347,9 @@ static bool TreeSearch(bool_enum CONSTR_FLAG, quadrature *q_new, history *hist)
       // level1 stage1
       for(sd1 = 0; sd1 < SEARCH_DIM; ++sd1)
       {
-         VectorAddScale(1.0, qstart__1->z, -1.0, qnewtemp__1->z, dz__1);                     // dz1 = qstart1 - qnew
-         VectorAddScale(1.0, qnewtemp__1->z, shortParams.t[sd1], dz__1, qsearch__1->z);      // qsearch1 = qnew + α*dz1
-         searchNewGuessFlag__1 = LeastSquaresNewton(CONSTR_FLAG, qsearch__1);                // update qsearch1 if success
+         VAddScale(1.0, qstart__1->z, -1.0, qnewtemp__1->z, dz__1);                     // dz1 = qstart1 - qnew
+         VAddScale(1.0, qnewtemp__1->z, shortParams.t[sd1], dz__1, qsearch__1->z);      // qsearch1 = qnew + α*dz1
+         searchNewGuessFlag__1 = nonlinear_solve_ptr(CONSTR_FLAG, qsearch__1);          // update qsearch1 if success
 
          // update q_new and break if eliminated node/nodes
          if(qsearch__1->num_nodes != n_cur)
@@ -353,7 +375,7 @@ static bool TreeSearch(bool_enum CONSTR_FLAG, quadrature *q_new, history *hist)
       if(searchNewGuessFlag__1.SOL_FLAG)
       {
          assert(qsearch__1->num_nodes == n_cur);
-         searchElimFlag__1 = LsqSearch(CONSTR_FLAG, qsearch__1, hist);
+         searchElimFlag__1 = LsqSearch(CONSTR_FLAG, qsearch__1, hist, st);
 
          // if eliminated a node, save solution and break all loops
          if(searchElimFlag__1)
@@ -386,7 +408,7 @@ static bool TreeSearch(bool_enum CONSTR_FLAG, quadrature *q_new, history *hist)
       quadrature *qstart__2  = quadrature_make_full_copy(q_new);
       Vector dz__2 = Vector_init(n_cur*(dim+1));
       DistanceStruct *distance__2 = distance_init(n_cur);
-      RMatrix Z__2  = Predictor_Ptr(qnewtemp__1, distance__2);
+      RMatrix Z__2  = predictor_ptr(qnewtemp__1, distance__2);
 
       bool searchElimFlag__2 = SOL_NOT_FOUND;
       int failCount__2 = 0;
@@ -399,9 +421,9 @@ static bool TreeSearch(bool_enum CONSTR_FLAG, quadrature *q_new, history *hist)
          // level2 stage1
          for(sd2 = 0; sd2 < SEARCH_DIM; ++sd2)
          {
-            VectorAddScale(1.0, qstart__2->z, -1.0, qnewtemp__1->z, dz__2);                        // dz2 = qstart12 - qnewtemp
-            VectorAddScale(1.0, qnewtemp__1->z, shortParams.t[sd2], dz__2, qsearch__2->z);         // qsearch2 = qnewtemp + α*dz2
-            searchNewGuessFlag__2 = LeastSquaresNewton(CONSTR_FLAG, qsearch__2);                   // update qsearch2 if success
+            VAddScale(1.0, qstart__2->z, -1.0, qnewtemp__1->z, dz__2);                        // dz2 = qstart12 - qnewtemp
+            VAddScale(1.0, qnewtemp__1->z, shortParams.t[sd2], dz__2, qsearch__2->z);         // qsearch2 = qnewtemp + α*dz2
+            searchNewGuessFlag__2 = nonlinear_solve_ptr(CONSTR_FLAG, qsearch__2);             // update qsearch2 if success
 
             if(qsearch__2->num_nodes != n_cur)
             {
@@ -427,7 +449,7 @@ static bool TreeSearch(bool_enum CONSTR_FLAG, quadrature *q_new, history *hist)
          if(searchNewGuessFlag__2.SOL_FLAG)
          {
             assert(qsearch__2->num_nodes == n_cur);
-            searchElimFlag__2 = LsqSearch(CONSTR_FLAG, qsearch__2, hist);
+            searchElimFlag__2 = LsqSearch(CONSTR_FLAG, qsearch__2, hist, st);
             // if eliminated a node, save solution and break all loops
             if(searchElimFlag__2)
             {
@@ -857,8 +879,8 @@ static bool TestQR(const CMatrix Q)
    double err2 = fabs(non_diag - max_non_diag);
    double max_error = MAX(err1, err2);
 
-   if(max_error > tol) return FAILED;
-   else                return PASSED;
+   if(max_error > tol) return QR_FAILED;
+   else                return QR_PASSED;
 }
 
 

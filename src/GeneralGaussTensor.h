@@ -1,3 +1,9 @@
+/* Arkadijs Slobodkins
+ * SMU Mathematics
+ * Copyright 2022
+ */
+
+
 #ifndef GENERALIZED_TENSOR_H
 #define GENERALIZED_TENSOR_H
 

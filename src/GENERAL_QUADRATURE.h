@@ -1,3 +1,9 @@
+/* Arkadijs Slobodkins
+ * SMU Mathematics
+ * Copyright 2022
+ */
+
+
 #ifndef GENERAL_QUADRATURE_H
 #define GENERAL_QUADRATURE_H
 
@@ -78,6 +84,7 @@ typedef struct
    int nodes_tot;
    int success_node;
    int success_its;
+   int num_solutions;
 } hist_data;
 
 typedef struct
@@ -87,10 +94,12 @@ typedef struct
    int degree;
    int nodes_initial;
    int nodes_final;
+   int nodes_optimal;
    int num_funcs;
    double res;
    DOMAIN_TYPE D;
    int total_elims;
+   double efficiency;
 } history;
 
 

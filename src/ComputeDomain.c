@@ -1,8 +1,8 @@
-
 /* Arkadijs Slobodkins
  * SMU Mathematics
- * August 2021
+ * Copyright 2022
  */
+
 
 #include "ComputeDomain.h"
 
@@ -447,6 +447,10 @@ static history *hist_create(int n)
    history *h = (history *)malloc(sizeof(history));
    h->hist_array = (hist_data *)malloc(n*sizeof(hist_data));
    h->total_elims = 0;
+
+   for(int i = 0; i < n; ++i)
+      h->hist_array[i].num_solutions = 0;
+
    return h;
 }
 
@@ -461,8 +465,10 @@ static void hist_save_start(quadrature *q, history *hist)
    hist->dim           = q->dim;
    hist->degree        = q->deg;
    hist->nodes_initial = q->num_nodes;
+   hist->nodes_optimal = ceil( 1.0 * q->basis->numFuncs / (q->dim+1) );
    hist->num_funcs     = q->basis->numFuncs;
    hist->D             = q->D;
+   hist->efficiency    = 0.0;
 }
 
 static void hist_save_end(quadrature *q, history *hist)

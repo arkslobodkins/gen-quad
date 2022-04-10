@@ -1,7 +1,8 @@
 /* Arkadijs Slobodkins
  * SMU Mathematics
- * August 2021
+ * Copyright 2022
  */
+
 
 #include "GeneralGaussTensor.h"
 #include "Quadrature.h"

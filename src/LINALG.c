@@ -1,4 +1,9 @@
-#include "LINALG.h"
+/* Arkadijs Slobodkins
+ * SMU Mathematics
+ * Copyright 2022
+ */
+
+
 #include "Print.h"
 
 #include <stdlib.h>
@@ -103,9 +108,15 @@ int DGESVD_LAPACK(CMatrix A, CMatrix VT)
    else          return GQ_SUCCESS;
 }
 
-int DGELS_LAPACK(CMatrix A, Vector RHS_TO_X)
+int DGELS_LAPACK(CMatrix A, Vector b, Vector x)
 {
-   assert(RHS_TO_X.len == MAX(A.rows, A.cols));
+   assert(A.rows == b.len);
+   assert(A.cols == x.len);
+   int rows = A.rows;
+   int cols = A.cols;
+
+   Vector RHS_TO_X = Vector_init(MAX(rows, cols));
+   for(int i = 0; i < rows; ++i) RHS_TO_X.id[i] = b.id[i];
 
    char TRANS = 'N';
    int NRHS = 1;
@@ -113,6 +124,10 @@ int DGELS_LAPACK(CMatrix A, Vector RHS_TO_X)
    int LEAD_DIM = MAX(A.rows, A.cols);
    int INFO = LAPACKE_dgels( LAPACK_COL_MAJOR, TRANS, A.rows,
                              A.cols, NRHS, A.id, LDA, RHS_TO_X.id, LEAD_DIM );
+
+   for(int i = 0; i < cols; ++i) x.id[i] = RHS_TO_X.id[i];
+   Vector_free(RHS_TO_X);
+
    if(INFO > 0)
       PRINT_WARN("LAPACK encountered 0 pivot", __LINE__, __FILE__);
 
@@ -121,10 +136,34 @@ int DGELS_LAPACK(CMatrix A, Vector RHS_TO_X)
 
 }
 
+//int DGELS_LAPACK(CMatrix A, Vector RHS_TO_X)
+//{
+//   assert(RHS_TO_X.len == MAX(A.rows, A.cols));
+//
+//   char TRANS = 'N';
+//   int NRHS = 1;
+//   int LDA = A.rows;
+//   int LEAD_DIM = MAX(A.rows, A.cols);
+//   int INFO = LAPACKE_dgels( LAPACK_COL_MAJOR, TRANS, A.rows,
+//                             A.cols, NRHS, A.id, LDA, RHS_TO_X.id, LEAD_DIM );
+//   if(INFO > 0)
+//      PRINT_WARN("LAPACK encountered 0 pivot", __LINE__, __FILE__);
+//
+//   if(INFO != 0) return LAPACK_ERR;
+//   else          return GQ_SUCCESS;
+//
+//}
+
 #ifdef _OPENMP
-int DGELS_PLASMA(CMatrix A, Vector RHS_TO_X)
+int DGELS_PLASMA(CMatrix A, Vector b, Vector x)
 {
-   assert(RHS_TO_X.len == MAX(A.rows, A.cols));
+   assert(A.rows == b.len);
+   assert(A.cols == x.len);
+   int rows = A.rows;
+   int cols = A.cols;
+
+   Vector RHS_TO_X = Vector_init(MAX(rows, cols));
+   for(int i = 0; i < rows; ++i) RHS_TO_X.id[i] = b.id[i];
 
    int NRHS = 1;
    int LDA = A.rows;
@@ -138,6 +177,9 @@ int DGELS_PLASMA(CMatrix A, Vector RHS_TO_X)
                             RHS_TO_X.id, LEAD_DIM );
    plasma_desc_destroy(&T);
    plasma_finalize();
+
+   for(int i = 0; i < cols; ++i) x.id[i] = RHS_TO_X.id[i];
+   Vector_free(RHS_TO_X);
 
    if(INFO != 0) return PLASMA_ERR;
    else          return GQ_SUCCESS;

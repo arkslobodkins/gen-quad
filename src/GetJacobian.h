@@ -1,3 +1,9 @@
+/* Arkadijs Slobodkins
+ * SMU Mathematics
+ * Copyright 2022
+ */
+
+
 #ifndef GET_JACOBIAN_H
 #define GET_JACOBIAN_H
 

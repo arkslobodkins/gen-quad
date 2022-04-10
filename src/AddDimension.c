@@ -1,7 +1,11 @@
+/* Arkadijs Slobodkins
+ * SMU Mathematics
+ * Copyright 2022
+ */
+
 
 #include "AddDimension.h"
 #include "GeneralGaussTensor.h"
-
 #include <assert.h>
 
 
@@ -101,7 +105,5 @@ void MixedTensor(const quadrature *q1, const quadrature *q2, quadrature *q_tp)
    }
    WeightsTensor2D(q1, q2, q_tp);
 }
-
-
 
 

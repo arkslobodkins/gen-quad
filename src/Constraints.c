@@ -1,7 +1,8 @@
 /* Arkadijs Slobodkins
  * SMU Mathematics
- * August 2021
+ * Copyright 2022
  */
+
 
 #include "Constraints.h"
 #include "Vector.h"
@@ -140,7 +141,7 @@ void constraints_interval_free(constraintsInterval *constr)
    Vector_free(constr->b);
    RMatrix_free(constr->M_FULL);
    Vector_free(constr->b_FULL);
-   free(constr); constr = NULL;
+   free(constr);
 }
 
 
@@ -201,7 +202,7 @@ void constraints_cube_free(constraintsCube *constr)
       free(constr->dimParams);
       constr->dimParams = NULL;
    }
-   free(constr); constr = NULL;
+   free(constr);
 }
 
 
@@ -261,7 +262,7 @@ void constraints_simplex_free(constraintsSimplex *constr)
       free(constr->dimParams);
       constr->dimParams = NULL;
    }
-   free(constr); constr = NULL;
+   free(constr);
 }
 
 
@@ -337,7 +338,7 @@ void constraints_cubesimplex_free(constraintsCubeSimplex *constr)
       free(constr->dimParams);
       constr->dimParams = NULL;
    }
-   free(constr); constr = NULL;
+   free(constr);
 }
 
 
@@ -411,7 +412,7 @@ void constraints_simplexsimplex_free(constraintsSimplexSimplex *constr)
       free(constr->dimParams);
       constr->dimParams = NULL;
    }
-   free(constr); constr = NULL;
+   free(constr);
 }
 
 

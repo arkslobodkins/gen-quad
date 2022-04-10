@@ -1,3 +1,8 @@
+/* Arkadijs Slobodkins
+ * SMU Mathematics
+ * Copyright 2022
+ */
+
 
 #ifndef ADD_DIMENSION_H
 #define ADD_DIMENSION_H

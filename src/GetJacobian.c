@@ -1,7 +1,8 @@
 /* Arkadijs Slobodkins
  * SMU Mathematics
- * November 2021 // Added OpenMP
+ * Copyright 2022
  */
+
 
 #include "GetJacobian.h"
 #include "Basis.h"
@@ -47,7 +48,7 @@ void GetJacobianOmp(quadrature *q, CMatrix JACOBIAN)
 
          BasisFuncs(basisLoc, curNode, basisFuncsLoc);
          BasisDer(basisLoc, curNode, basisDerLoc);
-         VectorScale(w[j], basisDerLoc);
+         VScale(w[j], basisDerLoc);
 
          CMatrix_LoadToColumn(j, JACOBIAN, basisFuncsLoc);
          int colId = j*dim+cols;
@@ -101,7 +102,7 @@ void GetFunctionAndJacobianOmp(quadrature *q, Vector f, CMatrix JACOBIAN)
          BasisFuncs(basisLoc, curNode, basisFuncsLoc);
          double_daxpy(len, w[j], basisFuncsLoc.id, fLoc);
          BasisDer(basisLoc, curNode, basisDerLoc);
-         VectorScale(w[j], basisDerLoc);
+         VScale(w[j], basisDerLoc);
 
          CMatrix_LoadToColumn(j, JACOBIAN, basisFuncsLoc);
          int colId = j*dim+cols;
@@ -137,7 +138,7 @@ void GetJacobian(quadrature *q, CMatrix JACOBIAN)
       const double *curNode = &x[dim*j];
       BasisFuncs(basis, curNode, functions);
       BasisDer(basis, curNode, derivatives);
-      VectorScale(w[j], derivatives);
+      VScale(w[j], derivatives);
 
       CMatrix_LoadToColumn(j, JACOBIAN, functions);
       int colId = j*dim+cols;
@@ -176,7 +177,7 @@ void GetFunctionAndJacobian(quadrature *q, Vector f, CMatrix JACOBIAN)
       CMatrix_LoadToColumn(j, JACOBIAN, functions);
 
       BasisDer(basis, curNode, derivatives);
-      VectorScale(w[j], derivatives);
+      VScale(w[j], derivatives);
       int colId = j*dim+cols;
       for(int d = 0; d < dim; ++d)
          CMatrix_LoadToColumnRange(d*rows, colId+d, JACOBIAN, derivatives);

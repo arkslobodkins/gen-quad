@@ -1,3 +1,8 @@
+/* Arkadijs Slobodkins
+ * SMU Mathematics
+ * Copyright 2022
+ */
+
 
 #ifndef CONSTRAINED_OPTIMIZATION_H
 #define CONSTRAINED_OPTIMIZATION_H

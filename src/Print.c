@@ -1,5 +1,9 @@
-#include "Print.h"
+/* Arkadijs Slobodkins
+ * SMU Mathematics
+ * Copyright 2022
+ */
 
+#include "Print.h"
 #include <stdlib.h>
 #include <stdio.h>
 
@@ -136,54 +140,23 @@ const char *ERR_STRING(int return_val)
 {
    switch(return_val)
    {
-   case GQ_SUCCESS:
-      return STR_GQ_SUCCESS;
-      break;
-   case NULL_VAL:
-      return STR_NULL_VAL;
-      break;
-   case ALLOC_FAIL:
-      return STR_ALLOC_FAIL;
-      break;
-   case INV_INPUT:
-      return STR_INV_INPUT;
-      break;
-   case INF_VAL:
-      return STR_INF_VAL;
-      break;
-   case NAN_VAL:
-      return STR_NAN_VAL;
-      break;
-   case QUAD_HUGE_ERR:
-      return STR_QUAD_HUGE_ERR;
-      break;
-   case LAPACK_ERR:
-      return STR_LAPACK_ERR;
-      break;
-   case PLASMA_ERR:
-      return STR_PLASMA_ERR;
-      break;
-   case DIV_BY_ZERO:
-      return STR_DIV_BY_ZERO;
-      break;
-   case NOT_CONVERGE:
-      return STR_NOT_CONVERGE;
-      break;
-   case DIVERGE_ERR:
-      return STR_DIVERGE_ERR;
-      break;
-   case LARGE_RES:
-      return STR_LARGE_RES;
-      break;
-   case CONSTR_ERROR:
-      return STR_CONSTR_ERROR;
-   case BOUND_ERROR:
-      return STR_BOUND_ERROR;
-   case LINALG_ERROR:
-      return STR_LINALG_ERROR;
-   default:
-      return "OTHER";
+   case GQ_SUCCESS:    return STR_GQ_SUCCESS;
+   case NULL_VAL:      return STR_NULL_VAL;
+   case ALLOC_FAIL:    return STR_ALLOC_FAIL;
+   case INV_INPUT:     return STR_INV_INPUT;
+   case INF_VAL:       return STR_INF_VAL;
+   case NAN_VAL:       return STR_NAN_VAL;
+   case QUAD_HUGE_ERR: return STR_QUAD_HUGE_ERR;
+   case LAPACK_ERR:    return STR_LAPACK_ERR;
+   case PLASMA_ERR:    return STR_PLASMA_ERR;
+   case DIV_BY_ZERO:   return STR_DIV_BY_ZERO;
+   case NOT_CONVERGE:  return STR_NOT_CONVERGE;
+   case DIVERGE_ERR:   return STR_DIVERGE_ERR;
+   case LARGE_RES:     return STR_LARGE_RES;
+   case CONSTR_ERROR:  return STR_CONSTR_ERROR;
+   case BOUND_ERROR:   return STR_BOUND_ERROR;
+   case LINALG_ERROR:  return STR_LINALG_ERROR;
+   default:            return "OTHER";
    }
-
 }
 

@@ -1,7 +1,8 @@
 /* Arkadijs Slobodkins
  * SMU Mathematics
- * August 2021
+ * Copyright 2022
  */
+
 
 #include "Vector.h"
 
@@ -15,36 +16,35 @@
 #include <omp.h>
 #include <mkl_blas.h>
 
-
 static bool comparedouble(double x, double y);
 
 VectorInt VectorInt_init(int n)
 {
    assert(n >= 1);
 
-   VectorInt V = {0};
-   V.len = n;
-   V.id = (int *)calloc(n, sizeof(int));
+   VectorInt z = {0};
+   z.len = n;
+   z.id = (int *)calloc(n, sizeof(int));
 
-   return V;
+   return z;
 }
 
-void VectorInt_realloc(int n, VectorInt *V)
+void VectorInt_realloc(int n, VectorInt *z)
 {
    assert(n >= 1);
-   V->id = (int *)realloc(V->id, n*sizeof(int));
-   V->len = n;
+   z->id = (int *)realloc(z->id, n*sizeof(int));
+   z->len = n;
 }
 
-void VectorInt_Assign(VectorInt v1, VectorInt v2)
+void VectorInt_Assign(VectorInt V1, VectorInt V2)
 {
-   assert(v1.len == v2.len);
-   memcpy(v2.id, v1.id, v1.len*sizeof(int));
+   assert(V1.len == V2.len);
+   memcpy(V2.id, V1.id, V1.len*sizeof(int));
 }
 
-void VectorInt_free(VectorInt V)
+void VectorInt_free(VectorInt z)
 {
-   if(V.id != NULL) { free(V.id); V.id = NULL; }
+   if(z.id != NULL) { free(z.id); }
 }
 
 
@@ -53,66 +53,64 @@ Vector Vector_init(int n)
 {
    assert(n >= 1);
 
-   Vector V = {0};
-   V.len = n;
-   V.id = (double *)calloc(n, sizeof(double));
-   V.ompId = NULL;
+   Vector z = {0};
+   z.len = n;
+   z.id = (double *)calloc(n, sizeof(double));
+   z.ompId = NULL;
 
-   return V;
+   return z;
 }
-
 
 Vector Vector_uninitialized(int n)
 {
    assert(n >= 1);
 
-   Vector V = {0};
-   V.len = n;
-   V.id = (double *)malloc(n*sizeof(double));
+   Vector z = {0};
+   z.len = n;
+   z.id = (double *)malloc(n*sizeof(double));
    for(int i = 0; i < n; ++i)
-      V.id[i] = -100.;
-   V.ompId = NULL;
+      z.id[i] = -100.;
+   z.ompId = NULL;
 
-   return V;
+   return z;
 }
 
-void Vector_realloc(int n, Vector *V)
+void Vector_realloc(int n, Vector *z)
 {
    assert(n >= 1);
-   V->id = (double *)realloc(V->id, n*sizeof(double));
-   V->len = n;
+   z->id = (double *)realloc(z->id, n*sizeof(double));
+   z->len = n;
 }
 
-void Vector_Assign(Vector v1, Vector v2)
+void Vector_Assign(Vector V1, Vector V2)
 {
-   assert(v1.len == v2.len);
-   memcpy(v2.id, v1.id, v1.len*sizeof(double));
+   assert(V1.len >= 1);
+   assert(V1.len == V2.len);
+   memcpy(V2.id, V1.id, V1.len*sizeof(double));
 }
 
-void Vector_free(Vector V)
+void Vector_free(Vector z)
 {
-   if(V.id != NULL) { free(V.id); V.id = NULL; }
+   if(z.id != NULL) { free(z.id); }
 }
 
 #ifdef _OPENMP
-void AllocVectorOmpData(Vector *v)
+void AllocVectorOmpData(Vector *z)
 {
    int max_threads = omp_get_max_threads();
-   v->ompId = (double **)malloc(max_threads*sizeof(double *));
+   z->ompId = (double **)malloc(max_threads*sizeof(double *));
    for(int i = 0; i < max_threads; ++i)
-      v->ompId[i] = (double *)malloc(v->len*sizeof(double));
+      z->ompId[i] = (double *)malloc(z->len*sizeof(double));
 }
 
-void FreeVectorOmpData(Vector v)
+void FreeVectorOmpData(Vector z)
 {
-   if(v.ompId == NULL) return;
+   if(z.ompId == NULL) return;
    for(int i = 0; i < omp_get_max_threads(); ++i)
-      free(v.ompId[i]);
-   free(v.ompId); v.ompId = NULL;
+      free(z.ompId[i]);
+   free(z.ompId);
 }
 #endif
-
-
 
 void VPrint(Vector V)
 {
@@ -121,27 +119,29 @@ void VPrint(Vector V)
    printf("\n");
 }
 
-double VDot(Vector a, Vector b)
+double VDot(Vector x, Vector y)
 {
-   assert(a.len == b.len && b.len > 0);
+   assert(x.len == y.len && y.len > 0);
 
    double dot = 0.0;
-   for(int i = 0; i < a.len; ++i)
-      dot += a.id[i]*b.id[i];
+   for(int i = 0; i < x.len; ++i)
+      dot += x.id[i] * y.id[i];
 
    return dot;
 }
 
-void VSetToOne(Vector v)
+void VSetToOne(Vector z)
 {
-   for(int k = 0; k < v.len; ++k)
-      v.id[k] = 1.0;
+   assert(z.len >= 1);
+   for(int k = 0; k < z.len; ++k)
+      z.id[k] = 1.0;
 }
 
-void VectorScale(double c, Vector V)
+void VScale(double c, Vector z)
 {
+   assert(z.len >= 1);
    int spacing = 1;
-   dscal(&V.len, &c, V.id, &spacing);
+   dscal(&z.len, &c, z.id, &spacing);
 }
 
 void Vector_daxpy(double a, Vector x, Vector y)
@@ -152,37 +152,31 @@ void Vector_daxpy(double a, Vector x, Vector y)
    daxpy(&x.len, &a, x.id, &incx, y.id, &incy);
 }
 
-void double_daxpy(int len, double a, double *x, double *y)
-{
-   int incx = 1;
-   int incy = 1;
-   daxpy(&len, &a, x, &incx, y, &incy);
-}
-
-void VectorAddScale(double c1, Vector V1, double c2, Vector V2, Vector V3)
+void VAddScale(double c1, Vector V1, double c2, Vector V2, Vector V3)
 {
    assert(V1.len == V2.len && V2.len == V3.len && V3.len > 0);
    for(int i = 0; i < V3.len; ++i)
       V3.id[i] = c1*V1.id[i] + c2*V2.id[i];
 }
 
-VMin VectorMin(Vector v)
+VMin VectorMin(Vector z)
 {
+   assert(z.len > 0);
    VMin vMin = {0};
 
    vMin.min_index = 0;
-   vMin.min_value = v.id[0];
-   for(int i = 1; i < v.len; ++i)
-      if(v.id[i] < vMin.min_value)
+   vMin.min_value = z.id[0];
+   for(int i = 1; i < z.len; ++i)
+      if(z.id[i] < vMin.min_value)
       {
-         vMin.min_value = v.id[i];
+         vMin.min_value = z.id[i];
          vMin.min_index = i;
       }
 
    return vMin;
 }
 
-void VectorRemoveElement(int index, Vector *z)
+void VRemoveElement(int index, Vector *z)
 {
    assert(index >= 0 && index <= z->len-1);
 
@@ -191,6 +185,24 @@ void VectorRemoveElement(int index, Vector *z)
 
    Vector_realloc(z->len-1, z);
 }
+
+VMax VectorMax(Vector z)
+{
+   assert(z.len > 0);
+   VMax vMax = {0};
+
+   vMax.max_index = 0;
+   vMax.max_value = z.id[0];
+   for(int i = 1; i < z.len; ++i)
+      if(z.id[i] > vMax.max_value)
+      {
+         vMax.max_value = z.id[i];
+         vMax.max_index = i;
+      }
+
+   return vMax;
+}
+
 
 double V_ScaledTwoNorm(Vector z)
 {
@@ -236,12 +248,24 @@ bool V_CheckInf(Vector z)
    return false;
 }
 
-bool V_IsUninitialized(Vector v)
+bool V_CheckInfOrNan(Vector z)
 {
-   for(int i = 0; i < v.len; ++i)
-      if(comparedouble(v.id[i], -100.))
+   return V_CheckInf(z) || V_CheckNan(z);
+}
+
+bool V_IsUninitialized(Vector z)
+{
+   for(int i = 0; i < z.len; ++i)
+      if(comparedouble(z.id[i], -100.))
          return true;
    return false;
+}
+
+void double_daxpy(int len, double a, double *x, double *y)
+{
+   int incx = 1;
+   int incy = 1;
+   daxpy(&len, &a, x, &incx, y, &incy);
 }
 
 void double_dcopy(int n, double *x, double *y)
@@ -252,11 +276,8 @@ void double_dcopy(int n, double *x, double *y)
 
 static bool comparedouble(double x, double y)
 {
-   double tol = pow(10, -14);
-   if( (x < y + tol) && (x > y - tol) )
-      return true;
-   else
-      return false;
+   if( fabs(x-y) < pow(10, -15) ) return true;
+   return false;
 }
 
 

@@ -1,3 +1,9 @@
+/* Arkadijs Slobodkins
+ * SMU Mathematics
+ * Copyright 2022
+ */
+
+
 #ifndef MATRIX_H
 #define MATRIX_H
 
@@ -49,6 +55,7 @@ void CMatrix_LoadToColumnRange(int begin, int col, CMatrix M, Vector x);
 void CMatrix_GetRow(int row, CMatrix M, Vector x);
 void CMatrix_GetColumn(int col, CMatrix M, Vector x);
 void CMatrix_ColumnScale(int col, double c, CMatrix M);
+void CMatrix_Assign_Transpose(CMatrix A, CMatrix B);
 CMatrix CMatrix_Transpose(CMatrix A, trans_type tt);
 void CMatVec(CMatrix M, Vector x, Vector y);
 void CMatrixPrint(CMatrix M);

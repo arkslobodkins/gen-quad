@@ -1,7 +1,8 @@
 /* Arkadijs Slobodkins
  * SMU Mathematics
- * August 2021
+ * Copyright 2022
  */
+
 
 #include "Matrix.h"
 #include "Print.h"
@@ -11,7 +12,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <omp.h>
 #include <mkl_blas.h>
 
 RMatrix RMatrix_init(int nRows, int nCols)
@@ -60,21 +60,21 @@ void RMatrix_realloc(int nRows, int nCols, RMatrix *M)
 
 void RMatrix_free(RMatrix M)
 {
-   if(M.id != NULL)  { free(M.id); M.id = NULL; }
-   if(M.rid != NULL) { free(M.rid); M.rid = NULL; }
+   if(M.id != NULL)  { free(M.id); }
+   if(M.rid != NULL) { free(M.rid); }
 }
 
 void RMatrix_LoadToRow(int row, RMatrix M, Vector v)
 {
+   assert(row > -1 && row < M.rows);
    assert(v.len == M.cols);
-   assert(row > -1  && row < M.rows);
    memcpy(M.rid[row], v.id, SIZE_DOUBLE(M.cols));
 }
 
 void RMatVec(RMatrix M, Vector x, Vector y)
 {
+   assert(M.rows == y.len);
    assert(M.cols == x.len);
-   assert(y.len == M.rows);
 
    memset(y.id, 0, y.len*sizeof(double));
    for(int i = 0; i < M.rows; ++i)
@@ -84,10 +84,12 @@ void RMatVec(RMatrix M, Vector x, Vector y)
 
 double RDotRow(int row, RMatrix M, Vector x)
 {
+   assert(row > -1 && row < M.rows);
    assert(M.cols == x.len);
+
    double dot = 0.;
-   for(int i = 0; i < M.cols; ++i)
-      dot += M.rid[row][i] * x.id[i];
+   for(int j = 0; j < M.cols; ++j)
+      dot += M.rid[row][j] * x.id[j];
    return dot;
 }
 
@@ -148,8 +150,8 @@ void CMatrix_realloc(int nRows, int nCols, CMatrix *M)
 
 void CMatrix_free(CMatrix M)
 {
-   if(M.id != NULL)  { free(M.id); M.id = NULL; }
-   if(M.cid != NULL) { free(M.cid); M.cid = NULL; }
+   if(M.id != NULL)  { free(M.id); }
+   if(M.cid != NULL) { free(M.cid); }
 }
 
 void CMatrix_Assign(CMatrix A, CMatrix B)
@@ -167,41 +169,57 @@ void CMatrix_Identity(CMatrix M)
       C_ELEM_ID(M, i, i) = 1.0;
 }
 
+// Load all entries from Vector x to col column of Matrix M
 void CMatrix_LoadToColumn(int col, CMatrix M, Vector x)
 {
-   assert(x.len == M.rows);
    assert(col > -1 && col < M.cols);
+   assert(x.len == M.rows);
    memcpy(M.cid[col], x.id, SIZE_DOUBLE(M.rows));
 }
 
+// Load entries[begin, begin+x.len-1] from Vector x to col column of Matrix M
 void CMatrix_LoadToColumnRange(int begin, int col, CMatrix M, Vector x)
 {
    assert(col > -1 && col < M.cols);
-   assert(begin > -1);
-   assert(begin + M.rows <= x.len);
-   assert(x.len >= M.rows);
+   assert(begin > -1);              // first entry copied from vector
+   assert(x.len % M.rows == 0);     // length of x multiple of #rows
+   assert(begin + M.rows <= x.len); // make sure begin is not too far
+
    memcpy(M.cid[col], x.id+begin, SIZE_DOUBLE(M.rows));
 }
 
 void CMatrix_GetRow(int row, CMatrix M, Vector x)
 {
+   assert(row > -1 && row < M.rows);
    assert(x.len == M.cols);
-   assert(row > -1  && row < M.rows);
    for(int j = 0; j < M.cols; ++j)
       x.id[j] = C_ELEM_ID(M, row, j);
 }
 
 void CMatrix_GetColumn(int col, CMatrix M, Vector x)
 {
-   assert(col > -1  && col < M.cols);
+   assert(col > -1 && col < M.cols);
    assert(x.len == M.rows);
    memcpy(x.id, M.cid[col], SIZE_DOUBLE(M.rows));
 }
 
 void CMatrix_ColumnScale(int col, double c, CMatrix M)
 {
+   assert(col > -1 && col < M.cols);
    int spacing = 1;
    dscal(&M.rows, &c, M.cid[col], &spacing);
+}
+
+void CMatrix_Assign_Transpose(CMatrix A, CMatrix B)
+{
+   assert(A.rows == B.cols);
+   assert(A.cols == B.rows);
+   int Arows = A.rows;
+   int Acols = A.cols;
+
+   for(int j = 0; j < Acols; ++j)
+      for(int i = 0; i < Arows; ++i)
+         C_ELEM_ID(B, j, i) = C_ELEM_ID(A, i, j);
 }
 
 CMatrix CMatrix_Transpose(CMatrix A, trans_type tt)
@@ -217,7 +235,6 @@ CMatrix CMatrix_Transpose(CMatrix A, trans_type tt)
    if(tt == move) CMatrix_free(A);
    return A_TR;
 }
-
 
 void CMatVec(CMatrix M, Vector x, Vector y)
 {

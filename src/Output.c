@@ -1,7 +1,8 @@
 /* Arkadijs Slobodkins
  * SMU Mathematics
- * August 2021
+ * Copyright 2022
  */
+
 
 #include "Output.h"
 #include <stdio.h>
@@ -27,10 +28,14 @@ void HistoryToFile(const quadrature *q, int arr_size, history **hist)
       fprintf(FID, "number of basis functions = %i\n", hist[i]->num_funcs);
       fprintf(FID, "initial number of nodes   = %i\n", hist[i]->nodes_initial);
       fprintf(FID, "final number of nodes     = %i\n", hist[i]->nodes_final);
+      fprintf(FID, "optimal number of nodes   = %i\n", hist[i]->nodes_optimal);
       fprintf(FID, "total eliminations        = %i\n", hist[i]->total_elims);
-      fprintf(FID, "final residual            = %.16e\n\n", hist[i]->res);
+      fprintf(FID, "final residual            = %.16e\n", hist[i]->res);
+      fprintf(FID, "efficiency                = %lf\n\n", hist[i]->efficiency);
       for(j = 0; j < hist[i]->total_elims; ++j)
       {
+         if(hist[i]->hist_array[j].num_solutions)
+            fprintf(FID, "Found %i solutions in wide search\n", hist[i]->hist_array[j].num_solutions);
          fprintf(FID, "total number of nodes[%i] = %i\n", j, hist[i]->hist_array[j].nodes_tot);
          fprintf(FID, "success_node[%i] = %i\n", j, hist[i]->hist_array[j].success_node);
          fprintf(FID, "Converged in %i iterations\n\n", hist[i]->hist_array[j].success_its);
