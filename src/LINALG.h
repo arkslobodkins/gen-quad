@@ -17,7 +17,7 @@ extern "C" {
 // performed in serial, whereas PLASMA routines use OpenMP with
 // omp_get_max_threads(), i.e. maximum number of available threads.
 
-void DGEMM_LAPACK(CMatrix A, CMatrix B, CMatrix C);
+int DGEMM_LAPACK(CMatrix A, CMatrix B, CMatrix C);
 int DGEQR2_LAPACK(CMatrix A, Vector TAU);
 int DGEQRF_LAPACK(CMatrix A, Vector TAU);
 int DORMQR_LAPACK(char SIDE, char TRANS, Vector TAU, CMatrix Q, CMatrix A);

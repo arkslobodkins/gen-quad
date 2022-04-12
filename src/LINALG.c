@@ -13,7 +13,7 @@
 #include <mkl_blas.h>
 #include <mkl_lapacke.h>
 
-void DGEMM_LAPACK(CMatrix A, CMatrix B, CMatrix C)
+int DGEMM_LAPACK(CMatrix A, CMatrix B, CMatrix C)
 {
    assert(C.rows == A.rows);
    assert(C.cols == B.cols);
@@ -28,6 +28,7 @@ void DGEMM_LAPACK(CMatrix A, CMatrix B, CMatrix C)
    int N = B.cols;
 
    dgemm( &TRANS1, &TRANS2, &M, &N, &K, &alpha, A.id, &M, B.id, &K, &beta, C.id, &M );
+   return GQ_SUCCESS;
 }
 
 int DGEQR2_LAPACK(CMatrix A, Vector TAU)

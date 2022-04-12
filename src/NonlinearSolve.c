@@ -285,6 +285,7 @@ LSQ_out LevenbergMarquardt(const bool_enum CONSTR_OPT, quadrature *q_orig)
    int (*leastsquares_ptr)(CMatrix A, Vector b, Vector x);
    void (*getFunc_ptr)(quadrature *q, Vector f);
    void (*getFunctionAndJacobian_ptr)(quadrature *q, Vector f, CMatrix JACOBIAN);
+   int (*dgemm_ptr)(CMatrix A, CMatrix B, CMatrix C);
 
 #ifdef _OPENMP
    bool is_alloc_omp = false;
@@ -301,17 +302,20 @@ LSQ_out LevenbergMarquardt(const bool_enum CONSTR_OPT, quadrature *q_orig)
       leastsquares_ptr           = DGELS_PLASMA;
       getFunc_ptr                = &GetFunctionOmp;
       getFunctionAndJacobian_ptr = &GetFunctionAndJacobianOmp;
+      dgemm_ptr                  = &DGEMM_PLASMA;
    }
    else
    {
       leastsquares_ptr           = DGELS_LAPACK;
       getFunc_ptr                = &GetFunction;
       getFunctionAndJacobian_ptr = &GetFunctionAndJacobian;
+      dgemm_ptr                  = &DGEMM_LAPACK;
    }
 #else
-   leastsquares_ptr = &DGELS_LAPACK;
-   getFunc_ptr      = &GetFunction;
+   leastsquares_ptr           = &DGELS_LAPACK;
+   getFunc_ptr                = &GetFunction;
    getFunctionAndJacobian_ptr = &GetFunctionAndJacobian;
+   dgemm_ptr                  = &DGEMM_LAPACK;
 #endif
 
    // return if input is a satisfactory quadrature
@@ -331,13 +335,12 @@ LSQ_out LevenbergMarquardt(const bool_enum CONSTR_OPT, quadrature *q_orig)
 
       getFunctionAndJacobian_ptr(q_prev, FPrev, JACOBIAN);                                           // J(xp)                            m x n
       CMatrix_Assign_Transpose(JACOBIAN, JACOBIAN_TR);                                               // JT(xp)                           n x m
-      DGEMM_LAPACK(JACOBIAN_TR, JACOBIAN, JT_J_lmd);                                                 // JT_J_lmd = JT * J                n x n
-      for(int i = 0; i < JT_J_lmd.rows; ++i) JT_J_lmd.cid[i][i] += alpha_lvmr * JT_J_lmd.cid[i][i];  // JT_J_lmd += λ*D                  n x n
-
-      CMatVec(JACOBIAN_TR, FPrev, LevMarRHS);                                                        // LevMarRHS = JT * F               n x m * m -> n
-      VScale(-1.0, LevMarRHS);
 
       double start_time = get_cur_time();
+      dgemm_ptr(JACOBIAN_TR, JACOBIAN, JT_J_lmd);                                                    // JT_J_lmd = JT * J                n x n
+      for(int i = 0; i < JT_J_lmd.rows; ++i) JT_J_lmd.cid[i][i] += alpha_lvmr * JT_J_lmd.cid[i][i];  // JT_J_lmd += λ*D                  n x n
+      CMatVec(JACOBIAN_TR, FPrev, LevMarRHS);                                                        // LevMarRHS = JT * F               n x m * m -> n
+      VScale(-1.0, LevMarRHS);
       int INFO = leastsquares_ptr(JT_J_lmd, LevMarRHS, dz);                                          // dz = -(JT * J + λD) \ (JT * F)   n x n * n -> n
       LSQ_TIME += get_cur_time() - start_time;
 
