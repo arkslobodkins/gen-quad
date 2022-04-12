@@ -502,7 +502,7 @@ static double ComputePenalty(const quadrature *q_prev, const quadrature *q_next)
    double distNext = QuadMinDistFromTheBoundary(q_next);
    double distPrev = QuadMinDistFromTheBoundary(q_prev);
 #ifdef QUAD_DEBUG_ON
-   char errString[60] = STR_BOUND_ERROR;
+   char errString[100] = STR_BOUND_ERROR;
    if(distNext < 0 || distPrev < 0)
       PRINT_ERR(strcat(errString, " , most likely a bug in QuadMinDistFromTheBoundary"), __LINE__, __FILE__);
 #endif
