@@ -64,6 +64,12 @@ void RMatrix_free(RMatrix M)
    if(M.rid != NULL) { free(M.rid); }
 }
 
+void RMatrix_SetZero(RMatrix M)
+{
+   assert(M.rows > 0 && M.cols > 0);
+   memset(M.id, 0, SIZE_DOUBLE(M.rows*M.cols));
+}
+
 void RMatrix_LoadToRow(int row, RMatrix M, Vector v)
 {
    assert(row > -1 && row < M.rows);
@@ -152,6 +158,12 @@ void CMatrix_free(CMatrix M)
 {
    if(M.id != NULL)  { free(M.id); }
    if(M.cid != NULL) { free(M.cid); }
+}
+
+void CMatrix_SetZero(CMatrix M)
+{
+   assert(M.rows > 0 && M.cols > 0);
+   memset(M.id, 0, SIZE_DOUBLE(M.rows*M.cols));
 }
 
 void CMatrix_Assign(CMatrix A, CMatrix B)

@@ -123,8 +123,8 @@ constraintsInterval* constraints_interval_init(__attribute__unused dimParamsInte
 
 void get_constraints_interval(constraintsInterval *constr)
 {
-   memset(constr->M.id, 0, SIZE_DOUBLE(constr->M.len));
-   memset(constr->b.id, 0, SIZE_DOUBLE(constr->b.len));
+   RMatrix_SetZero(constr->M);
+   VSetToZero(constr->b);
    constr->M.rid[0][0] = -1.0;
    constr->M.rid[1][0] = 1.0;
    constr->b.id[0] = 0.0;
@@ -174,8 +174,8 @@ void get_constraints_cube(constraintsCube *constr)
 {
    int n_rows = constr->M.rows;
    int n_cols = constr->M.cols;
-   memset(constr->M.id, 0, SIZE_DOUBLE(n_rows*n_cols));
-   memset(constr->b.id, 0, SIZE_DOUBLE(n_rows));
+   RMatrix_SetZero(constr->M);
+   VSetToZero(constr->b);
 
    for(int j = 0; j < n_cols; ++j) {
       int two_j = 2*j;
@@ -233,13 +233,12 @@ constraintsSimplex* constraints_simplex_init(dimParamsSimplex *params)
 
 void get_constraints_simplex(constraintsSimplex *constr)
 {
-   int n_rows = constr->M.rows;
-   int n_cols = constr->M.cols;
-
-   memset(constr->M.id, 0, SIZE_DOUBLE(n_rows*n_cols));
-   memset(constr->b.id, 0, SIZE_DOUBLE(n_rows));
+   RMatrix_SetZero(constr->M);
+   VSetToZero(constr->b);
    constr->b.id[0] = 1.0;
 
+   int n_rows = constr->M.rows;
+   int n_cols = constr->M.cols;
    constr->M.rid[0][0] = 1.0;
    for(int j = 1; j < n_rows-1; ++j) {
       constr->M.rid[j][j-1] = -1.0;
@@ -295,10 +294,8 @@ constraintsCubeSimplex* constraints_cubesimplex_init(dimParamsCubeSimplex *param
 
 void get_constraints_cubesimplex(constraintsCubeSimplex *constr)
 {
-   int n_rows = constr->M.rows;
-   int n_cols = constr->M.cols;
-   memset(constr->M.id, 0, SIZE_DOUBLE(n_rows*n_cols));
-   memset(constr->b.id, 0, SIZE_DOUBLE(n_rows));
+   RMatrix_SetZero(constr->M);
+   VSetToZero(constr->b);
 
    dimParamsCube paramsCube = { constr->dimParams->dims[0] };
    constraintsCube *constr_cube = constraints_cube_init(&paramsCube);
@@ -371,8 +368,8 @@ constraintsSimplexSimplex* constraints_simplexsimplex_init(dimParamsSimplexSimpl
 
 void get_constraints_simplexsimplex(constraintsSimplexSimplex *constr)
 {
-   memset(constr->M.id, 0, SIZE_DOUBLE(constr->M.len));
-   memset(constr->b.id, 0, SIZE_DOUBLE(constr->b.len));
+   RMatrix_SetZero(constr->M);
+   VSetToZero(constr->b);
 
    dimParamsSimplex paramsS1 = { constr->dimParams->dims[0] };
    constraintsSimplex *constrS1 = constraints_simplex_init(&paramsS1);

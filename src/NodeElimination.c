@@ -158,7 +158,7 @@ void NodeElimination(const quadrature *q_initial, quadrature *q_final, history *
    PrintElimInfo(dim, n_cur , n_opt, efficiency);
    while( (n_cur > n_opt) && (n_cur >= 2) )
    {
-      SOL_FLAG = WideLsqSearch(OFF, q_new, hist, lev_mar);
+      SOL_FLAG = LsqSearch(OFF, q_new, hist, lev_mar);
       if(SOL_FLAG == SOL_NOT_FOUND)
       {
          if(dim != MAX_DIM) SOL_FLAG = TreeSearch(OFF, q_new, hist, lev_mar);
@@ -502,7 +502,7 @@ static RMatrix PredictorLapack(quadrature *q, DistanceStruct *distance)
 
    CMatrix J = CMatrix_init(nrows, ncols);
    GetJacobian(q, J);
-   double start_time__1 = get_cur_time();
+   double start_time__1 = get_cur_time();             // time from here since Jacobian is timed separately
    CMatrix J_TR = CMatrix_Transpose(J, move);
 
    // construct QR factorization of transpose of the Jacobian
@@ -532,25 +532,21 @@ static RMatrix PredictorLapack(quadrature *q, DistanceStruct *distance)
       for(int i = 0; i < Q2Weight.rows; ++i)
          C_ELEM_ID(Q2Weight, i, j) = C_ELEM_ID(QFull, i, j+numFuncs);
 
-   double *ith_row = (double *)malloc(Q2Weight.cols*sizeof(double));
-   double *norm_Q2_ROW = (double *)malloc(n_cur*sizeof(double));
-   for(int i = 0; i < n_cur; ++i) {
-      for(int j = 0; j < Q2Weight.cols; ++j)
-         ith_row[j] = C_ELEM_ID(Q2Weight, i, j);
-      norm_Q2_ROW[i] = TwoNorm(Q2Weight.cols, ith_row);
+   Vector ith_row = Vector_init(Q2Weight.cols);
+   Vector norm_Q2_ROW = Vector_init(Q2Weight.rows);
+   for(int i = 0; i < Q2Weight.rows; ++i) {
+      CMatrix_GetRow(i, Q2Weight, ith_row);
+      norm_Q2_ROW.id[i] = V_TwoNorm(ith_row);
    }
 
-   // multiply Q2 by its weights rows, product goes to columns
+   // multiply Q2 by its weight rows(hence tranpose Q2Weight), product goes to columns
    Q2Weight = CMatrix_Transpose(Q2Weight, move);
-
-   int LA_FLAG;
-   if((LA_FLAG = DGEMM_LAPACK(Q2, Q2Weight, Q2Mult)) != 0)
-      PRINT_ERR(ERR_STRING(LA_FLAG), __LINE__, __FILE__);
+   DGEMM_LAPACK(Q2, Q2Weight, Q2Mult);
 
    double *w = q->w;
    for(int i = 0; i < Q2Mult.cols; ++i)
       for(int j = 0; j < Q2Mult.rows; ++j)
-         dZ.rid[i][j] = C_ELEM_ID(Q2Mult, j, i) * w[i]/SQUARE(norm_Q2_ROW[i]);
+         dZ.rid[i][j] = C_ELEM_ID(Q2Mult, j, i) * w[i]/SQUARE(norm_Q2_ROW.id[i]);
 
    Vector qz = q->z;
    for(int i = 0; i < Z.rows; ++i)
@@ -558,12 +554,12 @@ static RMatrix PredictorLapack(quadrature *q, DistanceStruct *distance)
          Z.rid[i][j] = qz.id[j] - dZ.rid[i][j];
 
    for(int i = 0; i < dZ.rows; ++i)
-      distance[i].d = TwoNorm(ncols, dZ.rid[i]);
+      distance[i].d = TwoNorm(dZ.cols, dZ.rid[i]);
 
    qsort(distance, n_cur, sizeof(DistanceStruct), compareDouble);
 
-   free(ith_row);
-   free(norm_Q2_ROW);
+   Vector_free(norm_Q2_ROW);
+   Vector_free(ith_row);
    Vector_free(REFL);
    CMatrix_free(J_TR);
    RMatrix_free(dZ);
@@ -585,7 +581,6 @@ static RMatrix PredictorPlasma(quadrature *q, DistanceStruct *distance)
    const int n_cur     = q->num_nodes;
    const int nrows     = numFuncs;
    const int ncols     = (dim+1) * n_cur;
-   int INFO;
    assert(nrows < ncols);
 
    RMatrix Z        = RMatrix_init(n_cur, n_cur*(dim+1));
@@ -600,14 +595,14 @@ static RMatrix PredictorPlasma(quadrature *q, DistanceStruct *distance)
    QuadAllocBasisOmp(q, omp_get_max_threads());
    GetJacobianOmp(q, J);
    QuadFreeBasisOmp(q, omp_get_max_threads());
-   double start_time__1 = get_cur_time();
+   double start_time__1 = get_cur_time();         // time from here since Jacobian is timed separately
    CMatrix J_TR = CMatrix_Transpose(J, move);
    int LDJ = J_TR.rows;
    int n_refl = MIN(J_TR.rows, J_TR.cols);
 
    plasma_init();
    plasma_desc_t T;
-   INFO = plasma_dgeqrf(J_TR.rows, J_TR.cols, J_TR.id, LDJ, &T);
+   int INFO = plasma_dgeqrf(J_TR.rows, J_TR.cols, J_TR.id, LDJ, &T);
    if(INFO != 0)
       PRINT_ERR(STR_PLASMA_ERR, __LINE__, __FILE__);
 
@@ -619,6 +614,8 @@ static RMatrix PredictorPlasma(quadrature *q, DistanceStruct *distance)
                         QFull.id, QFull.rows);
    if(INFO != 0)
       PRINT_ERR(STR_PLASMA_ERR, __LINE__, __FILE__);
+   plasma_desc_destroy(&T);
+   plasma_finalize();
 
    // extract Q2
    for(int j = 0; j < Q2.cols; ++j)
@@ -629,24 +626,23 @@ static RMatrix PredictorPlasma(quadrature *q, DistanceStruct *distance)
       for(int i = 0; i < Q2Weight.rows; ++i)
          C_ELEM_ID(Q2Weight, i, j) = C_ELEM_ID(QFull, i, j+numFuncs);
 
-   double *ith_row = (double *)malloc(Q2Weight.cols*sizeof(double));
-   double *norm_Q2_ROW = (double *)malloc(n_cur*sizeof(double));
-   for(int i = 0; i < n_cur; ++i) {
-      for(int j = 0; j < Q2Weight.cols; ++j)
-         ith_row[j] = C_ELEM_ID(Q2Weight, i, j);
-      norm_Q2_ROW[i] = TwoNorm(Q2Weight.cols, ith_row);
+   Vector ith_row = Vector_init(Q2Weight.cols);
+   Vector norm_Q2_ROW = Vector_init(Q2Weight.rows);
+   for(int i = 0; i < Q2Weight.rows; ++i) {
+      CMatrix_GetRow(i, Q2Weight, ith_row);
+      norm_Q2_ROW.id[i] = V_TwoNorm(ith_row);
    }
-   plasma_desc_destroy(&T);
-   plasma_finalize();
 
    // multiply Q2 by its weights rows, product goes to columns
    Q2Weight = CMatrix_Transpose(Q2Weight, move);
-   DGEMM_PLASMA(Q2, Q2Weight, Q2Mult);
+   INFO = DGEMM_PLASMA(Q2, Q2Weight, Q2Mult);
+   if(INFO != GQ_SUCCESS)
+      PRINT_ERR(ERR_STRING(INFO), __LINE__, __FILE__);
 
    double *w = q->w;
    for(int i = 0; i < Q2Mult.cols; ++i)
       for(int j = 0; j < Q2Mult.rows; ++j)
-         dZ.rid[i][j] = C_ELEM_ID(Q2Mult, j, i) * w[i]/SQUARE(norm_Q2_ROW[i]);
+         dZ.rid[i][j] = C_ELEM_ID(Q2Mult, j, i) * w[i]/SQUARE(norm_Q2_ROW.id[i]);
 
    Vector qz = q->z;
    for(int i = 0; i < Z.rows; ++i)
@@ -654,12 +650,12 @@ static RMatrix PredictorPlasma(quadrature *q, DistanceStruct *distance)
          Z.rid[i][j] = qz.id[j] - dZ.rid[i][j];
 
    for(int i = 0; i < dZ.rows; ++i)
-      distance[i].d = TwoNorm(ncols, dZ.rid[i]);
+      distance[i].d = TwoNorm(dZ.cols, dZ.rid[i]);
 
    qsort(distance, n_cur, sizeof(DistanceStruct), compareDouble);
 
-   free(ith_row);
-   free(norm_Q2_ROW);
+   Vector_free(norm_Q2_ROW);
+   Vector_free(ith_row);
    CMatrix_free(J_TR);
    RMatrix_free(dZ);
    CMatrix_free(QFull);
@@ -679,13 +675,6 @@ static RMatrix PredictorSimple(quadrature *q, DistanceStruct *distance)
    const int n_cur = q->num_nodes;
    RMatrix Z = RMatrix_init(n_cur, n_cur*(dim+1));
 
-   CubeParams params;
-   params.deg = q->deg;
-   params.dim = q->dim;
-   CubeParams *paramsPtr = &params;
-   BasisInterface interface = SetCubeBasisInterface();
-   Basis *cubeBasis = BasisInit((void *)paramsPtr, &interface);
-
    for(int i = 0; i < Z.rows; ++i)
       for(int j = 0; j < Z.cols; ++j)
          Z.rid[i][j] = q->z.id[j];
@@ -694,11 +683,11 @@ static RMatrix PredictorSimple(quadrature *q, DistanceStruct *distance)
       distance[i].d = 0.0;
 
    double *x;
-   Vector basisFuncs = cubeBasis->functions;
+   Vector basisFuncs = q->basis->functions;
    for(int i = 0; i < Z.rows; ++i)
    {
       x = &q->x[i*dim];
-      BasisMonomial(cubeBasis, x, basisFuncs);
+      BasisMonomial(q->basis, x, basisFuncs);
       for(int j = 0; j < basisFuncs.len; ++j)
          distance[i].d += SQUARE(basisFuncs.id[j]);
    }
@@ -706,7 +695,6 @@ static RMatrix PredictorSimple(quadrature *q, DistanceStruct *distance)
       distance[i].d *= q->w[i];
    qsort(distance, n_cur, sizeof(DistanceStruct), compareDouble);
 
-   BasisFree(cubeBasis);
    return Z;
 }
 
@@ -791,6 +779,8 @@ static void InsertionSort(int num_entries, double *norms, int *arrayIndex)
 // extracts quadrature that belongs to arrayIndex row, exluding the 0 weight
 static void ExtractFromPredictor(RMatrix Z, int arrayIndex, quadrature *q)
 {
+   assert(arrayIndex > -1 && arrayIndex < Z.rows);
+
    int count, j, d;
    int dim = q->dim;
    int numNodes = Z.cols/(dim+1);
@@ -807,6 +797,10 @@ static void ExtractFromPredictor(RMatrix Z, int arrayIndex, quadrature *q)
          q->x[count*dim+d] = Z.rid[arrayIndex][numNodes+j*dim+d];
       ++count;
    }
+#ifdef QUAD_DEBUG_ON
+   if( fabs(Z.rid[arrayIndex][arrayIndex]) > QUAD_TOL )
+      PRINT_ERR("weight should be closer to 0", __LINE__, __FILE__);
+#endif
 }
 
 
@@ -829,9 +823,7 @@ static int compareDouble(const void *a, const void *b)
 {
    DistanceStruct *ad = (DistanceStruct *)a;
    DistanceStruct *bd = (DistanceStruct *)b;
-   if(ad->d > bd->d)
-      return 1;
-   else return -1;
+   return (ad->d > bd->d) - (ad->d < bd->d);
 }
 
 
@@ -844,7 +836,7 @@ static double TwoNorm(int n, double *z)
 }
 
 
-// assumes Q has less rows than columns
+// assumes Q has greater or equal number of columns than rows
 static bool TestQR(const CMatrix Q)
 {
    int rows = Q.rows; int cols = Q.cols;
@@ -853,8 +845,8 @@ static bool TestQR(const CMatrix Q)
    double temp = -1.0, tol = POW_DOUBLE(10, -12);
 
    CMatrix Q_COPY = CMatrix_init(rows, cols);
-   memcpy(Q_COPY.id, Q.id, SIZE_DOUBLE(Q.len));
 
+   CMatrix_Assign(Q, Q_COPY);
    CMatrix Q_COPY_TR = CMatrix_Transpose(Q_COPY, copy);
    CMatrix Identity = CMatrix_init(rows, rows);
    DGEMM_LAPACK(Q_COPY, Q_COPY_TR, Identity);
@@ -863,13 +855,14 @@ static bool TestQR(const CMatrix Q)
    {
       temp = fabs(Identity.id[i*rows+i]);
       diag = MAX(temp, diag);
+   }
+   for(int i = 0; i < rows; ++i)
       for(int j = 0; j < rows; ++j)
       {
          if(j == i) continue;
          temp = fabs(Identity.id[i*rows+j]);
          non_diag = MAX(temp, non_diag);
       }
-   }
 
    CMatrix_free(Q_COPY);
    CMatrix_free(Q_COPY_TR);

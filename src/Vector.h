@@ -66,9 +66,11 @@ void FreeVectorOmpData(Vector v);
 
 void VPrint(Vector V);
 double VDot(Vector a, Vector b);
+void VSetToZero(Vector z);
 void VSetToOne(Vector v);
 void VScale(double c, Vector V);
 void Vector_daxpy(double a, Vector x, Vector y);
+void VAdd(Vector V1, Vector V2, Vector V3);
 void VAddScale(double c1, Vector V1, double c2, Vector V2, Vector V3);
 void VRemoveElement(int index, Vector *z);
 VMin VectorMin(Vector v);

@@ -40,6 +40,7 @@ typedef struct CMatrix
 RMatrix RMatrix_init(int nRows, int nCols);
 void RMatrix_realloc(int nRows, int nCols, RMatrix *M);
 void RMatrix_free(RMatrix M);
+void RMatrix_SetZero(RMatrix M);
 void RMatrix_LoadToRow(int row, RMatrix M, Vector v);
 void RMatVec(RMatrix M, Vector x, Vector y);
 double RDotRow(int row, RMatrix M, Vector x);
@@ -48,6 +49,7 @@ void RMatrixPrint(RMatrix M);
 CMatrix CMatrix_init(int nRows, int nCols);
 void CMatrix_realloc(int nRows, int nCols, CMatrix *M);
 void CMatrix_free(CMatrix M);
+void CMatrix_SetZero(CMatrix M);
 void CMatrix_Assign(CMatrix A, CMatrix B);
 void CMatrix_Identity(CMatrix M);
 void CMatrix_LoadToColumn(int col, CMatrix M, Vector x);

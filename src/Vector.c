@@ -130,6 +130,12 @@ double VDot(Vector x, Vector y)
    return dot;
 }
 
+void VSetToZero(Vector z)
+{
+   assert(z.len >= 1);
+   memset(z.id, 0, z.len*sizeof(double));
+}
+
 void VSetToOne(Vector z)
 {
    assert(z.len >= 1);
@@ -150,6 +156,13 @@ void Vector_daxpy(double a, Vector x, Vector y)
    int incx = 1;
    int incy = 1;
    daxpy(&x.len, &a, x.id, &incx, y.id, &incy);
+}
+
+void VAdd(Vector V1, Vector V2, Vector V3)
+{
+   assert(V1.len == V2.len && V2.len == V3.len && V3.len > 0);
+   for(int i = 0; i < V3.len; ++i)
+      V3.id[i] = V1.id[i] + V2.id[i];
 }
 
 void VAddScale(double c1, Vector V1, double c2, Vector V2, Vector V3)
