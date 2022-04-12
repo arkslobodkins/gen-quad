@@ -25,8 +25,7 @@ In addition, PLASMA library is used in OpenMP mode for sufficiently large proble
 PLASMA is a parallel linear algebra library that has been compiled with MKL 
 and statically linked, therefore installation might not be needed. However, 
 it is recommended to reinstall PLASMA for best performance on your machine.
-Has been tested with gcc and g++ on multiple Linux platforms.  
-Makefile contains instructions for enabling/disabling debugging mode.  
+Has been tested with gcc and g++ on multiple Linux platforms. Makefile contains instructions for enabling/disabling debugging mode.  
   
 When running executable, the following command line arguments should be supplied:  
 1.Shape of the domain, which is case-insensitive. For example, either cube, CUBE or cubE are acceptable.  

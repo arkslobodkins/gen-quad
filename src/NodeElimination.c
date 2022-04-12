@@ -8,7 +8,7 @@
 
 #include "GetJacobian.h"
 #include "GetFunction.h"
-#include "LeastSquaresNewton.h"
+#include "NonlinearSolve.h"
 #include "ConstrainedOptimization.h"
 #include "Quadrature.h"
 #include "LINALG.h"
@@ -159,11 +159,13 @@ void NodeElimination(const quadrature *q_initial, quadrature *q_final, history *
    PrintElimInfo(dim, n_cur , n_opt, efficiency);
    while( (n_cur > n_opt) && (n_cur >= 2) )
    {
-      SOL_FLAG = LsqSearch(OFF, q_new, hist, lev_mar);
+      SOL_FLAG = WideLsqSearch(OFF, q_new, hist, lev_mar);
       if(SOL_FLAG == SOL_NOT_FOUND)
       {
-         if(dim != MAX_DIM) SOL_FLAG = TreeSearch(OFF, q_new, hist, lev_mar);
-         else               SOL_FLAG = TreeSearch(ON, q_new, hist, lev_mar);
+//         printf("levm\n");
+//         SOL_FLAG = LsqSearch(ON, q_new, hist, lev_mar);
+//         if(dim != MAX_DIM) SOL_FLAG = TreeSearch(OFF, q_new, hist, lev_mar);
+//         else               SOL_FLAG = TreeSearch(ON, q_new, hist, lev_mar);
       }
 
       n_cur = q_new->num_nodes;
@@ -248,7 +250,7 @@ static bool WideLsqSearch(bool_enum CONSTR_FLAG, quadrature *q_new, history *his
    DistanceStruct *distanceWeight = distance_init(n_cur);
    RMatrix Z = predictor_ptr(q_new, distanceWeight);
 
-   int search_size = MIN(10, q_new->num_nodes);
+   int search_size = MIN(5, q_new->num_nodes);
 
    int failCount = 0;
    int count = 0;
@@ -269,10 +271,8 @@ static bool WideLsqSearch(bool_enum CONSTR_FLAG, quadrature *q_new, history *his
       if(lsq_out[count].SOL_FLAG == SOL_FOUND)
          ++count;
       else if(lsq_out[count].SOL_FLAG == SOL_NOT_FOUND)
-      {
          if(++failCount >= MAX_FAILS_ELIM)
             break;
-      }
 
       if(count >= search_size) break;
    }
@@ -286,18 +286,22 @@ static bool WideLsqSearch(bool_enum CONSTR_FLAG, quadrature *q_new, history *his
       return SOL_NOT_FOUND;
    }
 
-   VMin alphas[count];
-   for(int i = 0; i < count; ++i)
-      alphas[i] = QuadMinAlpha(q_temp[i]);
+   Vector min_singv = MinSingvJacobians(count, q_temp);
+   VMax max_min_singv = VectorMax(min_singv);
+   int successQuad = max_min_singv.max_index;
 
-   VMin maxAlpha = alphas[0];
-   int successQuad = 0;
-   for(int i = 1; i < count; ++i)
-      if(maxAlpha.min_value < alphas[i].min_value)
-      {
-         maxAlpha = alphas[i];
-         successQuad = i;
-      }
+//   VMin alphas[count];
+//   for(int i = 0; i < count; ++i)
+//      alphas[i] = QuadMinAlpha(q_temp[i]);
+
+//   VMin maxAlpha = alphas[0];
+//   int successQuad = 0;
+//   for(int i = 1; i < count; ++i)
+//      if(maxAlpha.min_value < alphas[i].min_value)
+//      {
+//         maxAlpha = alphas[i];
+//         successQuad = i;
+//      }
 
    n_cur = q_temp[successQuad]->num_nodes;
    quadrature_assign_resize(q_temp[successQuad], q_new);
@@ -312,6 +316,7 @@ static bool WideLsqSearch(bool_enum CONSTR_FLAG, quadrature *q_new, history *his
       quadrature_free(q_temp[i]);
    free(distanceWeight);
    RMatrix_free(Z);
+   Vector_free(min_singv);
 
    return SOL_FOUND;
 }

@@ -5,6 +5,7 @@
 
 
 #include "GetJacobian.h"
+#include "LINALG.h"
 #include "Basis.h"
 
 #include <assert.h>
@@ -204,4 +205,32 @@ void GetBasis(quadrature *q, CMatrix BasisMatrix)
       BasisFuncs(basis, curNode, functions);
       CMatrix_LoadToColumn(j, BasisMatrix, functions);
    }
+}
+
+
+Vector MinSingvJacobians(int n, quadrature **q)
+{
+   Vector min_singv = Vector_init(n);
+
+   int rows[n];
+   int cols[n];
+   for(int i = 0; i < n; ++i)
+   {
+      rows[i] = q[i]->basis->numFuncs;
+      cols[i] = q[i]->num_nodes * (q[i]->dim+1);
+   }
+
+   CMatrix Jacobians[n];
+   for(int i = 0; i < n; ++i)
+      Jacobians[i] = CMatrix_init(rows[i], cols[i]);
+
+   for(int i = 0; i < n; ++i)
+      GetJacobian(q[i], Jacobians[i]);
+   for(int i = 0; i < n; ++i)
+      min_singv.id[i] = MIN_SINGV_LAPACK(Jacobians[i]);
+
+   for(int i = 0; i < n; ++i)
+      CMatrix_free(Jacobians[i]);
+
+   return min_singv;
 }

@@ -13,7 +13,6 @@ do {                                                                    \
    printf("%s took: %.4e seconds\n", #a, get_cur_time() - start);       \
    } while (0)
 
-
 double get_cur_time();
 
 #ifdef __cplusplus

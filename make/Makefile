@@ -29,7 +29,7 @@ endif
 RANLIB = ranlib
 VPATH = ../src:../src/Gauss_Lib
 
-OBJECTS = Main.o LeastSquaresNewton.o  GeneralGaussTensor.o GENERAL_QUADRATURE.o GetJacobian.o  \
+OBJECTS = Main.o NonlinearSolve.o  GeneralGaussTensor.o GENERAL_QUADRATURE.o GetJacobian.o      \
    GetFunction.o NodeElimination.o Output.o AddDimension.o ComputeDomain.o QuadDriver.o         \
    Constraints.o ConstrainedOptimization.o Vector.o Matrix.o Print.o Quadrature.o               \
 	LINALG.o Basis.o Tensor.o get_time.o libgaussq.a libplasma.a libcoreblas.a

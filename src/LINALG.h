@@ -4,8 +4,8 @@
  */
 
 
-#ifndef LIN_ALG_H
-#define LIN_ALG_H
+#ifndef LINALG_H
+#define LINALG_H
 
 #include "GENERAL_QUADRATURE.h"
 

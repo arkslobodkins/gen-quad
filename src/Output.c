@@ -95,11 +95,7 @@ void BoundaryCubeStats(const quadrature *quad)
    for(int i = 0; i < quad->num_nodes; ++i) {
       bool outsideFlag = false;
       for(int j = 0; j < dim; ++j) {
-         if(quad->x[dim*i+j] < 0.1) {
-            ++countsPerNode[i];
-            outsideFlag = true;
-         }
-         else if(quad->x[dim*i+j] > 0.9) {
+         if(quad->x[dim*i+j] < 0.1 || quad->x[dim*i+j] > 0.9) {
             ++countsPerNode[i];
             outsideFlag = true;
          }

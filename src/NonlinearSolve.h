@@ -4,8 +4,8 @@
  */
 
 
-#ifndef LEAST_SQUARES_NEWTONPLASMA_H
-#define LEAST_SQUARES_NEWTONPLASMA_H
+#ifndef NONLINEAR_SOLVE_H
+#define NONLINEAR_SOLVE_H
 
 #include "GENERAL_QUADRATURE.h"
 #include "Quadrature.h"
@@ -23,12 +23,13 @@ typedef struct
    bool SOL_FLAG;
 } LSQ_out;
 
+// LeastSquaresNewton && LevenbergMarquardt
+// Both solvers receive initial quadrature guess and parameter for
+// enabling/disabling constrained optimization mode.
+// Primarily designed for solving underdetermined systems of equations.
+// Returns SOL_FOUND if algorithm converged and all nodes are inside
+// of the domain and if all nodes are positive, otherwise SOL_NOT_FOUND.
 
-// LeastSquaresNewton
-// Receives initial quadrature guess. Primarily solves
-// underdetermined systems of equations in the least
-// squares sense. Returns success if algorithm converged
-// and all nodes are inside of the domain and if all nodes are positive.
 LSQ_out LeastSquaresNewton(const bool_enum CONSTR_OPT, quadrature *q_orig);
 LSQ_out LevenbergMarquardt(const bool_enum CONSTR_OPT, quadrature *q_orig);
 

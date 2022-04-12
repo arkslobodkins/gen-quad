@@ -4,7 +4,7 @@
  */
 
 
-#include "LeastSquaresNewton.h"
+#include "NonlinearSolve.h"
 #include "ConstrainedOptimization.h"
 
 #include "GetFunction.h"

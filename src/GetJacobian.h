@@ -29,6 +29,7 @@ void GetJacobian(quadrature *q, CMatrix);
 
 void GetFunctionAndJacobian(quadrature *q, Vector f, CMatrix JACOBIAN);
 void GetBasis(quadrature *q, CMatrix BasisMatrix);
+Vector MinSingvJacobians(int n, quadrature **q);
 
 #ifdef __cplusplus
 }
