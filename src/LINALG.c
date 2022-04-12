@@ -4,6 +4,7 @@
  */
 
 
+#include "LINALG.h"
 #include "Print.h"
 
 #include <stdlib.h>

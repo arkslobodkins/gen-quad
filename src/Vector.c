@@ -22,7 +22,7 @@ VectorInt VectorInt_init(int n)
 {
    assert(n >= 1);
 
-   VectorInt z = {0};
+   VectorInt z = {0, 0};
    z.len = n;
    z.id = (int *)calloc(n, sizeof(int));
 
@@ -53,7 +53,7 @@ Vector Vector_init(int n)
 {
    assert(n >= 1);
 
-   Vector z = {0};
+   Vector z = {0, 0, 0};
    z.len = n;
    z.id = (double *)calloc(n, sizeof(double));
    z.ompId = NULL;
@@ -65,7 +65,7 @@ Vector Vector_uninitialized(int n)
 {
    assert(n >= 1);
 
-   Vector z = {0};
+   Vector z = {0, 0, 0};
    z.len = n;
    z.id = (double *)malloc(n*sizeof(double));
    for(int i = 0; i < n; ++i)
@@ -175,7 +175,7 @@ void VAddScale(double c1, Vector V1, double c2, Vector V2, Vector V3)
 VMin VectorMin(Vector z)
 {
    assert(z.len > 0);
-   VMin vMin = {0};
+   VMin vMin = {0, 0};
 
    vMin.min_index = 0;
    vMin.min_value = z.id[0];
@@ -202,7 +202,7 @@ void VRemoveElement(int index, Vector *z)
 VMax VectorMax(Vector z)
 {
    assert(z.len > 0);
-   VMax vMax = {0};
+   VMax vMax;
 
    vMax.max_index = 0;
    vMax.max_value = z.id[0];

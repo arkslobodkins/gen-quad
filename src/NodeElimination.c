@@ -71,8 +71,9 @@ static void ExtractFromPredictor(RMatrix Z, int arrayIndex, quadrature *q);
 static void ExtractFromPredictorFull(RMatrix Z, int arrayIndex, quadrature *q);
 __attribute__unused static void ReorderWithBoundaryDist(RMatrix predictor, quadrature *q, DistanceStruct *arrayIndex);
 __attribute__unused static void InsertionSort(int num_entries, double *norms, int *arrayIndex);
+__attribute__unused static void TestInsertionSort(int num_entries, double *norms); // must be called right after InsertionSort
 
-static int compareDouble(const void *a, const void *b);
+static int compareDouble(const void *a, const void *b); // comparison routine to be passed to qsort
 static double TwoNorm(int n, double *z);
 
 __attribute__unused static bool TestQR(const CMatrix Q);
@@ -775,6 +776,13 @@ static void InsertionSort(int num_entries, double *norms, int *arrayIndex)
    }
 }
 
+static void TestInsertionSort(int num_entries, double *norms)
+{
+   for(int i = 1; i < num_entries; ++i)
+      if(norms[i] < norms[i-1])
+         PRINT_ERR("InsertionSort test Failed", __LINE__, __FILE__);
+}
+
 
 // extracts quadrature that belongs to arrayIndex row, exluding the 0 weight
 static void ExtractFromPredictor(RMatrix Z, int arrayIndex, quadrature *q)
@@ -818,7 +826,6 @@ static void ExtractFromPredictorFull(RMatrix Z, int arrayIndex, quadrature *q)
 }
 
 
-// comparison routine to be passed to qsort
 static int compareDouble(const void *a, const void *b)
 {
    DistanceStruct *ad = (DistanceStruct *)a;

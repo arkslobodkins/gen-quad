@@ -19,7 +19,7 @@ RMatrix RMatrix_init(int nRows, int nCols)
    assert(nRows >= 1);
    assert(nCols >= 1);
 
-   RMatrix M = {0};
+   RMatrix M;
 
    M.rows = nRows;
    M.cols = nCols;
@@ -117,7 +117,7 @@ CMatrix CMatrix_init(int nRows, int nCols)
    assert(nRows >= 1);
    assert(nCols >= 1);
 
-   CMatrix M = {0};
+   CMatrix M;
 
    M.rows = nRows;
    M.cols = nCols;

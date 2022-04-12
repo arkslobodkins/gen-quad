@@ -265,6 +265,10 @@ LSQ_out LevenbergMarquardt(const bool_enum CONSTR_OPT, quadrature *q_orig)
    CMatrix JACOBIAN_TR  = CMatrix_init(ncols, nrows);
    CMatrix JT_J_lmd     = CMatrix_init(ncols, ncols);
 
+   double alpha_lvmr = 0.;
+   if(CONSTR_OPT == OFF)     alpha_lvmr = 0.0001;                 // more local initial guess, consider other values
+   else if(CONSTR_OPT == ON) alpha_lvmr = 0.01;                   // more global search when solution is harder to find, consider other values
+
    Vector FPrev         = Vector_init(nrows);
    Vector FCur          = Vector_init(nrows);
    Vector FNext         = Vector_init(nrows);
@@ -320,9 +324,6 @@ LSQ_out LevenbergMarquardt(const bool_enum CONSTR_OPT, quadrature *q_orig)
       goto FREERETURN;
    }
 
-   double alpha_lvmr = 0.;
-   if(CONSTR_OPT == OFF)     alpha_lvmr = 0.0001;                 // more local initial guess, consider other values
-   else if(CONSTR_OPT == ON) alpha_lvmr = 0.01;                   // more global search when solution is harder to find, consider other values
 
    while( (lsq_out.its < maxiter) && (errorNormUpdate > q_tol) )  // while infinity norm > q_tol
    {
