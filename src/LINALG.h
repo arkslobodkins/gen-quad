@@ -22,8 +22,10 @@ int DGEQR2_LAPACK(CMatrix A, Vector TAU);
 int DGEQRF_LAPACK(CMatrix A, Vector TAU);
 int DORMQR_LAPACK(char SIDE, char TRANS, Vector TAU, CMatrix Q, CMatrix A);
 int DORGQR_LAPACK(CMatrix Q, Vector TAU);
-int DGESVD_LAPACK(CMatrix A, CMatrix VT);
+int DGESVD_LAPACK(CMatrix A, Vector SINGV);
 int DGELS_LAPACK(CMatrix A, Vector b, Vector x);
+
+double MIN_SINGV_LAPACK(CMatrix A);
 
 #ifdef _OPENMP
 int DGEMM_PLASMA(CMatrix A, CMatrix B, CMatrix C);

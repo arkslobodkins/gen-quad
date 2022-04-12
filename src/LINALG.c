@@ -136,6 +136,23 @@ int DGELS_LAPACK(CMatrix A, Vector b, Vector x)
    return GQ_SUCCESS;
 }
 
+double MIN_SINGV_LAPACK(CMatrix A)
+{
+   Vector singv = Vector_init(MIN(A.rows, A.cols));
+
+   int INFO = DGESVD_LAPACK(A, singv);
+   if(INFO != GQ_SUCCESS)
+   {
+      PRINT_ERR(STR_LAPACK_ERR, __LINE__, __FILE__);
+      return -1.;
+   }
+
+   VMin min_singv = VectorMin(singv);
+
+   Vector_free(singv);
+   return min_singv.min_value;
+}
+
 #ifdef _OPENMP
 
 int DGEMM_PLASMA(CMatrix A, CMatrix B, CMatrix C)

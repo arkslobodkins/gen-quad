@@ -349,7 +349,7 @@ LSQ_out LevenbergMarquardt(const bool_enum CONSTR_OPT, quadrature *q_orig)
          goto FREERETURN;
       }
 
-      VAdd(*z_prev, dz, *z_cur);                                                      // z_cur = z_prev + dz -> q_cur = q_prev + dz
+      VAdd(*z_prev, dz, *z_cur);                                                                     // z_cur = z_prev + dz -> q_cur = q_prev + dz
 
       // |||||||||| start region for updating q_next === z_next and alpha_lvmr ||||||||||
       getFunc_ptr(q_cur, FCur);                                                                      // F(q_cur) === F(z_cur)
