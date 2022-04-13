@@ -58,10 +58,10 @@ LSQ_out LeastSquaresNewton(const bool_enum CONSTR_OPT, quadrature *q_orig)
 
    int nrows    = numFuncs;
    int ncols    = (dim+1)*num_nodes;
-   CMatrix JACOBIAN    = CMatrix_init(nrows, ncols);
-   Vector dz           = Vector_init(ncols);
-   Vector FPrev        = Vector_init(nrows);
-   Vector FNext        = Vector_init(nrows);
+   CMatrix JACOBIAN = CMatrix_init(nrows, ncols);
+   Vector dz        = Vector_init(ncols);
+   Vector FPrev     = Vector_init(nrows);
+   Vector FNext     = Vector_init(nrows);
 
    quadrature *q_prev = quadrature_make_full_copy(q_orig);
    quadrature *q_next = quadrature_make_full_copy(q_orig);
@@ -143,9 +143,11 @@ LSQ_out LeastSquaresNewton(const bool_enum CONSTR_OPT, quadrature *q_orig)
       int INFO = leastsquares_ptr(JACOBIAN, FPrev, dz);                                              // dz = J(q_prev) \ F(q_prev) (pseudoinverse)
       LSQ_TIME += get_cur_time() - start_time;
 
-      char errString[60] = STR_LINALG_ERROR;
-      strcat(errString, ", may happen");
-      if(INFO != 0) PRINT_WARN(errString, __LINE__, __FILE__);
+      if(INFO != 0)                                                                                  // \\\\\ return if could not solve the system /////
+      {
+         lsq_out.SOL_FLAG = SOL_NOT_FOUND;
+         goto FREERETURN;
+      }
 
       VScale(-1.0, dz);
       VAdd(*z_prev, dz, *z_next);                                                                    // z_next = z_prev + dz
@@ -269,11 +271,11 @@ LSQ_out LevenbergMarquardt(const bool_enum CONSTR_OPT, quadrature *q_orig)
    if(CONSTR_OPT == OFF)     alpha_lvmr = 0.0001;                 // more local initial guess, consider other values
    else if(CONSTR_OPT == ON) alpha_lvmr = 0.01;                   // more global search when solution is harder to find, consider other values
 
-   Vector FPrev         = Vector_init(nrows);
-   Vector FCur          = Vector_init(nrows);
-   Vector FNext         = Vector_init(nrows);
-   Vector LevMarRHS     = Vector_init(ncols);
-   Vector dz            = Vector_init(ncols);
+   Vector FPrev     = Vector_init(nrows);
+   Vector FCur      = Vector_init(nrows);
+   Vector FNext     = Vector_init(nrows);
+   Vector LevMarRHS = Vector_init(ncols);
+   Vector dz        = Vector_init(ncols);
 
    quadrature *q_prev = quadrature_make_full_copy(q_orig);
    quadrature *q_cur  = quadrature_make_full_copy(q_orig);
@@ -346,9 +348,6 @@ LSQ_out LevenbergMarquardt(const bool_enum CONSTR_OPT, quadrature *q_orig)
 
       if(INFO != 0)                                                                                  // \\\\\ return if could not solve the system /////
       {
-         char errString[60] = STR_LINALG_ERROR;
-         strcat(errString, ", may happen");
-         PRINT_WARN(errString, __LINE__, __FILE__);
          lsq_out.SOL_FLAG = SOL_NOT_FOUND;
          goto FREERETURN;
       }

@@ -8,6 +8,7 @@
 #define VECTOR_H
 
 #include <assert.h>
+#include <string.h>
 #include <stdbool.h>
 #include <stdlib.h>
 
