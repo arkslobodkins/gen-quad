@@ -8,13 +8,6 @@
 #include "get_time.h"
 #include "../../plasma-17.1/include/plasma.h"
 
-
-int plasma_dgels(plasma_enum_t trans,
-                 int m, int n, int nrhs,
-                 double *pA, int lda,
-                 plasma_desc_t *T,
-                 double *pB, int ldb);
-
 double compute_norm(int len, double *v)
 {
    double norm = 0.0;
@@ -65,6 +58,7 @@ int main(int argc, char *argv[])
    free(b_plasma);
    plasma_desc_destroy(&T);
    plasma_finalize();
+
    printf("plasma time = %lf\n", PL_END-PL_START);
    printf("plasma sol norm = %.16e\n", pl_sol_norm);
    //////////////////////////////////////////////////////////////////////

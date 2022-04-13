@@ -121,12 +121,12 @@ void assert_scale()
    Vector_Assign(a, b);
    VScale(-1.0, b);
    for(int i = 0; i < a.len; ++i)
-      assert(within_tol(-a.id[i], b.id[i]));
+      assert( within_tol(-a.id[i], b.id[i]) );
 
    Vector_Assign(a, b);
    VScale(2.0, b);
    for(int i = 0; i < a.len; ++i)
-      assert(within_tol(a.id[i] + a.id[i], b.id[i]));
+      assert( within_tol(a.id[i] + a.id[i], b.id[i]) );
 
    Vector_free(a);
    Vector_free(b);
@@ -143,7 +143,7 @@ void assert_daxpy()
    Vector_Assign(a, b);           // b = a
    Vector_daxpy(2.0, a, b);       // b = 2*a + a = 3*a
    for(int i = 0; i < vlen; ++i)
-      assert(within_tol(a.id[i] + a.id[i] + a.id[i], b.id[i]));
+      assert( within_tol(a.id[i] + a.id[i] + a.id[i], b.id[i]) );
 
    Vector_free(a);
    Vector_free(b);
@@ -159,14 +159,14 @@ void assert_add_scale()
 
    VAddScale(1.0, a, 1.0, b, c);
    for(int i = 0; i < vlen; ++i)
-      assert(within_tol(a.id[i] + b.id[i], c.id[i]));
+      assert( within_tol(a.id[i] + b.id[i], c.id[i]) );
 
    reinitialize_random(a, 5.0);
    reinitialize_random(b, 5.0);
 
    VAddScale(1.0, a, 2.0, b, c);
    for(int i = 0; i < vlen; ++i)
-      assert(within_tol(a.id[i] + b.id[i] + b.id[i], c.id[i]));
+      assert( within_tol(a.id[i] + b.id[i] + b.id[i], c.id[i]) );
 
    reinitialize_random(a, 5.0);
    VAddScale(1.0, a, -1.0, a, c);
