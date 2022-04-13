@@ -39,16 +39,16 @@ int main(int argc, char *argv[])
    for(int i = 0; i < LEAD_DIM; ++i)
       b_plasma[i] = (double)rand() / (double) RAND_MAX;
 
-   // Allocate copies so that identical problem will be solved with lapack
+   // Allocate copies so that identical problem will be solved with mkl lapack
    double *A_lapack = (double *)malloc(nrows*ncols*sizeof(double));
    memcpy(A_lapack, A_plasma, nrows*ncols*sizeof(double));
    double *b_lapack = (double *)malloc(LEAD_DIM*sizeof(double));
    memcpy(b_lapack, b_plasma, LEAD_DIM*sizeof(double));
 
-#ifdef _OPENMP
    mkl_set_threading_layer(MKL_THREADING_SEQUENTIAL);
    printf("OPENMP enanbled with %i threads\n\n", omp_get_max_threads());
-#endif
+
+   //////////////////////////////////////////////////////////////////////
    plasma_init(omp_get_max_threads());
    plasma_desc_t T;
 
@@ -65,9 +65,11 @@ int main(int argc, char *argv[])
    plasma_desc_destroy(&T);
    plasma_finalize();
    printf("plasma time = %lf\n", PL_END-PL_START);
-   printf("plasma sol norm = %lf\n", pl_sol_norm);
+   printf("plasma sol norm = %.16e\n", pl_sol_norm);
+   //////////////////////////////////////////////////////////////////////
 
 
+   //////////////////////////////////////////////////////////////////////
    char TRANS = 'N';
    int LWORK = 5*nrows;
    double *WORK = (double *)malloc(LWORK*sizeof(double));
@@ -85,8 +87,9 @@ int main(int argc, char *argv[])
    free(A_lapack);
    free(b_lapack);
 
-   printf("lapack time = %lf\n", LP_END-LP_START);
-   printf("lapack sol norm = %lf\n", la_sol_norm);
+   printf("mkl lapack time = %lf\n", LP_END-LP_START);
+   printf("mkl lapack sol norm = %.16e\n", la_sol_norm);
+   //////////////////////////////////////////////////////////////////////
 
    return EXIT_SUCCESS;
 }
