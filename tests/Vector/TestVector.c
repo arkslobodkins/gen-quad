@@ -55,7 +55,7 @@ void reinitialize_random(Vector x, double range)
 ////////////////////////////////////////////////////////
 // beginning of unit tests
 ////////////////////////////////////////////////////////
-void assert_equal(int line)
+void assert_equal()
 {
    Vector a = initialize_random(5.0);
 
@@ -66,10 +66,10 @@ void assert_equal(int line)
    Vector_free(a);
    Vector_free(b);
 
-   printf("passed assert_equal on line %i\n", line);
+   printf("passed assert_equal\n");
 }
 
-void assert_zeros(int line)
+void assert_zeros()
 {
    Vector x = Vector_init(vlen);
 
@@ -78,10 +78,10 @@ void assert_zeros(int line)
 
    Vector_free(x);
 
-   printf("passed assert_zeros on line %i\n", line);
+   printf("passed assert_zeros\n");
 }
 
-void assert_ones(int line)
+void assert_ones()
 {
    Vector x = Vector_init(vlen);
    VSetToOne(x);
@@ -90,10 +90,10 @@ void assert_ones(int line)
 
    Vector_free(x);
 
-   printf("passed assert_ones on line %i\n", line);
+   printf("passed assert_ones\n");
 }
 
-void assert_dot_itself(int line)
+void assert_dot_itself()
 {
    Vector x = initialize_random(5.0);
 
@@ -106,10 +106,10 @@ void assert_dot_itself(int line)
 
    Vector_free(x);
 
-   printf("passed assert_dot_itself on line %i\n", line);
+   printf("passed assert_dot_itself\n");
 }
 
-void assert_scale(int line)
+void assert_scale()
 {
    Vector a = initialize_random(5.0);
    Vector b = Vector_init(vlen);
@@ -131,10 +131,10 @@ void assert_scale(int line)
    Vector_free(a);
    Vector_free(b);
 
-   printf("passed assert_scale on line %i\n", line);
+   printf("passed assert_scale\n");
 }
 
-void assert_daxpy(int line)
+void assert_daxpy()
 {
    Vector a = initialize_random(5.0);
    Vector b = Vector_init(vlen);
@@ -148,10 +148,10 @@ void assert_daxpy(int line)
    Vector_free(a);
    Vector_free(b);
 
-   printf("passed assert_daxpy on line %i\n", line);
+   printf("passed assert_daxpy\n");
 }
 
-void assert_add_scale(int line)
+void assert_add_scale()
 {
    Vector a = initialize_random(5.0);
    Vector b = initialize_random(5.0);
@@ -177,18 +177,64 @@ void assert_add_scale(int line)
    Vector_free(b);
    Vector_free(c);
 
-   printf("passed assert_add_scale on line %i\n", line);
+   printf("passed assert_add_scale\n");
 }
 
-int main(int argc, char *argv[])
+void assert_min()
 {
-   assert_zeros(__LINE__);
-   assert_equal(__LINE__);
-   assert_dot_itself(__LINE__);
-   assert_ones(__LINE__);
-   assert_scale(__LINE__);
-   assert_daxpy(__LINE__);
-   assert_add_scale(__LINE__);
+   Vector x = Vector_init(vlen);
+
+   for(int i = 0; i < x.len; ++i)
+      x.id[i] = i;
+   x.id[x.len-1] = -10.;
+
+   VMin min = VectorMin(x);
+   assert(min.min_index == x.len-1);
+   assert(min.min_value == x.id[x.len-1]);
+
+   x.id[0] = x.id[x.len-1]-0.0001;
+   min = VectorMin(x);
+   assert(min.min_index == 0);
+   assert(min.min_value == x.id[0]);
+
+   Vector_free(x);
+
+   printf("passed assert_min\n");
+}
+
+void assert_max()
+{
+   Vector x = Vector_init(vlen);
+
+   for(int i = 0; i < x.len; ++i)
+      x.id[i] = i;
+   x.id[x.len-1] = x.len*3.0;
+
+   VMax max = VectorMax(x);
+   assert(max.max_index == x.len-1);
+   assert(max.max_value == x.id[x.len-1]);
+
+   x.id[0] = x.id[x.len-1]+0.0001;
+   max = VectorMax(x);
+   assert(max.max_index == 0);
+   assert(max.max_value == x.id[0]);
+
+   Vector_free(x);
+
+   printf("passed assert_max\n");
+}
+
+int main()
+{
+   assert_zeros();
+   assert_equal();
+   assert_dot_itself();
+   assert_ones();
+   assert_scale();
+   assert_daxpy();
+   assert_add_scale();
+   assert_min();
+   assert_max();
 
    return EXIT_SUCCESS;
 }
