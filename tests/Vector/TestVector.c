@@ -10,7 +10,6 @@ const int vlen = 100; // all tests are performed with this length
 ////////////////////////////////////////////////////////
 // Auxiliary routines
 ////////////////////////////////////////////////////////
-
 bool within_tol(double x, double y)
 {
    double tol = pow(10, -15);
@@ -56,7 +55,6 @@ void reinitialize_random(Vector x, double range)
 ////////////////////////////////////////////////////////
 // beginning of unit tests
 ////////////////////////////////////////////////////////
-
 void assert_equal(int line)
 {
    Vector a = initialize_random(5.0);
