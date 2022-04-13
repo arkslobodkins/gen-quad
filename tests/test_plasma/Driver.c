@@ -2,6 +2,7 @@
 #include <math.h>
 #include <string.h>
 #include <omp.h>
+#include <mkl_lapacke.h>
 #include <mkl.h>
 
 #include "get_time.h"
@@ -70,20 +71,12 @@ int main(int argc, char *argv[])
 
 
    //////////////////////////////////////////////////////////////////////
-   char TRANS = 'N';
-   int LWORK = 5*nrows;
-   double *WORK = (double *)malloc(LWORK*sizeof(double));
-   int INFO = 0;
-
    double LP_START = get_cur_time();
-   dgels(&TRANS, &nrows, &ncols, &NRHS,
-          A_lapack, &LDA,
-          b_lapack, &LEAD_DIM,
-          WORK, &LWORK, &INFO);
+   LAPACKE_dgels(LAPACK_COL_MAJOR, 'N', nrows, ncols, NRHS,
+                 A_lapack, LDA, b_lapack, LEAD_DIM);
    double LP_END = get_cur_time();
    double la_sol_norm = compute_norm(ncols, b_lapack);
 
-   free(WORK);
    free(A_lapack);
    free(b_lapack);
 
