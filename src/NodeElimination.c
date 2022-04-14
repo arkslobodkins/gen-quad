@@ -162,8 +162,11 @@ void NodeElimination(const quadrature *q_initial, quadrature *q_final, history *
       SOL_FLAG = LsqSearch(OFF, q_new, hist, lev_mar);
       if(SOL_FLAG == SOL_NOT_FOUND)
       {
-//         printf("levm\n");
-//         SOL_FLAG = LsqSearch(ON, q_new, hist, lev_mar);
+         if(dim == MAX_DIM)
+         {
+            printf("levm\n");
+            SOL_FLAG = LsqSearch(ON, q_new, hist, lev_mar);
+         }
 //         if(dim != MAX_DIM) SOL_FLAG = TreeSearch(OFF, q_new, hist, lev_mar);
 //         else               SOL_FLAG = TreeSearch(ON, q_new, hist, lev_mar);
       }

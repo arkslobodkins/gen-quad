@@ -115,7 +115,6 @@ LSQ_out LeastSquaresNewton(const bool_enum CONSTR_OPT, quadrature *q_orig)
 
    while( (lsq_out.its < maxiter) && (errorNormUpdate > q_tol) )                                     // while infinity norm > q_tol
    {
-
       if( (CONSTR_OPT == ON) && (cVectData.N_OR_W == WEIGHT) )                                       // constrained optimization : remove 1 node from  q_prev and q_next, preserve other nodes,
                                                                                                      // remove (dim+1) columns from JACOBIAN, remove (dim+1) entries from dz vector
       {
@@ -257,7 +256,7 @@ LSQ_out LevenbergMarquardt(const bool_enum CONSTR_OPT, quadrature *q_orig)
    const int num_nodes = q_orig->num_nodes;
    const int numFuncs  = q_orig->basis->numFuncs;
 
-   const int maxiter  = 60;
+   const int maxiter  = 75;
    const double q_tol = QUAD_TOL; // 10^(-14);
 
    const int nrows    = numFuncs;
@@ -269,7 +268,7 @@ LSQ_out LevenbergMarquardt(const bool_enum CONSTR_OPT, quadrature *q_orig)
 
    double alpha_lvmr = 0.;
    if(CONSTR_OPT == OFF)     alpha_lvmr = 0.0001;                 // more local initial guess, consider other values
-   else if(CONSTR_OPT == ON) alpha_lvmr = 0.01;                   // more global search when solution is harder to find, consider other values
+   else if(CONSTR_OPT == ON) alpha_lvmr = 100;                    // more global search when solution is harder to find, consider other values
 
    Vector FPrev     = Vector_init(nrows);
    Vector FCur      = Vector_init(nrows);
@@ -338,8 +337,9 @@ LSQ_out LevenbergMarquardt(const bool_enum CONSTR_OPT, quadrature *q_orig)
       getFunctionAndJacobian_ptr(q_prev, FPrev, JACOBIAN);                                           // J(xp)                            m x n
       CMatrix_Assign_Transpose(JACOBIAN, JACOBIAN_TR);                                               // JT(xp)                           n x m
 
-      double start_time = get_cur_time();
+      double start_time = get_cur_time();                                                            // include dgemm in LSQ_TIME
       dgemm_ptr(JACOBIAN_TR, JACOBIAN, JT_J_lmd);                                                    // JT_J_lmd = JT * J                n x n
+
       for(int i = 0; i < JT_J_lmd.rows; ++i) JT_J_lmd.cid[i][i] += alpha_lvmr * JT_J_lmd.cid[i][i];  // JT_J_lmd += λ*D                  n x n
       CMatVec(JACOBIAN_TR, FPrev, LevMarRHS);                                                        // LevMarRHS = JT * F               n x m * m -> n
       VScale(-1.0, LevMarRHS);
@@ -395,8 +395,13 @@ LSQ_out LevenbergMarquardt(const bool_enum CONSTR_OPT, quadrature *q_orig)
                   Vector_free(dz_short);
                }
             }
+            else if(lsq_out.its < 25) {                                                                 // add boundary penalty
+               double alpha = ComputePenalty(q_prev, q_next);                                           //
+               if(alpha < 1.0)                                                                          // alpha >= 0
+                  VAddScale(1.0, *z_prev, alpha, dz, *z_next);                                          // z_next = z_prev + alpha * dz
+            }
          }
-         else if(lsq_out.its < 20) {                                                                 // add boundary penalty
+         else if(lsq_out.its < 25) {                                                                 // add boundary penalty
             double alpha = ComputePenalty(q_prev, q_next);                                           //
             if(alpha < 1.0)                                                                          // alpha >= 0
                VAddScale(1.0, *z_prev, alpha, dz, *z_next);                                          // z_next = z_prev + alpha * dz
