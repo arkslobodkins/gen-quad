@@ -164,7 +164,7 @@ void NodeElimination(const quadrature *q_initial, quadrature *q_final, history *
       {
          if(dim == MAX_DIM)
          {
-            printf("levm\n");
+            printf("Rerunning with constrained optimization\n");
             SOL_FLAG = LsqSearch(ON, q_new, hist, lev_mar);
          }
 //         if(dim != MAX_DIM) SOL_FLAG = TreeSearch(OFF, q_new, hist, lev_mar);

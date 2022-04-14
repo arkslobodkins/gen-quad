@@ -66,7 +66,7 @@ int ConstrainedProjection(const quadrature *q_prev, quadrature *q_next)
          }
 
          for(int d = 0; d < dim; ++d)
-            TID1(node_change_T, 1) = TID2(x_next_T, i, d) - TID2(x_prev_T, i, d);
+            TID1(node_change_T, d) = TID2(x_next_T, i, d) - TID2(x_prev_T, i, d);
          int P_FLAG = ProjectNode(eqn_matrix, node_change, node_projected);
          if(P_FLAG != CONSTR_SUCCESS)
          {
@@ -88,15 +88,13 @@ int ConstrainedProjection(const quadrature *q_prev, quadrature *q_next)
 int ConstrainedOptimization(ConstrOptData *data, const quadrature *q_prev, quadrature *q_next, ConstrVectData *cVectData)
 {
    assert(q_prev->num_nodes == q_next->num_nodes);
-   int qlen = q_next->z.len;
 
-   Vector q_diff = data->q_diff;
+   Vector dz = data->dz;
    quadrature *q_next_copy = data->q_next_copy;
-   Vector x_next_copy = q_next_copy->z;
-   Vector x_prev = q_prev->z;
+   Vector z_next_copy = q_next_copy->z;
+   Vector z_prev = q_prev->z;
 
-   for(int i = 0; i < qlen; ++i)
-      q_diff.id[i] = x_next_copy.id[i] - x_prev.id[i];
+   VAddScale(1.0, z_next_copy, -1.0, z_prev, dz);
 
    if(QuadInConstraint(q_prev) == false)
       return CANNOT_CONSTRAIN;
@@ -109,8 +107,7 @@ int ConstrainedOptimization(ConstrOptData *data, const quadrature *q_prev, quadr
          ConstrVectDataReset(cVectData);
          return RET_FLAG;
       }
-      for(int i = 0; i < qlen; ++i)
-         x_next_copy.id[i] = x_prev.id[i] + (cVectData->tMin - BOUND_CORRECTION) * q_diff.id[i];
+      VAddScale(1.0, z_prev, cVectData->tMin-BOUND_CORRECTION, dz, z_next_copy);
       COND_TEST_2;
 
       if(QuadInConstraintEps(q_next_copy) == true) {
@@ -206,25 +203,20 @@ ConstrNodeData ShortenNode(const RMatrix A, const Vector b_bound, const Vector z
    StaticVectorInit(nrows, t);
    StaticVectorInit(ncols, dz);
 
-   int outEqn[nrows];
-   memset(outEqn, -1, nrows*sizeof(int));
-
    VAddScale(1.0, z_new, -1.0, z_old, dz);
    RMatVec(A, dz, b_diff);
    RMatVec(A, z_new, b_new);
    RMatVec(A, z_old, b_old);
 
    // return if z_old does not satisfy inequality constraints
-   for (i = 0; i < nrows; ++i)
+   for(i = 0; i < nrows; ++i)
       if(b_old.id[i] > b_bound.id[i])
          return ConstrNodeDataInit();
 
    // compute t for those equations that z_new does not satisfy inequality constraints
-   for (out_count = 0, i = 0; i < nrows; ++i)
-      if (b_new.id[i] > b_bound.id[i]) {
-         t.id[out_count] = (b_bound.id[i] - b_old.id[i]) / b_diff.id[i];
-         outEqn[out_count++] = i;
-      }
+   for(out_count = 0, i = 0; i < nrows; ++i)
+      if (b_new.id[i] > b_bound.id[i])
+         t.id[out_count++] = (b_bound.id[i] - b_old.id[i]) / b_diff.id[i];
 
    // return if z_new(and z_old) satisfies constraints
    if(out_count == 0)
@@ -234,16 +226,10 @@ ConstrNodeData ShortenNode(const RMatrix A, const Vector b_bound, const Vector z
    // compute and return data if z_new does not(and z_old does) satisfy constraints
    else
    {
-      int eqnId = outEqn[0];
-      double tMin = t.id[0];
-      for(i = 1; i < out_count; ++i)
-         if(t.id[i] < tMin) {
-            tMin  = t.id[i];
-            eqnId = outEqn[i];
-         }
+      VMin tMin = VectorMin(t);
       ConstrNodeData cNodeData = ConstrNodeDataInit();
-      cNodeData.eqnId  = eqnId;
-      cNodeData.tMin   = tMin;
+      cNodeData.eqnId  = tMin.min_index;
+      cNodeData.tMin   = tMin.min_value;
       cNodeData.ACTIVE = ON;
       if(cNodeData.eqnId == 0)     cNodeData.N_OR_W = WEIGHT;
       else if(cNodeData.eqnId > 0) cNodeData.N_OR_W = NODE;
@@ -302,13 +288,13 @@ ConstrOptData* ConstrainedOptimizationInit(quadrature *q_next)
 {
    ConstrOptData *data = (ConstrOptData*)malloc(sizeof(ConstrOptData));
    data->q_next_copy = quadrature_make_full_copy(q_next);
-   data->q_diff = Vector_init(q_next->z.len);
+   data->dz = Vector_init(q_next->z.len);
    return data;
 }
 
 void ConstrainedOptimizationFree(ConstrOptData *data)
 {
-   Vector_free(data->q_diff);
+   Vector_free(data->dz);
    quadrature_free(data->q_next_copy);
    free(data);
 }

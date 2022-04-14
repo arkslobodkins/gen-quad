@@ -43,7 +43,7 @@ typedef struct
 typedef struct
 {
    quadrature *q_next_copy;
-   Vector q_diff;
+   Vector dz;
 } ConstrOptData;
 
 
@@ -62,7 +62,7 @@ int ConstrainedOptimization(ConstrOptData *data, const quadrature *q_prev, quadr
 
 
 // Shortens q_next vector such that every node satisfies the inequality
-// A*q_next(node[i]) <=  b, provided that q_prev satisfies the constraints.
+// A*q_next(node[i]) <= b, provided that q_prev satisfies the constraints.
 int ShortenVector(const quadrature *q_prev, const quadrature *q_next, ConstrVectData *cVectData);
 
 // Returns data information needed to map z_new onto the boundary, such that A*z_new = b_bound,
@@ -74,7 +74,6 @@ ConstrNodeData ShortenNode(const RMatrix A, const Vector b_bound, const Vector z
 // Projects dx onto equations specified by eqn_matrix. Reduced matrix Q of eqn_matrix
 // is extracted from QR factorization, and projector P is computed by
 // P = I-Q_reduced*Q_reduced'. Results are stored in x_projected.
-// Most parameters are allocated on the stack due to small matrix sizes.
 int ProjectNode(const CMatrix eqn_matrix, const Vector dx, Vector x_projected);
 
 #ifdef __cplusplus
