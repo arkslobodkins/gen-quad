@@ -77,7 +77,7 @@ quadrature* quadrature_init_basic(int n, int dim, int *dims, int deg, DOMAIN_TYP
    memset(q, 0, sizeof(quadrature));
 
    q->num_nodes = n;
-   q->z = Vector_init(n*(dim+1));
+   q->z = Vector_uninitialized(n*(dim+1));
    memset( q->z.id, 0, SIZE_DOUBLE(n*(dim+1)) );
    q->w = &q->z.id[0];
    q->x = &q->z.id[n];

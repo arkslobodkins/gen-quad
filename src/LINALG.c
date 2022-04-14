@@ -84,7 +84,7 @@ int DORGQR_LAPACK(CMatrix Q, Vector TAU)
 
 int DGESVD_LAPACK(CMatrix A, Vector SINGV)
 {
-   assert(SINGV.len = MIN(A.rows, A.cols));
+   assert(SINGV.len == MIN(A.rows, A.cols));
 
    int M = A.rows;
    int N = A.cols;
