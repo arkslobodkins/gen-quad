@@ -26,7 +26,7 @@ void GetJacobianOmp(quadrature *q, CMatrix JACOBIAN)
    int dim = q->dim;
    int deg = q->deg;
    int rows = q->basis->numFuncs;
-   int cols = q->num_nodes;
+   int wcols = q->num_nodes;
    const double *w = q->w;
    const double *x = q->x;
    Basis **basis = q->basisOmp;
@@ -42,7 +42,7 @@ void GetJacobianOmp(quadrature *q, CMatrix JACOBIAN)
       Vector basisFuncsLoc = basisLoc->functions;
       Vector basisDerLoc   = basisLoc->derivatives;
       #pragma omp for schedule(static)
-      for(int j = 0; j < cols; ++j) {
+      for(int j = 0; j < wcols; ++j) {
          double curNode[dim];
          for(int i = 0; i < dim; ++i)
             curNode[i] = x[dim*j+i];
@@ -52,7 +52,7 @@ void GetJacobianOmp(quadrature *q, CMatrix JACOBIAN)
          VScale(w[j], basisDerLoc);
 
          CMatrix_LoadToColumn(j, JACOBIAN, basisFuncsLoc);
-         int colId = j*dim+cols;
+         int colId = j*dim+wcols;
          for(int d = 0; d < dim; ++d)
             CMatrix_LoadToColumnRange(d*rows, colId+d, JACOBIAN, basisDerLoc);
       }
@@ -71,7 +71,7 @@ void GetFunctionAndJacobianOmp(quadrature *q, Vector f, CMatrix JACOBIAN)
    int dim = q->dim;
    int deg = q->deg;
    int rows = q->basis->numFuncs;
-   int cols = q->num_nodes;
+   int wcols = q->num_nodes;
    const double *w = q->w;
    const double *x = q->x;
    Basis **basis = q->basisOmp;
@@ -94,7 +94,7 @@ void GetFunctionAndJacobianOmp(quadrature *q, Vector f, CMatrix JACOBIAN)
       Vector basisFuncsLoc = basisLoc->functions;
       Vector basisDerLoc   = basisLoc->derivatives;
       #pragma omp for schedule(static)
-      for(int j = 0; j < cols; ++j)
+      for(int j = 0; j < wcols; ++j)
       {
          double curNode[dim];
          for(int i = 0; i < dim; ++i)
@@ -106,7 +106,7 @@ void GetFunctionAndJacobianOmp(quadrature *q, Vector f, CMatrix JACOBIAN)
          VScale(w[j], basisDerLoc);
 
          CMatrix_LoadToColumn(j, JACOBIAN, basisFuncsLoc);
-         int colId = j*dim+cols;
+         int colId = j*dim+wcols;
          for(int d = 0; d < dim; ++d)
             CMatrix_LoadToColumnRange(d*rows, colId+d, JACOBIAN, basisDerLoc);
       }
@@ -127,14 +127,14 @@ void GetJacobian(quadrature *q, CMatrix JACOBIAN)
 
    int dim = q->dim;
    int rows = q->basis->numFuncs;
-   int cols = q->num_nodes;
+   int wcols = q->num_nodes;
    const double *w = q->w;
    const double *x = q->x;
 
    Basis *basis       = q->basis;
    Vector functions   = basis->functions;
    Vector derivatives = basis->derivatives;
-   for(int j = 0; j < cols; ++j)
+   for(int j = 0; j < wcols; ++j)
    {
       const double *curNode = &x[dim*j];
       BasisFuncs(basis, curNode, functions);
@@ -142,7 +142,7 @@ void GetJacobian(quadrature *q, CMatrix JACOBIAN)
       VScale(w[j], derivatives);
 
       CMatrix_LoadToColumn(j, JACOBIAN, functions);
-      int colId = j*dim+cols;
+      int colId = j*dim+wcols;
       for(int d = 0; d < dim; ++d)
          CMatrix_LoadToColumnRange(d*rows, colId+d, JACOBIAN, derivatives);
    }
@@ -157,7 +157,7 @@ void GetFunctionAndJacobian(quadrature *q, Vector f, CMatrix JACOBIAN)
    assert(q->z.len == JACOBIAN.cols);
    int dim = q->dim;
    int rows = q->basis->numFuncs;
-   int cols = q->num_nodes;
+   int wcols = q->num_nodes;
    const double *w = q->w;
    const double *x = q->x;
 
@@ -170,7 +170,7 @@ void GetFunctionAndJacobian(quadrature *q, Vector f, CMatrix JACOBIAN)
    for(int i = 0; i < integrals.len; ++i)
       f.id[i] = -1.0 * integrals.id[i];
 
-   for(int j = 0; j < cols; ++j)
+   for(int j = 0; j < wcols; ++j)
    {
       const double *curNode = &x[dim*j];
       BasisFuncs(basis, curNode, functions);
@@ -179,7 +179,7 @@ void GetFunctionAndJacobian(quadrature *q, Vector f, CMatrix JACOBIAN)
 
       BasisDer(basis, curNode, derivatives);
       VScale(w[j], derivatives);
-      int colId = j*dim+cols;
+      int colId = j*dim+wcols;
       for(int d = 0; d < dim; ++d)
          CMatrix_LoadToColumnRange(d*rows, colId+d, JACOBIAN, derivatives);
    }

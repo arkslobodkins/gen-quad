@@ -1,0 +1,68 @@
+*********************************************************
+
+dimension                 = 2
+degree of precision       = 4
+DOMAIN_TYPE               = CUBE
+number of basis functions = 15
+initial number of nodes   = 9
+final number of nodes     = 6
+optimal number of nodes   = 5
+total eliminations        = 3
+final residual            = 5.5621769612875071e-16
+efficiency                = 0.833333
+
+total number of nodes[0] = 8
+success_node[0] = 0
+Converged in 6 iterations
+
+total number of nodes[1] = 7
+success_node[1] = 0
+Converged in 18 iterations
+
+total number of nodes[2] = 6
+success_node[2] = 0
+Converged in 5 iterations
+
+
+*********************************************************
+
+dimension                 = 3
+degree of precision       = 4
+DOMAIN_TYPE               = CUBE
+number of basis functions = 35
+initial number of nodes   = 18
+final number of nodes     = 11
+optimal number of nodes   = 9
+total eliminations        = 7
+final residual            = 1.3018416935542226e-16
+efficiency                = 0.818182
+
+total number of nodes[0] = 17
+success_node[0] = 0
+Converged in 5 iterations
+
+total number of nodes[1] = 16
+success_node[1] = 0
+Converged in 5 iterations
+
+total number of nodes[2] = 15
+success_node[2] = 0
+Converged in 4 iterations
+
+total number of nodes[3] = 14
+success_node[3] = 0
+Converged in 4 iterations
+
+total number of nodes[4] = 13
+success_node[4] = 2
+Converged in 11 iterations
+
+total number of nodes[5] = 12
+success_node[5] = 1
+Converged in 19 iterations
+
+total number of nodes[6] = 11
+success_node[6] = 0
+Converged in 5 iterations
+
+

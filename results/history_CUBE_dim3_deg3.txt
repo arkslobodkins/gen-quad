@@ -1,0 +1,28 @@
+*********************************************************
+
+dimension                 = 2
+degree of precision       = 3
+DOMAIN_TYPE               = CUBE
+number of basis functions = 10
+initial number of nodes   = 4
+final number of nodes     = 4
+optimal number of nodes   = 4
+total eliminations        = 0
+final residual            = 2.4653150624272316e-16
+efficiency                = 1.000000
+
+
+*********************************************************
+
+dimension                 = 3
+degree of precision       = 3
+DOMAIN_TYPE               = CUBE
+number of basis functions = 20
+initial number of nodes   = 8
+final number of nodes     = 8
+optimal number of nodes   = 5
+total eliminations        = 0
+final residual            = 2.4653150624272316e-16
+efficiency                = 0.625000
+
+

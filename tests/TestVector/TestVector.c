@@ -224,6 +224,46 @@ void assert_max()
    printf("passed assert_max\n");
 }
 
+void assert_remove()
+{
+   Vector a = Vector_init(vlen);
+   Vector b = Vector_init(vlen-1);
+
+   for(int i = 0; i < a.len; ++i) a.id[i] = i;
+   for(int i = 0; i < b.len; ++i) b.id[i] = i;
+   VRemoveElement(a.len-1, &a);
+   assert(vector_equal(a, b));
+
+   Vector_realloc(vlen, &a);
+   for(int i = 0; i < a.len; ++i) a.id[i] = i-1;
+   VRemoveElement(0, &a);
+   assert(vector_equal(a, b));
+
+   Vector_realloc(vlen, &a);
+   for(int i = 0; i <= a.len/2; ++i) a.id[i] = i;
+   for(int i = a.len/2+1; i < a.len; ++i) a.id[i] = i-1;
+   VRemoveElement(a.len/2, &a);
+   assert(vector_equal(a, b));
+
+   Vector_free(a);
+   Vector_free(b);
+
+   printf("passed assert_remove\n");
+}
+
+void assert_increasing()
+{
+   Vector x = Vector_init(vlen);
+   for(int i = 0; i < x.len; ++i) x.id[i] = i;
+   assert(V_IsIncreasing(x));
+
+   x.id[0] = 5;
+   assert(!V_IsIncreasing(x));
+
+   Vector_free(x);
+   printf("passed assert_increasing\n");
+}
+
 int main()
 {
    assert_zeros();
@@ -235,6 +275,8 @@ int main()
    assert_add_scale();
    assert_min();
    assert_max();
+   assert_remove();
+   assert_increasing();
 
    return EXIT_SUCCESS;
 }

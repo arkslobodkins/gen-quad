@@ -274,6 +274,15 @@ bool V_IsUninitialized(Vector z)
    return false;
 }
 
+bool V_IsIncreasing(Vector v)
+{
+   for(int i = 1; i < v.len; ++i)
+      if(v.id[i] < v.id[i-1])
+         return false;
+
+   return true;
+}
+
 void double_daxpy(int len, double a, double *x, double *y)
 {
    int incx = 1;

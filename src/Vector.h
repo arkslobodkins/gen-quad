@@ -84,6 +84,7 @@ bool V_CheckNan(Vector z);
 bool V_CheckInf(Vector z);
 bool V_CheckInfOrNan(Vector z);
 bool V_IsUninitialized(Vector v);
+bool V_IsIncreasing(Vector v);
 
 void double_daxpy(int len, double a, double *x, double *y);
 void double_dcopy(int n, double *x, double *y);
