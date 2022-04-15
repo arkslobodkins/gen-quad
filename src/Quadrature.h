@@ -43,6 +43,7 @@ struct quadrature
    struct constraints *constr;
    struct Basis *basis;
    struct Basis **basisOmp;
+   int omp_threads;
    ExpIntegralExact expIntegralExact;
 
    FreePtr free_ptr;
@@ -88,7 +89,7 @@ void quadrature_free(quadrature *quad);
 
 #ifdef _OPENMP
 void QuadAllocBasisOmp(quadrature *q, int num_threads);
-void QuadFreeBasisOmp(quadrature *q, int num_threads);
+void QuadFreeBasisOmp(quadrature *q);
 #endif
 bool QuadInDomainElem(const quadrature *q, int elem);
 bool QuadInDomainElemEps(const quadrature *q, int elem);

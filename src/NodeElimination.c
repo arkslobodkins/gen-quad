@@ -109,7 +109,17 @@ Predictor_Ptr set_predictor_ptr(quadrature *q)
    #endif
 }
 
+static void updateHistory(int n, int snode, int its, int nsols, history *hist)
+{
+   hist->hist_array[hist->total_elims].nodes_tot    = n;
+   hist->hist_array[hist->total_elims].success_node = snode;
+   hist->hist_array[hist->total_elims].success_its  = its;
+   hist->hist_array[hist->total_elims].num_solutions  = nsols;
+   ++hist->total_elims;
+}
 
+
+//////////////////////////////////////////////////////////////////////////////////////////
 double PREDICTOR_TIME = 0.0;
 void NodeElimination(const quadrature *q_initial, quadrature *q_final, history *hist)
 {
@@ -160,21 +170,14 @@ void NodeElimination(const quadrature *q_initial, quadrature *q_final, history *
    while( (n_cur > n_opt) && (n_cur >= 2) )
    {
       SOL_FLAG = LsqSearch(OFF, q_new, hist, lev_mar);
-      if(SOL_FLAG == SOL_NOT_FOUND)
-      {
-         if(dim == MAX_DIM)
+      if(dim == MAX_DIM)
+         if(SOL_FLAG == SOL_NOT_FOUND)
          {
-            printf("Rerunning with constrained optimization\n");
-            SOL_FLAG = LsqSearch(ON, q_new, hist, lev_mar);
-//            if(SOL_FLAG == SOL_NOT_FOUND)
-//            {
-//               printf("TreeSearch\n");
-//               SOL_FLAG = TreeSearch(ON, q_new, hist, lev_mar);
-//            }
+            {
+               printf("Rerunning with constrained optimization\n");
+               SOL_FLAG = LsqSearch(ON, q_new, hist, lev_mar);
+            }
          }
-//         if(dim != MAX_DIM) SOL_FLAG = TreeSearch(OFF, q_new, hist, lev_mar);
-//         else               SOL_FLAG = TreeSearch(ON, q_new, hist, lev_mar);
-      }
 
       n_cur = q_new->num_nodes;
       efficiency = (double)n_opt/n_cur;
@@ -210,42 +213,36 @@ static bool LsqSearch(bool_enum CONSTR_FLAG, quadrature *q_new, history *hist, s
    int failCount = 0;
    LSQ_out lsq_out = {0, SOL_NOT_FOUND};
    quadrature *q_temp = quadrature_make_full_copy(q_new);
+   quadrature_realloc_array(n_cur-1, q_temp);
    ReorderWithBoundaryDist(Z, q_new, distanceWeight);
    for(int i = 0; i < n_cur; ++i)
    {
-      quadrature_realloc_array(n_cur-1, q_temp);
-      // store ith initial quadrature guess in q_temp
-      ExtractFromPredictor(Z, distanceWeight[i].index, q_temp);
+      ExtractFromPredictor(Z, distanceWeight[i].index, q_temp); // store ith initial quadrature guess in q_temp
 
       if(V_InfNorm(q_temp->z) >= QUAD_HUGE) continue;
       if(!QuadInConstraint(q_temp))         continue;
 
+      // update quadrature if Newton's method succeeded, update history
       lsq_out = nonlinear_solve_ptr(CONSTR_FLAG, q_temp);
-      // store nodes and weights if Newton's method succeeded, update history
       if(lsq_out.SOL_FLAG == SOL_FOUND)
       {
          n_cur = q_temp->num_nodes;
          quadrature_assign_resize(q_temp, q_new);
-
-         hist->hist_array[hist->total_elims].nodes_tot    = n_cur;
-         hist->hist_array[hist->total_elims].success_node = failCount;
-         hist->hist_array[hist->total_elims].success_its  = lsq_out.its;
-         ++hist->total_elims;
+         updateHistory(n_cur, failCount, lsq_out.its, 0, hist);
          break;
       }
       else if(lsq_out.SOL_FLAG == SOL_NOT_FOUND)
-      {
-         quadrature_realloc_array(n_cur-1, q_temp);
          if(++failCount >= MAX_FAILS_ELIM)
             break;
-      }
    }
+
    quadrature_free(q_temp);
    free(distanceWeight);
    RMatrix_free(Z);
 
    return lsq_out.SOL_FLAG;
 }
+
 
 
 static bool WideLsqSearch(bool_enum CONSTR_FLAG, quadrature *q_new, history *hist, solver_type st)
@@ -258,7 +255,7 @@ static bool WideLsqSearch(bool_enum CONSTR_FLAG, quadrature *q_new, history *his
    DistanceStruct *distanceWeight = distance_init(n_cur);
    RMatrix Z = predictor_ptr(q_new, distanceWeight);
 
-   int search_size = MIN(5, q_new->num_nodes);
+   int search_size = MIN(10, q_new->num_nodes);
 
    int failCount = 0;
    int count = 0;
@@ -298,27 +295,10 @@ static bool WideLsqSearch(bool_enum CONSTR_FLAG, quadrature *q_new, history *his
    VMax max_min_singv = VectorMax(min_singv);
    int successQuad = max_min_singv.max_index;
 
-//   VMin alphas[count];
-//   for(int i = 0; i < count; ++i)
-//      alphas[i] = QuadMinAlpha(q_temp[i]);
-
-//   VMin maxAlpha = alphas[0];
-//   int successQuad = 0;
-//   for(int i = 1; i < count; ++i)
-//      if(maxAlpha.min_value < alphas[i].min_value)
-//      {
-//         maxAlpha = alphas[i];
-//         successQuad = i;
-//      }
-
    n_cur = q_temp[successQuad]->num_nodes;
    quadrature_assign_resize(q_temp[successQuad], q_new);
 
-   hist->hist_array[hist->total_elims].nodes_tot    = n_cur;
-   hist->hist_array[hist->total_elims].success_node = successQuad;
-   hist->hist_array[hist->total_elims].success_its  = lsq_out[successQuad].its;
-   hist->hist_array[hist->total_elims].num_solutions  = count;
-   ++hist->total_elims;
+   updateHistory(n_cur, successQuad, lsq_out[successQuad].its, count, hist);
 
    for(int i = 0; i < search_size; ++i)
       quadrature_free(q_temp[i]);
@@ -608,7 +588,7 @@ static RMatrix PredictorPlasma(quadrature *q, DistanceStruct *distance)
    // construct QR factorization of transpose of the Jacobian
    QuadAllocBasisOmp(q, omp_get_max_threads());
    GetJacobianOmp(q, J);
-   QuadFreeBasisOmp(q, omp_get_max_threads());
+   QuadFreeBasisOmp(q);
    double start_time__1 = get_cur_time();         // time from here since Jacobian is timed separately
    CMatrix J_TR = CMatrix_Transpose(J, move);
    int LDJ = J_TR.rows;

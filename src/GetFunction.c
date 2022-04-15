@@ -23,8 +23,10 @@ double FUNCTION_TIME = 0.0;
 void GetFunctionOmp(quadrature *q, Vector f)
 {
    assert(f.len == q->basis->numFuncs);
+   assert(q->omp_threads == f.ompLen);
    double time_start = get_cur_time();
 
+   int nthreads = f.ompLen;
    int dim = q->dim;
    int deg = q->deg;
    int len = q->basis->numFuncs;
@@ -42,7 +44,7 @@ void GetFunctionOmp(quadrature *q, Vector f)
       f.id[i] = -1.0 * basis[0]->integrals.id[i];
 
    int omp_condition = OMP_CONDITION(deg, dim);
-   #pragma omp parallel if(omp_condition) default(shared) num_threads(omp_get_max_threads())
+   #pragma omp parallel if(omp_condition) default(shared) num_threads(nthreads)
    {
       double *fLoc = f.ompId[omp_get_thread_num()];
       memset(fLoc, 0, SIZE_DOUBLE(len));

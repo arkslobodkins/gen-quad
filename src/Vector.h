@@ -28,6 +28,7 @@ typedef struct
    double *id;
    double **ompId;
    int len;
+   int ompLen;
 } Vector;
 
 typedef struct
@@ -61,7 +62,7 @@ void Vector_Assign(Vector v1, Vector v2);
 void Vector_free(Vector V);
 
 #ifdef _OPENMP
-void AllocVectorOmpData(Vector *v);
+void AllocVectorOmpData(Vector *v, int num_threads);
 void FreeVectorOmpData(Vector v);
 #endif
 

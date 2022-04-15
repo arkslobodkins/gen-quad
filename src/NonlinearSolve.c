@@ -81,8 +81,8 @@ LSQ_out LeastSquaresNewton(const bool_enum CONSTR_OPT, quadrature *q_orig)
    {
       QuadAllocBasisOmp(q_next, omp_get_max_threads());
       QuadAllocBasisOmp(q_prev, omp_get_max_threads());
-      AllocVectorOmpData(&FPrev);
-      AllocVectorOmpData(&FNext);
+      AllocVectorOmpData(&FPrev, omp_get_max_threads());
+      AllocVectorOmpData(&FNext, omp_get_max_threads());
       is_alloc_omp = true;
 
       leastsquares_ptr = DGELS_PLASMA;
@@ -220,8 +220,8 @@ FREERETURN:
    {
       FreeVectorOmpData(FPrev);
       FreeVectorOmpData(FNext);
-      QuadFreeBasisOmp(q_prev, omp_get_max_threads());
-      QuadFreeBasisOmp(q_next, omp_get_max_threads());
+      QuadFreeBasisOmp(q_prev);
+      QuadFreeBasisOmp(q_next);
    }
 #endif
    CMatrix_free(JACOBIAN);
@@ -295,9 +295,9 @@ LSQ_out LevenbergMarquardt(const bool_enum CONSTR_OPT, quadrature *q_orig)
       QuadAllocBasisOmp(q_prev, omp_get_max_threads());
       QuadAllocBasisOmp(q_cur, omp_get_max_threads());
       QuadAllocBasisOmp(q_next, omp_get_max_threads());
-      AllocVectorOmpData(&FPrev);
-      AllocVectorOmpData(&FCur);
-      AllocVectorOmpData(&FNext);
+      AllocVectorOmpData(&FPrev, omp_get_max_threads());
+      AllocVectorOmpData(&FCur, omp_get_max_threads());
+      AllocVectorOmpData(&FNext, omp_get_max_threads());
       is_alloc_omp = true;
 
       leastsquares_ptr           = DGELS_PLASMA;
@@ -436,9 +436,9 @@ FREERETURN:
       FreeVectorOmpData(FPrev);
       FreeVectorOmpData(FCur);
       FreeVectorOmpData(FNext);
-      QuadFreeBasisOmp(q_prev, omp_get_max_threads());
-      QuadFreeBasisOmp(q_cur, omp_get_max_threads());
-      QuadFreeBasisOmp(q_next, omp_get_max_threads());
+      QuadFreeBasisOmp(q_prev);
+      QuadFreeBasisOmp(q_cur);
+      QuadFreeBasisOmp(q_next);
    }
 #endif
    CMatrix_free(JACOBIAN);

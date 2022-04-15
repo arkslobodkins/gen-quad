@@ -119,6 +119,7 @@ quadrature* quadrature_init_basic(int n, int dim, int *dims, int deg, DOMAIN_TYP
    q->constr           = NULL;
    q->basis            = NULL;
    q->basisOmp         = NULL;
+   q->omp_threads      = 0;
    q->expIntegralExact = NULL;
    q->free_ptr = &quadrature_free_basic;
    q->isFullyInitialized = GQ_FALSE;
@@ -457,12 +458,13 @@ void QuadAllocBasisOmp(quadrature *q, int num_threads)
    q->basisOmp = (Basis **)malloc(num_threads*sizeof(Basis *));
    for(int i = 0; i < num_threads; ++i)
       q->basisOmp[i] = BasisInit(q->basis->params, q->basis->interface);
+   q->omp_threads = num_threads;
 }
 
 
-void QuadFreeBasisOmp(quadrature *q, int num_threads)
+void QuadFreeBasisOmp(quadrature *q)
 {
-   for(int i = 0; i < num_threads; ++i)
+   for(int i = 0; i < q->omp_threads; ++i)
       BasisFree(q->basisOmp[i]);
    free(q->basisOmp); q->basisOmp = NULL;
 }

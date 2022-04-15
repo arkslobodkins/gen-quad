@@ -36,7 +36,7 @@ void GetJacobianOmp(quadrature *q, CMatrix JACOBIAN)
    memcpy(dims, q->dims, num_dims*sizeof(int));
 
    int omp_condition = OMP_CONDITION(deg, dim);
-   #pragma omp parallel default(shared) if(omp_condition) num_threads(omp_get_max_threads())
+   #pragma omp parallel default(shared) if(omp_condition) num_threads(q->omp_threads)
    {
       Basis *basisLoc      = basis[omp_get_thread_num()];
       Vector basisFuncsLoc = basisLoc->functions;
@@ -86,7 +86,7 @@ void GetFunctionAndJacobianOmp(quadrature *q, Vector f, CMatrix JACOBIAN)
       f.id[i] = -1.0 * basis[0]->integrals.id[i];
 
    int omp_condition = OMP_CONDITION(deg, dim);
-   #pragma omp parallel default(shared) if(omp_condition) num_threads(omp_get_max_threads())
+   #pragma omp parallel default(shared) if(omp_condition) num_threads(q->omp_threads)
    {
       double *fLoc = f.ompId[omp_get_thread_num()];
       memset(fLoc, 0, SIZE_DOUBLE(len));

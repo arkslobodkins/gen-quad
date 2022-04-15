@@ -22,6 +22,7 @@ static void BasisIndices(int deg, int dim, INT_8 *F);
 static Table3d Table3dCreate(int deg, int dim);
 static void Table3dFree(Table3d table);
 static void ComputeTable(Table3d table);
+static void CopyTable(Table3d t1, Table3d t2);
 
 static void LegendrePoly(int order, double x, double *p);
 static void LegendrePolyAndPrime(int order, double x, double *p, double *dp);
@@ -275,6 +276,7 @@ void ComputeCubeBasisDer(CubeBasis *basis, const double *x, Vector v)
    int dim = basis->dim;
    int numFuncs = basis->numFuncs;
    INT_8 *idMap = basis->addData->idMap;
+   Tensor2D phiPrime2D = VectorToTensor2D(dim, numFuncs, v);
 
    double legendre[(deg+1)*dim];
    double dxlegendre[(deg+1)*dim];
@@ -283,25 +285,24 @@ void ComputeCubeBasisDer(CubeBasis *basis, const double *x, Vector v)
       LegendrePolyAndPrime(deg+1, 2*x[d]-1, &legendre[d*(deg+1)], &dxlegendre[d*(deg+1)]);
 
    VSetToOne(v);
-   double *phiPrime = v.id;
    for(int d = 0; d < dim; ++d)
    {
       // dimension < d
       for(int j = 0; j < d; ++j) {
          double *legendre_ptr = &legendre[(deg+1)*j];
          for(int k = 0; k < numFuncs; k++)
-            phiPrime[d*numFuncs+k] *= legendre_ptr[idMap[j*numFuncs+k]];
+            TID2(phiPrime2D, d, k) *= legendre_ptr[idMap[j*numFuncs+k]];
       }
       // dimension = d
       double *dxlegendre_ptr = &dxlegendre[(deg+1)*d];
       for(int k = 0; k < numFuncs; ++k)
-         phiPrime[d*numFuncs+k] *= 2.0 * dxlegendre_ptr[idMap[d*numFuncs+k]];
+         TID2(phiPrime2D, d, k) *= 2.0 * dxlegendre_ptr[idMap[d*numFuncs+k]];
 
       // dimension > d
       for(int j = d+1; j < dim; ++j) {
          double *legendre_ptr = &legendre[(deg+1)*j];
          for(int k = 0; k < numFuncs; k++)
-            phiPrime[d*numFuncs+k] *= legendre_ptr[idMap[j*numFuncs+k]];
+            TID2(phiPrime2D, d, k) *= legendre_ptr[idMap[j*numFuncs+k]];
       }
    }
 }
@@ -349,7 +350,7 @@ void CubeBasisFree(CubeBasis *basis)
       free(basis->indices);
       basis->indices = NULL;
    }
-   free(basis); basis = NULL;
+   free(basis);
 }
 
 
@@ -418,53 +419,49 @@ SimplexBasis* SimplexBasisInit(SimplexParams *simplexParams)
 }
 
 
-SimplexBasis* MakeSimplexCopy(SimplexBasis *basis)
+SimplexBasis* MakeSimplexCopy(SimplexBasis *b)
 {
-   SimplexBasis *basisCopy = (SimplexBasis *)malloc(sizeof(SimplexBasis));
-   basisCopy->params       = (SimplexParams *)malloc(sizeof(SimplexParams));
-   basisCopy->params->deg  = basis->deg;
-   basisCopy->params->dim  = basis->dim;
-   basisCopy->deg          = basis->deg;
-   basisCopy->dim          = basis->dim;
-   basisCopy->numFuncs     = basis->numFuncs;
+   int deg = b->deg;
+   int dim = b->dim;
+   int numFuncs = b->numFuncs;
+
+   SimplexBasis *bcopy = (SimplexBasis *)malloc(sizeof(SimplexBasis));
+   bcopy->params       = (SimplexParams *)malloc(sizeof(SimplexParams));
+   bcopy->params->deg  = deg;
+   bcopy->params->dim  = dim;
+   bcopy->deg          = deg;
+   bcopy->dim          = dim;
+   bcopy->numFuncs     = numFuncs;
 
    BasisInterface interface = SetSimplexBasisInterface();
-   basisCopy->interface = (BasisInterface *)malloc(sizeof(BasisInterface));
-   *(basisCopy->interface) = interface;
+   bcopy->interface = (BasisInterface *)malloc(sizeof(BasisInterface));
+   *(bcopy->interface) = interface;
 
-   int deg = basisCopy->deg;
-   int dim = basisCopy->dim;
-   int numFuncs = basisCopy->numFuncs;
+   bcopy->indices = (INT_8 *)malloc(numFuncs*dim*sizeof(INT_8));
+   memcpy(bcopy->indices, b->indices, numFuncs*dim*sizeof(INT_8));
 
-   basisCopy->indices = (INT_8 *)malloc(numFuncs*dim*sizeof(INT_8));
-   memcpy(basisCopy->indices, basis->indices, numFuncs*dim*sizeof(INT_8));
+   bcopy->addData = (AddDataSimplex *)malloc(sizeof(AddDataSimplex));
+   AddDataSimplex *addDataCp = bcopy->addData;
+   AddDataSimplex *addData = b->addData;
 
-   basisCopy->addData = (AddDataSimplex *)malloc(sizeof(AddDataSimplex));
-   basisCopy->addData->idMap = (INT_8 *)malloc(dim*numFuncs*sizeof(INT_8));
-   memcpy(basisCopy->addData->idMap, basis->addData->idMap, numFuncs*dim*sizeof(INT_8));
+   addDataCp->idMap = (INT_8 *)malloc(dim*numFuncs*sizeof(INT_8));
+   memcpy(addDataCp->idMap, addData->idMap, numFuncs*dim*sizeof(INT_8));
 
-   basisCopy->addData->phi_backw1 = Vector_init(numFuncs);
-   basisCopy->addData->phi_forw1  = Vector_init(numFuncs);
+   addDataCp->phi_backw1 = Vector_init(numFuncs);
+   addDataCp->phi_forw1  = Vector_init(numFuncs);
+   addDataCp->xFactor = RMatrix_init(dim, numFuncs);
 
-   basisCopy->addData->xFactor = RMatrix_init(dim, numFuncs);
+   addDataCp->xPower  = (int *)malloc(dim*numFuncs*sizeof(int));
+   memcpy(addDataCp->xPower, addData->xPower, dim*numFuncs*sizeof(int));
 
-   basisCopy->addData->xPower  = (int *)malloc(dim*numFuncs*sizeof(int));
-   memcpy(basisCopy->addData->xPower, basis->addData->xPower, dim*numFuncs*sizeof(int));
+   bcopy->table = Table3dCreate(deg, dim);
+   CopyTable(b->table, bcopy->table);
 
-   basisCopy->table = Table3dCreate(deg, dim);
-   for(int alpha = 1; alpha < basis->table.size[0]; ++alpha) {
-      for (int k = 1; k < basis->table.size[1]; ++k) {
-         basisCopy->table.id[alpha][k][0] = basis->table.id[alpha][k][0];
-         basisCopy->table.id[alpha][k][1] = basis->table.id[alpha][k][1];
-         basisCopy->table.id[alpha][k][2] = basis->table.id[alpha][k][2];
-      }
-   }
+   bcopy->functions   = Vector_init(numFuncs);
+   bcopy->derivatives = Vector_init(numFuncs*dim);
+   bcopy->integrals   = Vector_init(numFuncs);
 
-   basisCopy->functions   = Vector_init(numFuncs);
-   basisCopy->derivatives = Vector_init(numFuncs*dim);
-   basisCopy->integrals   = Vector_init(numFuncs);
-
-   return basisCopy;
+   return bcopy;
 }
 
 
@@ -525,7 +522,6 @@ void SimplexBasisDer(SimplexBasis *basis, const double *x, Vector v)
    double x_backw1[dim];
    double x_forw1[dim];
 
-   double *basisDer = v.id;
    Vector phi_backw1 = basis->addData->phi_backw1;
    Vector phi_forw1  = basis->addData->phi_forw1;
 
@@ -543,7 +539,7 @@ void SimplexBasisDer(SimplexBasis *basis, const double *x, Vector v)
       SimplexBasisFuncs(basis, x_forw1, phi_forw1);
       #pragma omp simd
       for(int k = 0; k < numFuncs; ++k)
-         basisDer[d*numFuncs+k] = phi_forw1.id[k] - phi_backw1.id[k];
+         v.id[d*numFuncs+k] = phi_forw1.id[k] - phi_backw1.id[k];
    }
    VScale(1.0/(2.0*h), v);
 }
@@ -608,7 +604,7 @@ void SimplexBasisFree(SimplexBasis *basis)
       free(basis->indices);
       basis->indices = NULL;
    }
-   free(basis); basis = NULL;
+   free(basis);
 }
 
 
@@ -682,58 +678,56 @@ CubeSimplexBasis* CubeSimplexBasisInit(CubeSimplexParams *csParams)
 }
 
 
-CubeSimplexBasis* MakeCubeSimplexCopy(CubeSimplexBasis *basis)
+CubeSimplexBasis* MakeCubeSimplexCopy(CubeSimplexBasis *b)
 {
-   CubeSimplexBasis *basisCopy = (CubeSimplexBasis *)malloc(sizeof(CubeSimplexBasis));
-   basisCopy->params = (CubeSimplexParams *)malloc(sizeof(CubeSimplexParams));
-   basisCopy->params->deg = basis->deg;
-   basisCopy->params->dims[0] = basis->params->dims[0];
-   basisCopy->params->dims[1] = basis->params->dims[1];
-   basisCopy->deg         = basis->deg;
-   basisCopy->dim         = basis->dim;
-   basisCopy->numFuncs    = basis->numFuncs;
+   int deg = b->deg;
+   int dim = b->dim;
+   int dim1 = b->params->dims[0];
+   int dim2 = b->params->dims[1];
+   int numFuncs = b->numFuncs;
+
+   CubeSimplexBasis *bcopy = (CubeSimplexBasis *)malloc(sizeof(CubeSimplexBasis));
+   bcopy->params = (CubeSimplexParams *)malloc(sizeof(CubeSimplexParams));
+   bcopy->params->deg = b->deg;
+   bcopy->params->dims[0] = dim1;
+   bcopy->params->dims[1] = dim2;
+   bcopy->deg      = deg;
+   bcopy->dim      = dim;
+   bcopy->numFuncs = numFuncs;
 
    BasisInterface interface = SetCubeSimplexBasisInterface();
-   basisCopy->interface = (BasisInterface *)malloc(sizeof(BasisInterface));
-   *(basisCopy->interface) = interface;
+   bcopy->interface = (BasisInterface *)malloc(sizeof(BasisInterface));
+   *(bcopy->interface) = interface;
 
-   int deg = basisCopy->deg;
-   int dim = basisCopy->dim;
-   int dim2 = basisCopy->params->dims[1];
-   int numFuncs = basisCopy->numFuncs;
+   bcopy->indices = (INT_8 *)malloc(numFuncs*dim*sizeof(INT_8));
+   memcpy(bcopy->indices, b->indices, numFuncs*dim*sizeof(INT_8));
 
-   basisCopy->indices = (INT_8 *)malloc(numFuncs*dim*sizeof(INT_8));
-   memcpy(basisCopy->indices, basis->indices, numFuncs*dim*sizeof(INT_8));
+   bcopy->addData = (AddDataCubeSimplex *)malloc(sizeof(AddDataCubeSimplex));
+   AddDataCubeSimplex *addDataCp = bcopy->addData;
+   AddDataCubeSimplex *addData = b->addData;
 
-   basisCopy->addData = (AddDataCubeSimplex *)malloc(sizeof(AddDataCubeSimplex));
-   basisCopy->addData->idMap = (INT_8 *)malloc(dim*numFuncs*sizeof(INT_8));
-   memcpy(basisCopy->addData->idMap, basis->addData->idMap, numFuncs*dim*sizeof(INT_8));
+   addDataCp->idMap = (INT_8 *)malloc(dim*numFuncs*sizeof(INT_8));
+   memcpy(addDataCp->idMap, addData->idMap, numFuncs*dim*sizeof(INT_8));
 
-   basisCopy->addData->phi_backw1 = Vector_init(numFuncs);
-   basisCopy->addData->phi_forw1  = Vector_init(numFuncs);
-   basisCopy->addData->basis_polytopic = Vector_init(numFuncs);
+   addDataCp->phi_backw1 = Vector_init(numFuncs);
+   addDataCp->phi_forw1  = Vector_init(numFuncs);
+   addDataCp->basis_polytopic = Vector_init(numFuncs);
 
-   basisCopy->addData->xPower[0] = NULL;
-   memset(&basisCopy->addData->xFactor[0], 0, sizeof(RMatrix));
+   addDataCp->xPower[0] = NULL;
+   memset(&addDataCp->xFactor[0], 0, sizeof(RMatrix));
 
-   basisCopy->addData->xFactor[1] = RMatrix_init(dim2, numFuncs);
-   basisCopy->addData->xPower[1]  = (int *)malloc(dim2*numFuncs*sizeof(int));
-   memcpy(basisCopy->addData->xPower[1], basis->addData->xPower[1], dim2*numFuncs*sizeof(int));
+   addDataCp->xFactor[1] = RMatrix_init(dim2, numFuncs);
+   addDataCp->xPower[1]  = (int *)malloc(dim2*numFuncs*sizeof(int));
+   memcpy(addDataCp->xPower[1], addData->xPower[1], dim2*numFuncs*sizeof(int));
 
-   basisCopy->table = Table3dCreate(deg, dim);
-   for(int alpha = 1; alpha < basis->table.size[0]; ++alpha) {
-      for (int k = 1; k < basis->table.size[1]; ++k) {
-         basisCopy->table.id[alpha][k][0] = basis->table.id[alpha][k][0];
-         basisCopy->table.id[alpha][k][1] = basis->table.id[alpha][k][1];
-         basisCopy->table.id[alpha][k][2] = basis->table.id[alpha][k][2];
-      }
-   }
+   bcopy->table = Table3dCreate(deg, dim);
+   CopyTable(b->table, bcopy->table);
 
-   basisCopy->functions   = Vector_init(numFuncs);
-   basisCopy->derivatives = Vector_init(numFuncs*dim);
-   basisCopy->integrals   = Vector_init(numFuncs);
+   bcopy->functions   = Vector_init(numFuncs);
+   bcopy->derivatives = Vector_init(numFuncs*dim);
+   bcopy->integrals   = Vector_init(numFuncs);
 
-   return basisCopy;
+   return bcopy;
 }
 
 
@@ -756,9 +750,10 @@ void CubeSimplexBasisFuncs(CubeSimplexBasis *basis, const double *x, Vector v)
    }
 
    SimplexFuncsPolytopicTwo((MixedPolytopeBasis *)basis, x, basis->addData->basis_polytopic);
+   Vector basis_polytopic = basis->addData->basis_polytopic;
    #pragma omp simd
    for(int k = 0; k < numFuncs; ++k)
-      phi[k] *= basis->addData->basis_polytopic.id[k];
+      phi[k] *= basis_polytopic.id[k];
 }
 
 
@@ -884,7 +879,7 @@ void CubeSimplexBasisFree(CubeSimplexBasis *basis)
       free(basis->indices);
       basis->indices = NULL;
    }
-   free(basis); basis = NULL;
+   free(basis);
 }
 
 
@@ -965,60 +960,57 @@ SimplexSimplexBasis* SimplexSimplexBasisInit(SimplexSimplexParams *ssParams)
 }
 
 
-SimplexSimplexBasis* MakeSimplexSimplexCopy(SimplexSimplexBasis *basis)
+SimplexSimplexBasis* MakeSimplexSimplexCopy(SimplexSimplexBasis *b)
 {
-   SimplexSimplexBasis *basisCopy = (SimplexSimplexBasis *)malloc(sizeof(SimplexSimplexBasis));
-   basisCopy->params = (SimplexSimplexParams *)malloc(sizeof(SimplexSimplexParams));
-   basisCopy->params->deg = basis->deg;
-   basisCopy->params->dims[0] = basis->params->dims[0];
-   basisCopy->params->dims[1] = basis->params->dims[1];
-   basisCopy->deg         = basis->deg;
-   basisCopy->dim         = basis->dim;
-   basisCopy->numFuncs    = basis->numFuncs;
+   int deg = b->deg;
+   int dim = b->dim;
+   int dim1 = b->params->dims[0];
+   int dim2 = b->params->dims[1];
+   int numFuncs = b->numFuncs;
+
+   SimplexSimplexBasis *bcopy = (SimplexSimplexBasis *)malloc(sizeof(SimplexSimplexBasis));
+   bcopy->params = (SimplexSimplexParams *)malloc(sizeof(SimplexSimplexParams));
+   bcopy->params->deg = deg;
+   bcopy->params->dims[0] = dim1;
+   bcopy->params->dims[1] = dim2;
+   bcopy->deg      = deg;
+   bcopy->dim      = dim;
+   bcopy->numFuncs = numFuncs;
 
    BasisInterface interface = SetSimplexSimplexBasisInterface();
-   basisCopy->interface = (BasisInterface *)malloc(sizeof(BasisInterface));
-   *(basisCopy->interface) = interface;
+   bcopy->interface = (BasisInterface *)malloc(sizeof(BasisInterface));
+   *(bcopy->interface) = interface;
 
-   int deg = basisCopy->deg;
-   int dim = basisCopy->dim;
-   int dim1 = basisCopy->params->dims[0];
-   int dim2 = basisCopy->params->dims[1];
-   int numFuncs = basisCopy->numFuncs;
+   bcopy->indices = (INT_8 *)malloc(numFuncs*dim*sizeof(INT_8));
+   memcpy(bcopy->indices, b->indices, numFuncs*dim*sizeof(INT_8));
 
-   basisCopy->indices = (INT_8 *)malloc(numFuncs*dim*sizeof(INT_8));
-   memcpy(basisCopy->indices, basis->indices, numFuncs*dim*sizeof(INT_8));
+   bcopy->addData = (AddDataSimplexSimplex *)malloc(sizeof(AddDataSimplexSimplex));
+   AddDataSimplexSimplex *addDataCp = bcopy->addData;
+   AddDataSimplexSimplex *addData = b->addData;
 
-   basisCopy->addData = (AddDataSimplexSimplex *)malloc(sizeof(AddDataSimplexSimplex));
-   basisCopy->addData->idMap = (INT_8 *)malloc(dim*numFuncs*sizeof(INT_8));
-   memcpy(basisCopy->addData->idMap, basis->addData->idMap, numFuncs*dim*sizeof(INT_8));
+   addDataCp->idMap = (INT_8 *)malloc(dim*numFuncs*sizeof(INT_8));
+   memcpy(addDataCp->idMap, addData->idMap, numFuncs*dim*sizeof(INT_8));
 
-   basisCopy->addData->phi_backw1 = Vector_init(numFuncs);
-   basisCopy->addData->phi_forw1  = Vector_init(numFuncs);
-   basisCopy->addData->basis_polytopic = Vector_init(numFuncs);
+   addDataCp->phi_backw1 = Vector_init(numFuncs);
+   addDataCp->phi_forw1  = Vector_init(numFuncs);
+   addDataCp->basis_polytopic = Vector_init(numFuncs);
 
-   basisCopy->addData->xFactor[0] = RMatrix_init(dim1, numFuncs);
-   basisCopy->addData->xPower[0]  = (int *)malloc(dim1*numFuncs*sizeof(int));
-   memcpy(basisCopy->addData->xPower[0], basis->addData->xPower[0], dim1*numFuncs*sizeof(int));
+   addDataCp->xFactor[0] = RMatrix_init(dim1, numFuncs);
+   addDataCp->xPower[0]  = (int *)malloc(dim1*numFuncs*sizeof(int));
+   memcpy(addDataCp->xPower[0], addData->xPower[0], dim1*numFuncs*sizeof(int));
 
-   basisCopy->addData->xFactor[1] = RMatrix_init(dim2, numFuncs);
-   basisCopy->addData->xPower[1]  = (int *)malloc(dim2*numFuncs*sizeof(int));
-   memcpy(basisCopy->addData->xPower[1], basis->addData->xPower[1], dim2*numFuncs*sizeof(int));
+   addDataCp->xFactor[1] = RMatrix_init(dim2, numFuncs);
+   addDataCp->xPower[1]  = (int *)malloc(dim2*numFuncs*sizeof(int));
+   memcpy(addDataCp->xPower[1], addData->xPower[1], dim2*numFuncs*sizeof(int));
 
-   basisCopy->table = Table3dCreate(deg, dim);
-   for(int alpha = 1; alpha < basis->table.size[0]; ++alpha) {
-      for (int k = 1; k < basis->table.size[1]; ++k) {
-         basisCopy->table.id[alpha][k][0] = basis->table.id[alpha][k][0];
-         basisCopy->table.id[alpha][k][1] = basis->table.id[alpha][k][1];
-         basisCopy->table.id[alpha][k][2] = basis->table.id[alpha][k][2];
-      }
-   }
+   bcopy->table = Table3dCreate(deg, dim);
+   CopyTable(b->table, bcopy->table);
 
-   basisCopy->functions   = Vector_init(numFuncs);
-   basisCopy->derivatives = Vector_init(numFuncs*dim);
-   basisCopy->integrals   = Vector_init(numFuncs);
+   bcopy->functions   = Vector_init(numFuncs);
+   bcopy->derivatives = Vector_init(numFuncs*dim);
+   bcopy->integrals   = Vector_init(numFuncs);
 
-   return basisCopy;
+   return bcopy;
 }
 
 
@@ -1044,10 +1036,10 @@ void SimplexSimplexBasisFuncs(SimplexSimplexBasis *basis, const double *x, Vecto
 
 void SimplexSimplexBasisDer(SimplexSimplexBasis *basis, const double *x, Vector v)
 {
-   int dim1          = basis->params->dims[0];
-   int dim2          = basis->params->dims[1];
-   int dim           = basis->dim;
-   int numFuncs      = basis->numFuncs;
+   int dim1     = basis->params->dims[0];
+   int dim2     = basis->params->dims[1];
+   int dim      = basis->dim;
+   int numFuncs = basis->numFuncs;
 
    double h = POW_DOUBLE(10, -6)*5.0;
    double diffFact = 1.0/(2.0*h);
@@ -1064,17 +1056,16 @@ void SimplexSimplexBasisDer(SimplexSimplexBasis *basis, const double *x, Vector 
    Tensor1D  basis_polytopic1D = VectorToTensor1D(basis_polytopic);
 
    SimplexFuncsPolytopicTwo((MixedPolytopeBasis *)basis, x, basis_polytopic);
-   for(int d = 0; d < dim1; ++d) {
+   for(int d = 0; d < dim1; ++d)
       #pragma omp simd
       for(int k = 0; k < numFuncs; ++k)
          TID2(phiPrime2D, d, k) *= TID1(basis_polytopic1D, k);
-   }
+
    SimplexFuncsPolytopicOne((MixedPolytopeBasis *)basis, x, basis_polytopic);
-   for(int d = 0; d < dim2; ++d) {
+   for(int d = 0; d < dim2; ++d)
       #pragma omp simd
       for(int k = 0; k < numFuncs; ++k)
          TID2(phiPrime2D, d+dim1, k) *= TID1(basis_polytopic1D, k);
-   }
 
    for(int d = 0; d < dim2; ++d)
    {
@@ -1175,7 +1166,7 @@ void SimplexSimplexBasisFree(SimplexSimplexBasis *basis)
       free(basis->indices);
       basis->indices = NULL;
    }
-   free(basis); basis = NULL;
+   free(basis);
 }
 
 
@@ -1184,7 +1175,8 @@ static void LegendrePoly(int order, double x, double *p)
    p[0] = 1.0;
    p[1] = x;
 
-   for(int  k = 1; k < order-1; ++k) {
+   for(int  k = 1; k < order-1; ++k)
+   {
       double fac1 = (2.0*k+1.0)/(k+1.0);
       double fac2 = k/(k+1.0);
       p[k+1] = fac1*x*p[k] - fac2*p[k-1];
@@ -1194,12 +1186,11 @@ static void LegendrePoly(int order, double x, double *p)
 
 static void LegendrePolyAndPrime(int order, double x, double *p, double *dp)
 {
-   p[0] = 1.0;
-   p[1] = x;
-   dp[0] = 0.0;
-   dp[1] = 1.0;
+   p[0] = 1.0; p[1] = x;
+   dp[0] = 0.0; dp[1] = 1.0;
 
-   for(int  k = 1; k < order-1; ++k) {
+   for(int  k = 1; k < order-1; ++k)
+   {
       double fac1 = (2.0*k+1.0)/(k+1.0);
       double fac2 = k/(k+1.0);
       p[k+1] = fac1*x*p[k] - fac2*p[k-1];
@@ -1211,10 +1202,8 @@ static void LegendrePolyAndPrime(int order, double x, double *p, double *dp)
 static Table3d Table3dCreate(int deg, int dim)
 {
    Table3d table;
-   if(dim >= 3)
-      table.size[0] = 2*deg+2+dim-1;
-   else if(dim == 2)
-      table.size[0] = 2*deg+2;
+   if(dim >= 3)      table.size[0] = 2*deg+2+dim-1;
+   else if(dim == 2) table.size[0] = 2*deg+2;
    table.size[1] = deg+2;
    table.size[2] = 3;
 
@@ -1241,8 +1230,10 @@ static void Table3dFree(Table3d table)
 
 static void ComputeTable(Table3d table)
 {
-   for(int alpha = 1; alpha < table.size[0]; ++alpha) {
-      for (int k = 1; k < table.size[1]; ++k) {
+   for(int alpha = 1; alpha < table.size[0]; ++alpha)
+   {
+      for (int k = 1; k < table.size[1]; ++k)
+      {
          double fac1Part0 = (alpha+2.0*k+1.0) * (alpha+2.0*k+2.0) * (alpha+2.0*k);
          double fac1Part1 = (alpha+2.0*k+1.0) * (alpha*alpha);                      //excludes multiplication by x
          double fac2 = -2.0 * (alpha+k) * k * (alpha+2.0*k+2.0);
@@ -1250,6 +1241,22 @@ static void ComputeTable(Table3d table)
          table.id[alpha][k][0] = fac3 * fac1Part0;
          table.id[alpha][k][1] = fac3 * fac1Part1;
          table.id[alpha][k][2] = fac3 * fac2;
+      }
+   }
+}
+
+
+static void CopyTable(Table3d t1, Table3d t2)
+{
+   assert(t1.size[0] == t2.size[0]);
+   assert(t1.size[1] == t2.size[1]);
+   for(int alpha = 1; alpha < t1.size[0]; ++alpha)
+   {
+      for (int k = 1; k < t1.size[1]; ++k)
+      {
+         t2.id[alpha][k][0] = t1.id[alpha][k][0];
+         t2.id[alpha][k][1] = t1.id[alpha][k][1];
+         t2.id[alpha][k][2] = t1.id[alpha][k][2];
       }
    }
 }
@@ -1297,7 +1304,8 @@ static void IntegralsSimplexPolyhedralMonomialOne(MixedPolytopeBasis *basis, Vec
    for(int i = 0; i < numFuncs; ++i)
    {
       double val = 1.0;
-      for(int d = 0; d < dimSimplex; ++d) {
+      for(int d = 0; d < dimSimplex; ++d)
+      {
          double power = 0;
          for(int r = 0; r < dimSimplex-d; ++r)
             power += (double)indices[dim*i+dimSimplex-r-1];
@@ -1319,7 +1327,8 @@ static void IntegralsSimplexPolyhedralMonomialTwo(MixedPolytopeBasis *basis, Vec
    for(int i = 0; i < numFuncs; ++i)
    {
       double val = 1.0;
-      for(int d = 0; d < dimSimplex; ++d) {
+      for(int d = 0; d < dimSimplex; ++d)
+      {
          double power = 0;
          for(int r = 0; r < dimSimplex-d; ++r)
             power += (double)indices[dim*(i+1)-r-1];

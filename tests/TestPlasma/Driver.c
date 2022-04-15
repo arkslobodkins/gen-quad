@@ -19,8 +19,8 @@ double compute_norm(int len, double *v)
 
 int main(int argc, char *argv[])
 {
-   int nrows = 8000;
-   int ncols = 4000;
+   int nrows = 5000;
+   int ncols = 9000;
    int NRHS  = 1;
    int LDA   = nrows;
    int LEAD_DIM = nrows>ncols ? nrows:ncols;

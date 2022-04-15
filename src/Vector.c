@@ -53,10 +53,11 @@ Vector Vector_init(int n)
 {
    assert(n >= 1);
 
-   Vector z = {0, 0, 0};
+   Vector z;
    z.len = n;
    z.id = (double *)calloc(n, sizeof(double));
    z.ompId = NULL;
+   z.ompLen = 0;
 
    return z;
 }
@@ -65,12 +66,13 @@ Vector Vector_uninitialized(int n)
 {
    assert(n >= 1);
 
-   Vector z = {0, 0, 0};
+   Vector z;
    z.len = n;
    z.id = (double *)malloc(n*sizeof(double));
    for(int i = 0; i < n; ++i)
       z.id[i] = -100.;
    z.ompId = NULL;
+   z.ompLen = 0;
 
    return z;
 }
@@ -95,18 +97,18 @@ void Vector_free(Vector z)
 }
 
 #ifdef _OPENMP
-void AllocVectorOmpData(Vector *z)
+void AllocVectorOmpData(Vector *z, int num_threads)
 {
-   int max_threads = omp_get_max_threads();
-   z->ompId = (double **)malloc(max_threads*sizeof(double *));
-   for(int i = 0; i < max_threads; ++i)
+   z->ompLen = num_threads;
+   z->ompId = (double **)malloc(num_threads*sizeof(double *));
+   for(int i = 0; i < num_threads; ++i)
       z->ompId[i] = (double *)malloc(z->len*sizeof(double));
 }
 
 void FreeVectorOmpData(Vector z)
 {
    if(z.ompId == NULL) return;
-   for(int i = 0; i < omp_get_max_threads(); ++i)
+   for(int i = 0; i < z.ompLen; ++i)
       free(z.ompId[i]);
    free(z.ompId);
 }
