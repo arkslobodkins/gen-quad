@@ -4,9 +4,9 @@
 #include <omp.h>
 #include <mkl_lapacke.h>
 #include <mkl.h>
+#include <plasma.h>
 
 #include "get_time.h"
-#include "../../plasma-17.1/include/plasma.h"
 
 double compute_norm(int len, double *v)
 {

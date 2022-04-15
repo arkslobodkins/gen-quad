@@ -2,7 +2,7 @@ CC = gcc
 VERSION = -std=c99
 
 LPATH = -L /opt/intel/oneapi/mkl/2022.0.2/lib/intel64/
-IPATH = -I /opt/intel/oneapi/mkl/2022.0.2/include/
+IPATH = -I /opt/intel/oneapi/mkl/2022.0.2/include/ -I ../../plasma-17.1/include/
 
 CFLAGS=-g  -Wall -fopenmp -O3 -march=native $(IPATH) $(LPATH)
 LFLAGS= -lmkl_rt -lm
