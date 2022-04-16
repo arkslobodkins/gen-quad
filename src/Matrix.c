@@ -259,6 +259,28 @@ void CMatVec(CMatrix M, Vector x, Vector y)
          y.id[i] += C_ELEM_ID(M, i, j) * x.id[j];
 }
 
+double CMatrixMaxDifference(CMatrix A, CMatrix B)
+{
+   assert(A.rows == B.rows);
+   assert(A.cols == B.cols);
+   double maxDiff = fabs(A.id[0] - B.id[0]);
+
+   for(int i = 1; i < A.len; ++i)
+   {
+      double iDiff = fabs(A.id[i] - B.id[i]);
+      maxDiff = iDiff > maxDiff ? iDiff : maxDiff;
+   }
+   return maxDiff;
+}
+
+double CMatrixFrobenius(CMatrix M)
+{
+   double norm = 0.0;
+   for(int i = 0; i < M.len; ++i)
+      norm += M.id[i]*M.id[i];
+   return sqrt(norm);
+}
+
 void CMatrixPrint(CMatrix M)
 {
    for(int i = 0; i < M.rows; ++i)

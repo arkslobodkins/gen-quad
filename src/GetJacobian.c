@@ -136,7 +136,9 @@ void GetJacobian(quadrature *q, CMatrix JACOBIAN)
    Vector derivatives = basis->derivatives;
    for(int j = 0; j < wcols; ++j)
    {
-      const double *curNode = &x[dim*j];
+      double curNode[dim];
+      for(int i = 0; i < dim; ++i)
+         curNode[i] = x[dim*j+i];
       BasisFuncs(basis, curNode, functions);
       BasisDer(basis, curNode, derivatives);
       VScale(w[j], derivatives);

@@ -60,6 +60,8 @@ void CMatrix_ColumnScale(int col, double c, CMatrix M);
 void CMatrix_Assign_Transpose(CMatrix A, CMatrix B);
 CMatrix CMatrix_Transpose(CMatrix A, trans_type tt);
 void CMatVec(CMatrix M, Vector x, Vector y);
+double CMatrixMaxDifference(CMatrix A, CMatrix B);
+double CMatrixFrobenius(CMatrix M);
 void CMatrixPrint(CMatrix M);
 void CMatrixPrintToFile(CMatrix M, char *info);
 

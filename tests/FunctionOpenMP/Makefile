@@ -3,7 +3,7 @@ IPATH = -I /opt/intel/oneapi/mkl/2022.0.2/include/
 VPATH = ../../src/
 
 CC = gcc
-CFLAGS = $(IPATH) -fsanitize=address -fopenmp -O3
+CFLAGS = $(IPATH) -fopenmp -O3
 
 all : TestFunction
 

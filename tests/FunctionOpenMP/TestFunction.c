@@ -11,11 +11,11 @@ int main()
 {
    int numTests = 5;
    // set problem parameters, typical 4-d size problem
-   int nodes = 700;
+   int nodes = 900;
    int dim = 4;
    int dims[1] = {1};
    dims[0] = dim;
-   int deg = 13;
+   int deg = 14;
    DOMAIN_TYPE D = CUBE;
 
    // initialize elements to random values in [0, 1], similar to actual quadrature values
