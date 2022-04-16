@@ -14,6 +14,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <string.h>
+#include <time.h>
 
 static inline int GetNumDims(DOMAIN_TYPE D);
 static inline bool QuadPosWeightsElem(const quadrature *q, int elem);
@@ -403,8 +404,10 @@ void vector_to_quadrature(const Vector v, quadrature q)
 
 void quadrature_fill_random(quadrature *q)
 {
+   double randVal = (double)rand() / (double)RAND_MAX;
+   srand(time(0) + 100.*randVal);
    for(int i = 0; i < q->z.len; ++i)
-      q->z.id[i] = (double)rand() / (double) RAND_MAX;
+      q->z.id[i] = randVal;
 }
 
 

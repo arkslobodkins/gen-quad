@@ -2,7 +2,6 @@
 #include "../../src/Quadrature.h"
 #include "../../src/Matrix.h"
 #include "../../src/get_time.h"
-#include "../../src/get_time.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -12,7 +11,7 @@ int main()
 {
    int numTests = 5;
    // set problem parameters, typical 4-d size problem
-   int nodes = 500;
+   int nodes = 900;
    int dim = 4;
    int dims[1] = {1};
    dims[0] = dim;
@@ -25,19 +24,17 @@ int main()
    {
       q[i] = quadrature_init_full(nodes, dim, dims, deg, D);
       quadrature_fill_random(q[i]);
-      for(int j = 0; j < q[i]->z.len; ++j)
-      {
-         q[i]->z.id[j] *= 0.5;
-         q[i]->z.id[j] += pow(10, -12);
-       }
    }
 
    int nrows = q[0]->basis->numFuncs;
    int ncols = q[0]->z.len;
-//
-//   ////////////////////////////////////////////////////////////
-//   // serial norm and times
    CMatrix JSerial = CMatrix_init(nrows, ncols);
+   CMatrix JParallel = CMatrix_init(nrows, ncols);
+   for(int i = 0; i < numTests; ++i)
+      QuadAllocBasisOmp(q[i], omp_get_max_threads());
+
+   ////////////////////////////////////////////////////////////
+   // serial norm and times
    printf("\n");
    printf("timing serial GetJacobian\n");
    for(int i = 0; i < numTests; ++i)
@@ -51,10 +48,6 @@ int main()
 
    ////////////////////////////////////////////////////////////
    // parallel norm and times
-   CMatrix JParallel = CMatrix_init(nrows, ncols);
-   for(int i = 0; i < numTests; ++i)
-      QuadAllocBasisOmp(q[i], omp_get_max_threads());
-
    printf("timing parallel GetJacobianOmp\n");
    for(int i = 0; i < numTests; ++i)
    {
