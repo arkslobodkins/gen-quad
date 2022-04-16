@@ -43,6 +43,7 @@ void RMatrix_free(RMatrix M);
 void RMatrix_SetZero(RMatrix M);
 void RMatrix_LoadToRow(int row, RMatrix M, Vector v);
 void RMatVec(RMatrix M, Vector x, Vector y);
+void RMatVecAccurate(RMatrix M, Vector x, Vector y);
 double RDotRow(int row, RMatrix M, Vector x);
 void RMatrixPrint(RMatrix M);
 
@@ -60,6 +61,7 @@ void CMatrix_ColumnScale(int col, double c, CMatrix M);
 void CMatrix_Assign_Transpose(CMatrix A, CMatrix B);
 CMatrix CMatrix_Transpose(CMatrix A, trans_type tt);
 void CMatVec(CMatrix M, Vector x, Vector y);
+void CMatVecAccurate(CMatrix M, Vector x, Vector y);
 double CMatrixMaxDifference(CMatrix A, CMatrix B);
 double CMatrixFrobenius(CMatrix M);
 void CMatrixPrint(CMatrix M);

@@ -218,6 +218,19 @@ VMax VectorMax(Vector z)
    return vMax;
 }
 
+double VectorMaxDifference(Vector x, Vector y)
+{
+   assert(x.len == y.len);
+   double maxDiff = fabs(x.id[0] - y.id[0]);
+
+   for(int i = 1; i < x.len; ++i)
+   {
+      double iDiff = fabs(x.id[i] - y.id[i]);
+      maxDiff = iDiff > maxDiff ? iDiff : maxDiff;
+   }
+   return maxDiff;
+}
+
 
 double V_ScaledTwoNorm(Vector z)
 {

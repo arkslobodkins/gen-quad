@@ -88,6 +88,26 @@ void RMatVec(RMatrix M, Vector x, Vector y)
          y.id[i] += R_ELEM_ID(M, i, j) * x.id[j];
 }
 
+void RMatVecAccurate(RMatrix M, Vector x, Vector y)
+{
+   assert(M.rows == y.len);
+   assert(M.cols == x.len);
+   memset(y.id, 0, y.len*sizeof(double));
+
+   double128 mij, xj, yi;
+   for(int i = 0; i < M.rows; ++i)
+   {
+      yi = 0.q;
+      for(int j = 0; j < M.cols; ++j)
+      {
+         mij = R_ELEM_ID(M, i, j);
+         xj = x.id[j];
+         yi += mij * xj;
+      }
+      y.id[i] = yi;
+   }
+}
+
 double RDotRow(int row, RMatrix M, Vector x)
 {
    assert(row > -1 && row < M.rows);
@@ -259,8 +279,33 @@ void CMatVec(CMatrix M, Vector x, Vector y)
          y.id[i] += C_ELEM_ID(M, i, j) * x.id[j];
 }
 
+void CMatVecAccurate(CMatrix M, Vector x, Vector y)
+{
+   assert(M.rows == y.len);
+   assert(M.cols == x.len);
+   memset(y.id, 0, y.len*sizeof(double));
+
+   double128 mij, xj;
+   double128 yQuad[y.len];
+   memset(yQuad, 0, y.len*sizeof(double128));
+
+   for(int j = 0; j < M.cols; ++j)
+   {
+      xj = x.id[j];
+      for(int i = 0; i < M.rows; ++i)
+      {
+         mij = C_ELEM_ID(M, i, j);
+         yQuad[i] += mij*xj;
+      }
+   }
+
+   for(int i = 0; i < y.len; ++i)
+      y.id[i] = yQuad[i];
+}
+
 double CMatrixMaxDifference(CMatrix A, CMatrix B)
 {
+   assert(A.len > 0);
    assert(A.rows == B.rows);
    assert(A.cols == B.cols);
    double maxDiff = fabs(A.id[0] - B.id[0]);
@@ -275,10 +320,9 @@ double CMatrixMaxDifference(CMatrix A, CMatrix B)
 
 double CMatrixFrobenius(CMatrix M)
 {
-   double norm = 0.0;
-   for(int i = 0; i < M.len; ++i)
-      norm += M.id[i]*M.id[i];
-   return sqrt(norm);
+   assert(M.len > 0);
+   int incz = 1;
+   return dnrm2(&M.len, M.id, &incz);
 }
 
 void CMatrixPrint(CMatrix M)

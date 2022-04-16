@@ -36,6 +36,7 @@ extern "C" {
 #define GQ_TRUE 1
 #define GQ_FALSE 0
 typedef int GQ_BOOL;
+typedef __float128 double128;
 
 #define ONE 1
 #define TWO 2

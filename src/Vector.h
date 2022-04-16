@@ -77,6 +77,7 @@ void VAddScale(double c1, Vector V1, double c2, Vector V2, Vector V3);
 void VRemoveElement(int index, Vector *z);
 VMin VectorMin(Vector v);
 VMax VectorMax(Vector v);
+double VectorMaxDifference(Vector x, Vector y);
 
 double V_ScaledTwoNorm(Vector z);
 double V_TwoNorm(Vector z);
