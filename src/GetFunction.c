@@ -34,14 +34,10 @@ void GetFunctionOmp(quadrature *q, Vector f)
    const double *w = q->w;
    Tensor2D x = DoubleToTensor2D(nodes, dim, q->x);
 
-   int num_dims = q->num_dims;
-   int dims[num_dims];
-   memcpy(dims, q->dims, num_dims*sizeof(int));
-
    Basis **basis = q->basisOmp;
    BasisIntegrals(basis[0], basis[0]->integrals);
-   for(int i = 0; i < len; ++i)
-      f.id[i] = -1.0 * basis[0]->integrals.id[i];
+   Vector_Assign(basis[0]->integrals, f);
+   VScale(-1.0, f);
 
    int omp_condition = OMP_CONDITION(deg, dim);
    #pragma omp parallel if(omp_condition) default(shared) num_threads(nthreads)
@@ -82,14 +78,9 @@ void GetFunction(quadrature *q, Vector f)
    Vector functions = q->basis->functions;
    Vector integrals = q->basis->integrals;
 
-   int num_dims = q->num_dims;
-   int dims[num_dims];
-   memcpy(dims, q->dims, num_dims*sizeof(int));
-
    BasisIntegrals(q->basis, integrals);
-   for(int i = 0; i < integrals.len; ++i)
-      f.id[i] = -1.0 * integrals.id[i];
-
+   Vector_Assign(integrals, f);
+   VScale(-1.0, f);
    for(int i = 0; i < nodes; ++i)
    {
       const double *curNode = &x[dim*i];

@@ -238,6 +238,11 @@ void CubeBasisIntegrals(CubeBasis *basis, Vector v);
 void CubeBasisIntegralsMonomial(CubeBasis *basis, Vector v);
 void CubeBasisFree(CubeBasis *basis);
 
+// routines to verify correctness of generic ComputeCubeBasisFuncs routine for 2 3, and 4-d
+void ComputeCube2dTest(Basis *basis, const double *x, Vector v);
+void ComputeCube3dTest(Basis *basis, const double *x, Vector v);
+void ComputeCube4dTest(Basis *basis, const double *x, Vector v);
+
 SimplexBasis* SimplexBasisInit(SimplexParams *params);
 SimplexBasis* MakeSimplexCopy(SimplexBasis *basis);
 void SimplexBasisFuncs(SimplexBasis *basis, const double *x, Vector v);
@@ -245,6 +250,10 @@ void SimplexBasisDer(SimplexBasis *basis, const double *x, Vector v);
 void SimplexBasisIntegrals(SimplexBasis *basis, Vector v);
 void SimplexBasisIntegralsMonomial(SimplexBasis *basis, Vector v);
 void SimplexBasisFree(SimplexBasis *basis);
+
+// routines to verify correctness of generic ComputeSimplexBasisFuncs routine for 2 and 3-d
+void ComputeSimplex2dTest(Basis *basis, const double *x, Vector v);
+void ComputeSimplex3dTest(Basis *basis, const double *x, Vector v);
 
 CubeSimplexBasis* CubeSimplexBasisInit(CubeSimplexParams *params);
 CubeSimplexBasis* MakeCubeSimplexCopy(CubeSimplexBasis *basis);

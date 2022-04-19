@@ -25,8 +25,13 @@ static void ComputeTable(Table3d table);
 static void CopyTable(Table3d t1, Table3d t2);
 
 static void LegendrePoly(int order, double x, double *p);
+static void LegendrePolyAccurate(int order, double x, double *p);
+
 static void LegendrePolyAndPrime(int order, double x, double *p, double *dp);
+static void LegendrePolyAndPrimeAccurate(int order, double x, double *p, double *dp);
+static void JacobiPoly(int order, double x, int alpha, double *p);
 static void JacobiPolyWithTable(int order, double x, int alpha, double *p, Table3d table);
+static void JacobiPolyWithTableAccurate(int order, double x, int alpha, double *p, Table3d table);
 
 static void IntegralsCubePolyhedralMonomial(MixedPolytopeBasis *basis, Vector v);
 static void IntegralsSimplexPolyhedralMonomialOne(MixedPolytopeBasis *basis, Vector v);
@@ -108,7 +113,8 @@ static int BasisSize(int deg, int dim)
 static void BasisIndices(int deg, int dim, INT_8 *F)
 {
    if(dim == 1) {
-      for(int i = 0; i <= deg; ++i) F[i] = i;
+      for(int i = 0; i <= deg; ++i)
+         F[i] = i;
       return;
    }
 
@@ -152,18 +158,19 @@ static inline double DoubleIntPower(double x, int power)
 
 void BasisMonomial(Basis *basis, const double *x, Vector phi)
 {
-   int numFuncs    = basis->numFuncs;
-   int dim         = basis->dim;
-   INT_8 *basis_id = basis->indices;
+   int numFuncs = basis->numFuncs;
+   int dim      = basis->dim;
+   INT_8 *ind   = basis->indices;
 
    VSetToOne(phi);
    for(int k = 0; k < numFuncs; ++k) {
       for(int d = 0; d < dim; ++d) {
-         INT_8 basis_power = basis_id[k*dim+d];
+         INT_8 basis_power = ind[id2(k, d, dim)];
          phi.id[k] *= DoubleIntPower(x[d], basis_power);
       }
    }
 }
+
 
 /////////////////////////////////////////////////////////////////////////////
 BasisInterface SetCubeBasisInterface()
@@ -254,14 +261,14 @@ void ComputeCubeBasisFuncs(CubeBasis *basis, const double *x, Vector v)
    double *phi    = v.id;
 
    double legendre[deg+1];
-   LegendrePoly(deg+1, 2*x[0]-1, legendre);
+   LegendrePolyAccurate(deg+1, 2.*x[0]-1., legendre);
    #pragma omp simd
    for(int k = 0; k < numFuncs; ++k)
       phi[k] = legendre[idMap[k]];
 
    for(int d = 1; d < dim; ++d)
    {
-      LegendrePoly(deg+1, 2*x[d]-1, legendre);
+      LegendrePolyAccurate(deg+1, 2.*x[d]-1., legendre);
       int nextDim = d*numFuncs;
       #pragma omp simd
       for(int k = 0; k < numFuncs; ++k)
@@ -282,7 +289,7 @@ void ComputeCubeBasisDer(CubeBasis *basis, const double *x, Vector v)
    double dxlegendre[(deg+1)*dim];
 
    for(int d = 0; d < dim; ++d)
-      LegendrePolyAndPrime(deg+1, 2*x[d]-1, &legendre[d*(deg+1)], &dxlegendre[d*(deg+1)]);
+      LegendrePolyAndPrimeAccurate(deg+1, 2.*x[d]-1., &legendre[d*(deg+1)], &dxlegendre[d*(deg+1)]);
 
    VSetToOne(v);
    for(int d = 0; d < dim; ++d)
@@ -308,28 +315,24 @@ void ComputeCubeBasisDer(CubeBasis *basis, const double *x, Vector v)
 }
 
 
-void CubeBasisIntegrals(CubeBasis *basis, Vector v)
+void CubeBasisIntegrals(CubeBasis *basis, Vector integrals)
 {
-   int len = basis->integrals.len;
-   double *integrals = v.id;
-   memset(integrals, 0, SIZE_DOUBLE(len));
-   integrals[0] = 1.0;
+   assert(basis->numFuncs == integrals.len);
+   VSetToZero(integrals);
+   integrals.id[0] = 1.0;
 }
 
 
-void CubeBasisIntegralsMonomial(CubeBasis *basis, Vector v)
+void CubeBasisIntegralsMonomial(CubeBasis *basis, Vector integrals)
 {
    int dim = basis->dim;
    int numFuncs = basis->numFuncs;
-   INT_8 *basisIndices = basis->indices;
-   Vector integrals = v;
+   INT_8 *ind = basis->indices;
 
-   for(int i = 0; i < numFuncs; ++i) {
-      double val = 1.0;
+   VSetToOne(integrals);
+   for(int i = 0; i < numFuncs; ++i)
       for(int d = 0; d < dim; ++d)
-         val = val/(basisIndices[i*dim+d] + 1);
-      integrals.id[i] = val;
-   }
+         integrals.id[i] /= (ind[id2(i, d, dim)] + 1);
 }
 
 
@@ -353,6 +356,58 @@ void CubeBasisFree(CubeBasis *basis)
    free(basis);
 }
 
+
+void ComputeCube2dTest(Basis *basis, const double *x, Vector v)
+{
+   int deg = basis->deg;
+
+   double legendre1[deg+1];
+   double legendre2[deg+1];
+   LegendrePolyAccurate(deg+1, 2.*x[0]-1., legendre1);
+   LegendrePolyAccurate(deg+1, 2.*x[1]-1., legendre2);
+
+   for(int i = 0, count = 0; i < deg; ++i)
+      for(int j = 0; j < deg-i; ++j)
+         v.id[count++] = legendre1[j] * legendre2[i];
+}
+
+void ComputeCube3dTest(Basis *basis, const double *x, Vector v)
+{
+   int deg = basis->deg;
+
+   double legendre1[deg+1];
+   double legendre2[deg+1];
+   double legendre3[deg+1];
+   LegendrePolyAccurate(deg+1, 2.*x[0]-1., legendre1);
+   LegendrePolyAccurate(deg+1, 2.*x[1]-1., legendre2);
+   LegendrePolyAccurate(deg+1, 2.*x[2]-1., legendre3);
+
+   for(int i = 0, count = 0; i < deg; ++i)
+      for(int j = 0; j < deg-i; ++j)
+         for(int k = 0; k < deg-i-j; ++k)
+            v.id[count++] = legendre1[k] * legendre2[j] * legendre3[i];
+}
+
+
+void ComputeCube4dTest(Basis *basis, const double *x, Vector v)
+{
+   int deg = basis->deg;
+
+   double legendre1[deg+1];
+   double legendre2[deg+1];
+   double legendre3[deg+1];
+   double legendre4[deg+1];
+   LegendrePolyAccurate(deg+1, 2.*x[0]-1., legendre1);
+   LegendrePolyAccurate(deg+1, 2.*x[1]-1., legendre2);
+   LegendrePolyAccurate(deg+1, 2.*x[2]-1., legendre3);
+   LegendrePolyAccurate(deg+1, 2.*x[3]-1., legendre4);
+
+   for(int i = 0, count = 0; i < deg; ++i)
+      for(int j = 0; j < deg-i; ++j)
+         for(int k = 0; k < deg-i-j; ++k)
+            for(int l = 0; l < deg-i-j-k; ++l)
+            v.id[count++] = legendre1[l] * legendre2[k] * legendre3[j] * legendre4[i];
+}
 
 
 /////////////////////////////////////////////////////////////////////////////
@@ -474,9 +529,8 @@ void SimplexBasisFuncs(SimplexBasis *basis, const double *x, Vector v)
    double jacobi[SQUARE(deg+1)*(dim-1)];
 
    INT_8 *idMap   = basis->addData->idMap;
-   INT_8 *basisId = basis->indices;
 
-   LegendrePoly(deg+1, (2.0*x[dim-1]-x[dim-2])/x[dim-2], legendre);
+   LegendrePolyAccurate(deg+1, (2.0*x[dim-1]-x[dim-2])/x[dim-2], legendre);
    double xCoord[dim-1];
    for(int d = 0; d < dim-2; ++d) xCoord[d] = x[dim-d-2]/x[dim-d-3];
    xCoord[dim-2] = x[0];
@@ -490,7 +544,7 @@ void SimplexBasisFuncs(SimplexBasis *basis, const double *x, Vector v)
       int nextDim = (deg+1)*(d-1)*deg;
       for(int j = 0; j < deg+1; ++j) {
          int nextAlpha = (deg+1)*j;
-         JacobiPolyWithTable(deg+1, jCoord[d], 2*j+d, &jacobi[nextDim+nextAlpha], basis->table);
+         JacobiPolyWithTableAccurate(deg+1, jCoord[d], 2*j+d, &jacobi[nextDim+nextAlpha], basis->table);
       }
    }
 
@@ -508,7 +562,7 @@ void SimplexBasisFuncs(SimplexBasis *basis, const double *x, Vector v)
    for(int d = 1; d < dim; ++d) {
       int nextDim = (deg+1)*deg*(d-1);
       for(int k = 0; k < numFuncs; ++k)
-         phi[k] *= jacobi[basisId[k*dim+d] + nextDim + (deg+1)*xPower[id2(d, k, numFuncs)]] * xFactor.rid[d][k];
+         phi[k] *= jacobi[idMap[d*numFuncs+k] + nextDim + (deg+1)*xPower[id2(d, k, numFuncs)]] * xFactor.rid[d][k];
    }
 }
 
@@ -547,37 +601,28 @@ void SimplexBasisDer(SimplexBasis *basis, const double *x, Vector v)
 
 void SimplexBasisIntegrals(SimplexBasis *basis, Vector v)
 {
-   int dim = basis->dim;
-   int len = basis->integrals.len;
-   double *integrals = v.id;
-
-   memset(integrals, 0, SIZE_DOUBLE(len));
-   integrals[0] = 1;
-   for(int i = 1; i <= dim; ++i)
-      integrals[0] /= i;
-
+   assert(basis->numFuncs == v.len);
+   VSetToZero(v);
+   v.id[0] = 1.0 / (double)factorial(basis->dim);
 }
 
 
-void SimplexBasisIntegralsMonomial(SimplexBasis *basis, Vector v)
+void SimplexBasisIntegralsMonomial(SimplexBasis *basis, Vector integrals)
 {
-   int dim             = basis->dim;
-   int numFuncs        = basis->numFuncs;
-   INT_8 *basisIndices = basis->indices;
-   Vector integrals    = v;
-   double val, power;
+   int dim      = basis->dim;
+   int numFuncs = basis->numFuncs;
+   INT_8 *ind   = basis->indices;
 
+   VSetToOne(integrals);
    for(int i = 0; i < numFuncs; ++i)
    {
-      val = 1.0;
       for(int d = 0; d < dim; ++d)
       {
-         power = 0;
+         double power = 0;
          for(int r = 0; r < dim-d; ++r)
-            power += (double)basisIndices[i*dim+dim-r-1];
-         val /= (power+dim-d);
+            power += (double)ind[(i+1)*dim-(r+1)];
+         integrals.id[i] /= (power+dim-d);
       }
-      integrals.id[i] = val;
    }
 }
 
@@ -591,20 +636,61 @@ void SimplexBasisFree(SimplexBasis *basis)
       free(basis->params);
       basis->params = NULL;
    }
+
    if(basis->addData) {
-      Vector_free(basis->addData->phi_backw1);
-      Vector_free(basis->addData->phi_forw1);
-      free(basis->addData->idMap);
-      RMatrix_free(basis->addData->xFactor);
-      free(basis->addData->xPower);
-      free(basis->addData);
-      basis->addData = NULL;
+      AddDataSimplex *addData = basis->addData;
+      Vector_free(addData->phi_backw1);
+      Vector_free(addData->phi_forw1);
+      free(addData->idMap);
+      RMatrix_free(addData->xFactor);
+      free(addData->xPower);
+      free(addData);
+      basis->addData= NULL;
    }
    if(basis->indices) {
       free(basis->indices);
       basis->indices = NULL;
    }
    free(basis);
+}
+
+
+void ComputeSimplex2dTest(Basis *basis, const double *x, Vector v)
+{
+   int deg = basis->deg;
+   double legendre[deg+1];
+   double jacobi[deg+1];
+
+   LegendrePoly(deg+1, (2.*x[1]-x[0]) / x[0], legendre);
+   for(int i = 0, count = 0; i < deg; ++i)
+   {
+      JacobiPoly(deg+1, 1.0-2.0*x[0], 2*i+1, jacobi);
+      for(int j = 0; j < deg-i; ++j)
+         v.id[count++] = jacobi[j] * legendre[i] * DoubleIntPower(x[0], i);
+   }
+}
+
+
+void ComputeSimplex3dTest(Basis *basis, const double *x, Vector v)
+{
+   int deg = basis->deg;
+   double legendre[deg+1];
+   double jacobi1[deg+1];
+   double jacobi2[deg+1];
+
+   LegendrePoly(deg+1, (2.*x[2]-x[1]) / x[1], legendre);
+   for(int i = 0, count = 0; i < deg; ++i)
+   {
+      JacobiPoly(deg+1, 1.0-2.0*x[1]/x[0], 2*i+1, jacobi1);
+      for(int j = 0; j < deg-i; ++j)
+      {
+         JacobiPoly(deg+1, 1.0-2.0*x[0], 2*(i+j)+2, jacobi2);
+         for(int k = 0; k < deg-i-j; ++k)
+            v.id[count++] = jacobi2[k] * DoubleIntPower(x[0], i+j) *
+                            jacobi1[j] * DoubleIntPower(x[1]/x[0], i) *
+                            legendre[i];
+      }
+   }
 }
 
 
@@ -826,14 +912,8 @@ void CubeSimplexBasisDer(CubeSimplexBasis *basis, const double *x, Vector v)
 
 void CubeSimplexBasisIntegrals(CubeSimplexBasis *basis, Vector v)
 {
-   int dim2 = basis->params->dims[1];
-   int len = basis->integrals.len;
-   double *integrals = v.id;
-
-   memset(integrals, 0, SIZE_DOUBLE(len));
-   integrals[0] = 1;
-   for(int i = 1; i <= dim2; ++i)
-      integrals[0] /= i;
+   VSetToZero(v);
+   v.id[0] = 1.0 / (double)factorial(basis->params->dims[1]);
 }
 
 
@@ -866,13 +946,14 @@ void CubeSimplexBasisFree(CubeSimplexBasis *basis)
       basis->params = NULL;
    }
    if(basis->addData) {
-      Vector_free(basis->addData->basis_polytopic);
-      Vector_free(basis->addData->phi_backw1);
-      Vector_free(basis->addData->phi_forw1);
-      free(basis->addData->idMap);
-      RMatrix_free(basis->addData->xFactor[1]);
-      free(basis->addData->xPower[1]);
-      free(basis->addData);
+      AddDataCubeSimplex *addData = basis->addData;
+      Vector_free(addData->basis_polytopic);
+      Vector_free(addData->phi_backw1);
+      Vector_free(addData->phi_forw1);
+      free(addData->idMap);
+      RMatrix_free(addData->xFactor[1]);
+      free(addData->xPower[1]);
+      free(addData);
       basis->addData = NULL;
    }
    if(basis->indices) {
@@ -1107,18 +1188,9 @@ void SimplexSimplexBasisDer(SimplexSimplexBasis *basis, const double *x, Vector 
 
 void SimplexSimplexBasisIntegrals(SimplexSimplexBasis *basis, Vector v)
 {
-   int dim1 = basis->params->dims[0];
-   int dim2 = basis->params->dims[1];
-   int len  = basis->integrals.len;
-   double *integrals = v.id;
-
-   memset(integrals, 0, SIZE_DOUBLE(len));
-   integrals[0] = 1;
-   for(int i = 1; i <= dim1; ++i)
-      integrals[0] /= i;
-
-   for(int i = 1; i <= dim2; ++i)
-      integrals[0] /= i;
+   VSetToZero(v);
+   v.id[0] = 1.0 / (double)factorial(basis->params->dims[0]);
+   v.id[0] /= (double)factorial(basis->params->dims[1]);
 }
 
 
@@ -1131,10 +1203,7 @@ void SimplexSimplexBasisIntegralsMonomial(SimplexSimplexBasis *basis, Vector v)
 
   IntegralsSimplexPolyhedralMonomialOne((MixedPolytopeBasis *)basis, integralsS1);
   IntegralsSimplexPolyhedralMonomialTwo((MixedPolytopeBasis *)basis, integralsS2);
-
-  #pragma omp simd
-  for(int i = 0; i < numFuncs; ++i)
-     integrals.id[i] = integralsS1.id[i]*integralsS2.id[i];
+  VMult(integralsS1, integralsS2, integrals);
 
   Vector_free(integralsS1);
   Vector_free(integralsS2);
@@ -1151,15 +1220,16 @@ void SimplexSimplexBasisFree(SimplexSimplexBasis *basis)
       basis->params = NULL;
    }
    if(basis->addData) {
-      Vector_free(basis->addData->basis_polytopic);
-      Vector_free(basis->addData->phi_backw1);
-      Vector_free(basis->addData->phi_forw1);
-      free(basis->addData->idMap);
-      RMatrix_free(basis->addData->xFactor[0]);
-      RMatrix_free(basis->addData->xFactor[1]);
-      free(basis->addData->xPower[0]);
-      free(basis->addData->xPower[1]);
-      free(basis->addData);
+      AddDataSimplexSimplex *addData = basis->addData;
+      Vector_free(addData->basis_polytopic);
+      Vector_free(addData->phi_backw1);
+      Vector_free(addData->phi_forw1);
+      free(addData->idMap);
+      RMatrix_free(addData->xFactor[0]);
+      RMatrix_free(addData->xFactor[1]);
+      free(addData->xPower[0]);
+      free(addData->xPower[1]);
+      free(addData);
       basis->addData = NULL;
    }
    if(basis->indices) {
@@ -1183,6 +1253,23 @@ static void LegendrePoly(int order, double x, double *p)
    }
 }
 
+static void LegendrePolyAccurate(int order, double x, double *p)
+{
+   double128 pquad[order];
+   pquad[0] = 1.q;
+   pquad[1] = x;
+
+   for(int  k = 1; k < order-1; ++k)
+   {
+      double128 fac1 = (2.q*k+1.q)/(k+1.q);
+      double128 fac2 = k/(k+1.q);
+      pquad[k+1] = fac1*x*pquad[k] - fac2*pquad[k-1];
+   }
+
+   for(int  k = 0; k < order; ++k)
+      p[k] = pquad[k];
+}
+
 
 static void LegendrePolyAndPrime(int order, double x, double *p, double *dp)
 {
@@ -1196,6 +1283,25 @@ static void LegendrePolyAndPrime(int order, double x, double *p, double *dp)
       p[k+1] = fac1*x*p[k] - fac2*p[k-1];
       dp[k+1] = fac1*(p[k] + x*dp[k]) - fac2*dp[k-1];
    }
+}
+
+static void LegendrePolyAndPrimeAccurate(int order, double x, double *p, double *dp)
+{
+   double128 pquad[order];
+   double128 dpquad[order];
+   pquad[0] = 1.q; pquad[1] = x;
+   dpquad[0] = 0.q; dpquad[1] = 1.q;
+
+   for(int  k = 1; k < order-1; ++k)
+   {
+      double fac1 = (2.q*k+1.q)/(k+1.q);
+      double fac2 = k/(k+1.q);
+      pquad[k+1] = fac1*x*pquad[k] - fac2*pquad[k-1];
+      dpquad[k+1] = fac1*(pquad[k] + x*dpquad[k]) - fac2*dpquad[k-1];
+   }
+
+   for(int  k = 0; k < order; ++k) p[k] = pquad[k];
+   for(int  k = 0; k < order; ++k) dp[k] = dpquad[k];
 }
 
 
@@ -1234,10 +1340,10 @@ static void ComputeTable(Table3d table)
    {
       for (int k = 1; k < table.size[1]; ++k)
       {
-         double fac1Part0 = (alpha+2.0*k+1.0) * (alpha+2.0*k+2.0) * (alpha+2.0*k);
-         double fac1Part1 = (alpha+2.0*k+1.0) * (alpha*alpha);                      //excludes multiplication by x
-         double fac2 = -2.0 * (alpha+k) * k * (alpha+2.0*k+2.0);
-         double fac3 = 1.0 / (2.0*(k+1.0)*(alpha+k+1.0) * (alpha+2.0*k));
+         double128 fac1Part0 = (alpha+2.q*k+1.q) * (alpha+2.q*k+2.q) * (alpha+2.q*k);
+         double128 fac1Part1 = (alpha+2.q*k+1.q) * (alpha*alpha);                      //excludes multiplication by x
+         double128 fac2 = -2.q * (alpha+k) * k * (alpha+2.q*k+2.q);
+         double128 fac3 = 1.q / (2.q*(k+1.q)*(alpha+k+1.q) * (alpha+2.q*k));
          table.id[alpha][k][0] = fac3 * fac1Part0;
          table.id[alpha][k][1] = fac3 * fac1Part1;
          table.id[alpha][k][2] = fac3 * fac2;
@@ -1262,6 +1368,24 @@ static void CopyTable(Table3d t1, Table3d t2)
 }
 
 
+static void JacobiPoly(int order, double x, int alpha, double *p)
+{
+   p[0] = 1.0;
+   p[1] = 0.5*(x-1.0) * (alpha+2.0) + alpha+1.0;
+   for(int k = 1; k < order-1; ++k)
+   {
+      double fac1Part0 = (alpha+2.0*k+1.0) * (alpha+2.0*k+2.0) * (alpha+2.0*k);
+      double fac1Part1 = (alpha+2.0*k+1.0) * (alpha*alpha);
+      double fac2 = -2.0 * (alpha+k) * k * (alpha+2.0*k+2.0);
+      double fac3 = 1.0 / (2.0*(k+1.0)*(alpha+k+1.0) * (alpha+2.0*k));
+      double c1 = fac3 * fac1Part0;
+      double c2 = fac3 * fac1Part1;
+      double c3 = fac3 * fac2;
+      p[k+1] = (c1*x + c2)*p[k] + c3*p[k-1];
+   }
+}
+
+
 // asumes order is at least 2 or greater, i.e. polynomial degree is at least 1
 static void JacobiPolyWithTable(int order, double x, int alpha, double *p, Table3d table)
 {
@@ -1272,6 +1396,22 @@ static void JacobiPolyWithTable(int order, double x, int alpha, double *p, Table
    p[1] = 0.5*(x-1.0) * (alpha+2.0) + alpha+1.0;
    for(int k = 1; k < order-1; ++k)
       p[k+1] = (table.id[alpha][k][0]*x + table.id[alpha][k][1])*p[k] + table.id[alpha][k][2]*p[k-1];
+}
+
+// asumes order is at least 2 or greater, i.e. polynomial degree is at least 1
+static void JacobiPolyWithTableAccurate(int order, double x, int alpha, double *p, Table3d table)
+{
+#ifdef QUAD_DEBUG_ON
+   assert(order >= 2);
+#endif
+   double128 pquad[order];
+   pquad[0] = 1.q;
+   pquad[1] = 0.5q*(x-1.q) * (alpha+2.q) + alpha+1.q;
+   for(int k = 1; k < order-1; ++k)
+      pquad[k+1] = (table.id[alpha][k][0]*x + table.id[alpha][k][1])*pquad[k] + table.id[alpha][k][2]*pquad[k-1];
+
+   for(int k = 0; k < order; ++k)
+      p[k] = pquad[k];
 }
 
 

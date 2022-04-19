@@ -17,6 +17,8 @@
 #include <mkl_blas.h>
 
 static bool comparedouble(double x, double y);
+static inline double d_max(double x, double y);
+static inline double d_min(double x, double y);
 
 VectorInt VectorInt_init(int n)
 {
@@ -167,6 +169,13 @@ void VAdd(Vector V1, Vector V2, Vector V3)
       V3.id[i] = V1.id[i] + V2.id[i];
 }
 
+void VMult(Vector V1, Vector V2, Vector V3)
+{
+   assert(V1.len == V2.len && V2.len == V3.len && V3.len > 0);
+   for(int i = 0; i < V3.len; ++i)
+      V3.id[i] = V1.id[i] * V2.id[i];
+}
+
 void VAddScale(double c1, Vector V1, double c2, Vector V2, Vector V3)
 {
    assert(V1.len == V2.len && V2.len == V3.len && V3.len > 0);
@@ -226,7 +235,20 @@ double VectorMaxDifference(Vector x, Vector y)
    for(int i = 1; i < x.len; ++i)
    {
       double iDiff = fabs(x.id[i] - y.id[i]);
-      maxDiff = iDiff > maxDiff ? iDiff : maxDiff;
+      if(iDiff > maxDiff) maxDiff = iDiff;
+   }
+   return maxDiff;
+}
+
+double VectorMaxRelativeDifference(Vector x, Vector y)
+{
+   assert(x.len == y.len);
+   double maxDiff = fabs(x.id[0] - y.id[0]) / d_min( fabs(x.id[0]), fabs(y.id[0]) );
+
+   for(int i = 1; i < x.len; ++i)
+   {
+      double iDiff = fabs(x.id[i] - y.id[i]) / d_min( fabs(x.id[i]), fabs(y.id[i]) );
+      if(iDiff > maxDiff) maxDiff = iDiff;
    }
    return maxDiff;
 }
@@ -315,6 +337,16 @@ static bool comparedouble(double x, double y)
 {
    if( fabs(x-y) < pow(10, -15) ) return true;
    return false;
+}
+
+static inline double d_max(double x, double y)
+{
+   return x > y ? x : y;
+}
+
+static inline double d_min(double x, double y)
+{
+   return x > y ? y : x;
 }
 
 

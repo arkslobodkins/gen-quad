@@ -169,7 +169,7 @@ void NodeElimination(const quadrature *q_initial, quadrature *q_final, history *
    PrintElimInfo(dim, n_cur , n_opt, efficiency);
    while( (n_cur > n_opt) && (n_cur >= 2) )
    {
-      SOL_FLAG = LsqSearch(OFF, q_new, hist, lev_mar);
+      SOL_FLAG = LsqSearch(OFF, q_new, hist, lsq);
       if(dim == MAX_DIM)
          if(SOL_FLAG == SOL_NOT_FOUND)
          {

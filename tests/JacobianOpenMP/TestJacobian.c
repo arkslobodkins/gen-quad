@@ -5,17 +5,22 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+
+#include <mkl.h>
 #include <omp.h>
 
 int main()
 {
-   int numTests = 5;
+   mkl_set_threading_layer(MKL_THREADING_SEQUENTIAL);
+   printf("testing with %i threads\n", omp_get_max_threads());
+
+   int numTests = 10;
    // set problem parameters, typical 4-d size problem
-   int nodes = 900;
+   int nodes = 1200;
    int dim = 4;
    int dims[1] = {1};
    dims[0] = dim;
-   int deg = 12;
+   int deg = 15;
    DOMAIN_TYPE D = CUBE;
 
    // initialize elements to random values in [0, 1], similar to actual quadrature values
@@ -34,31 +39,18 @@ int main()
       QuadAllocBasisOmp(q[i], omp_get_max_threads());
 
    ////////////////////////////////////////////////////////////
-   // serial norm and times
+   // serial and parallel norm and times
    printf("\n");
-   printf("timing serial GetJacobian\n");
    for(int i = 0; i < numTests; ++i)
    {
       TIME(GetJacobian(q[i], JSerial));
-      printf("Frobenius norm of GetJacobian = %.16e\n", CMatrixFrobenius(JSerial));
-      printf("\n");
-   }
-   ////////////////////////////////////////////////////////////
-
-
-   ////////////////////////////////////////////////////////////
-   // parallel norm and times
-   printf("timing parallel GetJacobianOmp\n");
-   for(int i = 0; i < numTests; ++i)
-   {
       TIME(GetJacobianOmp(q[i], JParallel));
-      printf("Frobenius norm of GetJacobianOmp = %.16e\n", CMatrixFrobenius(JParallel));
+      printf("maximum absolute difference = %.16e\n", CMatrixMaxDifference(JSerial, JParallel));
       printf("\n");
    }
    printf("\n");
    ////////////////////////////////////////////////////////////
 
-   printf("maximum absolute difference = %.16e\n", CMatrixMaxDifference(JSerial, JParallel));
 
    CMatrix_free(JSerial);
    CMatrix_free(JParallel);

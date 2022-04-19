@@ -341,7 +341,7 @@ LSQ_out LevenbergMarquardt(const bool_enum CONSTR_OPT, quadrature *q_orig)
       dgemm_ptr(JACOBIAN_TR, JACOBIAN, JT_J_lmd);                                                    // JT_J_lmd = JT * J                n x n
 
       for(int i = 0; i < JT_J_lmd.rows; ++i) JT_J_lmd.cid[i][i] += alpha_lvmr * JT_J_lmd.cid[i][i];  // JT_J_lmd += λ*D                  n x n
-      CMatVec(JACOBIAN_TR, FPrev, LevMarRHS);                                                        // LevMarRHS = JT * F               n x m * m -> n
+      CMatVecAccurate(JACOBIAN_TR, FPrev, LevMarRHS);                                                        // LevMarRHS = JT * F               n x m * m -> n
       VScale(-1.0, LevMarRHS);
       int INFO = leastsquares_ptr(JT_J_lmd, LevMarRHS, dz);                                          // dz = -(JT * J + λD) \ (JT * F)   n x n * n -> n
       LSQ_TIME += get_cur_time() - start_time;
