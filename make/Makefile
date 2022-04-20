@@ -8,7 +8,7 @@ IPATH = -I /opt/intel/oneapi/mkl/2022.0.2/include/ -I ../plasma-17.1/include/
 CC  = gcc
 CVERSION = -std=c11
 LFLAGS = -lm -lmkl_rt
-CFLAGS = -O3 -march=native $(IPATH) -fsanitize=address #-fopt-info -Og
+CFLAGS = -O3 -march=native $(IPATH) #-fsanitize=address #-fopt-info -Og
 
 ifeq ($(OPENMP), 1)
 CFLAGS += -fopenmp

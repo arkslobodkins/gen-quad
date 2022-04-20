@@ -169,6 +169,13 @@ void VAdd(Vector V1, Vector V2, Vector V3)
       V3.id[i] = V1.id[i] + V2.id[i];
 }
 
+void VSubtract(Vector V1, Vector V2, Vector V3)
+{
+   assert(V1.len == V2.len && V2.len == V3.len && V3.len > 0);
+   for(int i = 0; i < V3.len; ++i)
+      V3.id[i] = V1.id[i] - V2.id[i];
+}
+
 void VMult(Vector V1, Vector V2, Vector V3)
 {
    assert(V1.len == V2.len && V2.len == V3.len && V3.len > 0);

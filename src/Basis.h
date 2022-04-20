@@ -232,47 +232,47 @@ struct MixedPolytopeBasis
 
 CubeBasis* CubeBasisInit(CubeParams *params);
 CubeBasis* MakeCubeCopy(CubeBasis *basis);
-void ComputeCubeBasisFuncs(CubeBasis *basis, const double *x, Vector v);
-void ComputeCubeBasisDer(CubeBasis *basis, const double *x, Vector v);
-void CubeBasisIntegrals(CubeBasis *basis, Vector v);
-void CubeBasisIntegralsMonomial(CubeBasis *basis, Vector v);
+void ComputeCubeBasisFuncs(CubeBasis *basis, const double *x, Vector F);
+void ComputeCubeBasisDer(CubeBasis *basis, const double *x, Vector dF);
+void CubeBasisIntegrals(CubeBasis *basis, Vector I);
+void CubeBasisIntegralsMonomial(CubeBasis *basis, Vector I);
 void CubeBasisFree(CubeBasis *basis);
 
 // routines to verify correctness of generic ComputeCubeBasisFuncs routine for 2 3, and 4-d
-void ComputeCube2dTest(Basis *basis, const double *x, Vector v);
-void ComputeCube3dTest(Basis *basis, const double *x, Vector v);
-void ComputeCube4dTest(Basis *basis, const double *x, Vector v);
+void ComputeCube2dTest(Basis *basis, const double *x, Vector F);
+void ComputeCube3dTest(Basis *basis, const double *x, Vector F);
+void ComputeCube4dTest(Basis *basis, const double *x, Vector F);
 
 SimplexBasis* SimplexBasisInit(SimplexParams *params);
 SimplexBasis* MakeSimplexCopy(SimplexBasis *basis);
-void SimplexBasisFuncs(SimplexBasis *basis, const double *x, Vector v);
-void SimplexBasisDer(SimplexBasis *basis, const double *x, Vector v);
-void SimplexBasisIntegrals(SimplexBasis *basis, Vector v);
-void SimplexBasisIntegralsMonomial(SimplexBasis *basis, Vector v);
+void SimplexBasisFuncs(SimplexBasis *basis, const double *x, Vector F);
+void SimplexBasisDer(SimplexBasis *basis, const double *x, Vector dF);
+void SimplexBasisIntegrals(SimplexBasis *basis, Vector I);
+void SimplexBasisIntegralsMonomial(SimplexBasis *basis, Vector I);
 void SimplexBasisFree(SimplexBasis *basis);
 
 // routines to verify correctness of generic ComputeSimplexBasisFuncs routine for 2 and 3-d
-void ComputeSimplex2dTest(Basis *basis, const double *x, Vector v);
-void ComputeSimplex3dTest(Basis *basis, const double *x, Vector v);
+void ComputeSimplex2dTest(Basis *basis, const double *x, Vector F);
+void ComputeSimplex3dTest(Basis *basis, const double *x, Vector F);
 
 CubeSimplexBasis* CubeSimplexBasisInit(CubeSimplexParams *params);
 CubeSimplexBasis* MakeCubeSimplexCopy(CubeSimplexBasis *basis);
-void CubeSimplexBasisFuncs(CubeSimplexBasis *basis, const double *x, Vector v);
-void CubeSimplexBasisDer(CubeSimplexBasis *basis, const double *x, Vector v);
-void CubeSimplexBasisIntegrals(CubeSimplexBasis *basis, Vector v);
-void CubeSimplexBasisIntegralsMonomial(CubeSimplexBasis *basis, Vector v);
+void CubeSimplexBasisFuncs(CubeSimplexBasis *basis, const double *x, Vector F);
+void CubeSimplexBasisDer(CubeSimplexBasis *basis, const double *x, Vector dF);
+void CubeSimplexBasisIntegrals(CubeSimplexBasis *basis, Vector I);
+void CubeSimplexBasisIntegralsMonomial(CubeSimplexBasis *basis, Vector I);
 void CubeSimplexBasisFree(CubeSimplexBasis *basis);
 
 SimplexSimplexBasis* SimplexSimplexBasisInit(SimplexSimplexParams *params);
 SimplexSimplexBasis* MakeSimplexSimplexCopy(SimplexSimplexBasis *basis);
-void SimplexSimplexBasisFuncs(SimplexSimplexBasis *basis, const double *x, Vector v);
-void SimplexSimplexBasisDer(SimplexSimplexBasis *basis, const double *x, Vector v);
-void SimplexSimplexBasisIntegrals(SimplexSimplexBasis *basis, Vector v);
-void SimplexSimplexBasisIntegralsMonomial(SimplexSimplexBasis *basis, Vector v);
+void SimplexSimplexBasisFuncs(SimplexSimplexBasis *basis, const double *x, Vector F);
+void SimplexSimplexBasisDer(SimplexSimplexBasis *basis, const double *x, Vector dF);
+void SimplexSimplexBasisIntegrals(SimplexSimplexBasis *basis, Vector I);
+void SimplexSimplexBasisIntegralsMonomial(SimplexSimplexBasis *basis, Vector I);
 void SimplexSimplexBasisFree(SimplexSimplexBasis *basis);
 
-void SimplexFuncsPolytopicOne(MixedPolytopeBasis *basis, const double *x, Vector v);
-void SimplexFuncsPolytopicTwo(MixedPolytopeBasis *basis, const double *x, Vector v);
+void SimplexFuncsPolytopicOne(MixedPolytopeBasis *basis, const double *x, Vector F);
+void SimplexFuncsPolytopicTwo(MixedPolytopeBasis *basis, const double *x, Vector F);
 
 double orthogonal_simplex_basis_test(int deg, int dim);
 double orthogonal_cube_basis_test(int deg, int dim);

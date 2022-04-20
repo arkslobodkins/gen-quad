@@ -74,6 +74,7 @@ void VScale(double c, Vector V);
 void VMult(Vector V1, Vector V2, Vector V3);
 void Vector_daxpy(double a, Vector x, Vector y);
 void VAdd(Vector V1, Vector V2, Vector V3);
+void VSubtract(Vector V1, Vector V2, Vector V3);
 void VAddScale(double c1, Vector V1, double c2, Vector V2, Vector V3);
 void VRemoveElement(int index, Vector *z);
 VMin VectorMin(Vector v);
