@@ -1072,18 +1072,16 @@ void SimplexSimplexBasisFuncs(SimplexSimplexBasis *basis, const double *x, Vecto
    int numFuncs     = basis->numFuncs;
    Vector polytopic = basis->addData->basis_polytopic;
 
-   VSetToOne(basis->functions);
-   double *phi = v.id;
-
+   VSetToOne(v);
    SimplexFuncsPolytopicOne((MixedPolytopeBasis *)basis, x, polytopic);
    #pragma omp simd
    for(int k = 0; k < numFuncs; ++k)
-      phi[k] *= polytopic.id[k];
+      v.id[k] *= polytopic.id[k];
 
    SimplexFuncsPolytopicTwo((MixedPolytopeBasis *)basis, x, polytopic);
    #pragma omp simd
    for(int k = 0; k < numFuncs; ++k)
-      phi[k] *= polytopic.id[k];
+      v.id[k] *= polytopic.id[k];
 }
 
 
