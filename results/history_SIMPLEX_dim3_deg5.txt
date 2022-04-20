@@ -1,0 +1,68 @@
+*********************************************************
+
+dimension                 = 2
+degree of precision       = 5
+DOMAIN_TYPE               = SIMPLEX
+number of basis functions = 21
+initial number of nodes   = 9
+final number of nodes     = 8
+optimal number of nodes   = 7
+total eliminations        = 1
+final residual            = 8.9007290049737062e-17
+efficiency                = 0.875000
+
+total number of nodes[0] = 8
+success_node[0] = 0
+Converged in 5 iterations
+
+
+*********************************************************
+
+dimension                 = 3
+degree of precision       = 5
+DOMAIN_TYPE               = SIMPLEX
+number of basis functions = 56
+initial number of nodes   = 24
+final number of nodes     = 15
+optimal number of nodes   = 14
+total eliminations        = 9
+final residual            = 5.0186398990198181e-15
+efficiency                = 0.933333
+
+total number of nodes[0] = 23
+success_node[0] = 0
+Converged in 3 iterations
+
+total number of nodes[1] = 22
+success_node[1] = 0
+Converged in 4 iterations
+
+total number of nodes[2] = 21
+success_node[2] = 0
+Converged in 3 iterations
+
+total number of nodes[3] = 20
+success_node[3] = 0
+Converged in 2 iterations
+
+total number of nodes[4] = 19
+success_node[4] = 0
+Converged in 3 iterations
+
+total number of nodes[5] = 18
+success_node[5] = 0
+Converged in 5 iterations
+
+total number of nodes[6] = 17
+success_node[6] = 1
+Converged in 4 iterations
+
+total number of nodes[7] = 16
+success_node[7] = 4
+Converged in 16 iterations
+
+total number of nodes[8] = 15
+success_node[8] = 1
+Converged in 6 iterations
+
+

@@ -1,0 +1,7 @@
+wall clock time for least squares routine in LeastSquaresNewton = 8.023696e-01
+wall clock time for GetJacobian routine = 2.831452e-01
+wall clock time for GetFunction routine = 9.593534e-02
+wall clock time for predictor routines  = 3.897619e-02
+
+main routines took 95.331496 percent of the total computation
+total wall clock time = 1.280192e+00

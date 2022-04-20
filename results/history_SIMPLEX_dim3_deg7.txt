@@ -1,0 +1,100 @@
+*********************************************************
+
+dimension                 = 2
+degree of precision       = 7
+DOMAIN_TYPE               = SIMPLEX
+number of basis functions = 36
+initial number of nodes   = 16
+final number of nodes     = 12
+optimal number of nodes   = 12
+total eliminations        = 4
+final residual            = 1.1102230246251565e-16
+efficiency                = 1.000000
+
+total number of nodes[0] = 15
+success_node[0] = 0
+Converged in 4 iterations
+
+total number of nodes[1] = 14
+success_node[1] = 0
+Converged in 5 iterations
+
+total number of nodes[2] = 13
+success_node[2] = 0
+Converged in 8 iterations
+
+total number of nodes[3] = 12
+success_node[3] = 3
+Converged in 6 iterations
+
+
+*********************************************************
+
+dimension                 = 3
+degree of precision       = 7
+DOMAIN_TYPE               = SIMPLEX
+number of basis functions = 120
+initial number of nodes   = 48
+final number of nodes     = 34
+optimal number of nodes   = 30
+total eliminations        = 14
+final residual            = 2.7755575615628914e-17
+efficiency                = 0.882353
+
+total number of nodes[0] = 47
+success_node[0] = 0
+Converged in 2 iterations
+
+total number of nodes[1] = 46
+success_node[1] = 0
+Converged in 2 iterations
+
+total number of nodes[2] = 45
+success_node[2] = 0
+Converged in 3 iterations
+
+total number of nodes[3] = 44
+success_node[3] = 0
+Converged in 4 iterations
+
+total number of nodes[4] = 43
+success_node[4] = 0
+Converged in 3 iterations
+
+total number of nodes[5] = 42
+success_node[5] = 0
+Converged in 5 iterations
+
+total number of nodes[6] = 41
+success_node[6] = 0
+Converged in 4 iterations
+
+total number of nodes[7] = 40
+success_node[7] = 1
+Converged in 6 iterations
+
+total number of nodes[8] = 39
+success_node[8] = 2
+Converged in 3 iterations
+
+total number of nodes[9] = 38
+success_node[9] = 2
+Converged in 4 iterations
+
+total number of nodes[10] = 37
+success_node[10] = 3
+Converged in 5 iterations
+
+total number of nodes[11] = 36
+success_node[11] = 7
+Converged in 8 iterations
+
+total number of nodes[12] = 35
+success_node[12] = 1
+Converged in 17 iterations
+
+total number of nodes[13] = 34
+success_node[13] = 4
+Converged in 10 iterations
+
+
