@@ -32,7 +32,7 @@ static void LegendrePolyAndPrimeAccurate(int order, double x, double *p, double 
 
 static void JacobiPoly(int order, double x, int alpha, double *p);
 static void JacobiPolyWithTable(int order, double x, int alpha, double *p, Table3d table);
-static void JacobiPolyWithTableAccurate(int order, double x, int alpha, double *p, Table3d table);
+__attribute__unused static void JacobiPolyWithTableAccurate(int order, double x, int alpha, double *p, Table3d table);
 
 static void IntegralsCubePolyhedralMonomial(MixedPolytopeBasis *basis, Vector v);
 static void IntegralsSimplexPolyhedralMonomialOne(MixedPolytopeBasis *basis, Vector v);
@@ -308,9 +308,8 @@ void ComputeCubeBasisDer(CubeBasis *basis, const double *x, Vector dF)
 }
 
 
-void CubeBasisIntegrals(CubeBasis *basis, Vector I)
+void CubeBasisIntegrals(__attribute__unused CubeBasis *basis, Vector I)
 {
-   assert(basis->numFuncs == I.len);
    VSetToZero(I);
    I.id[0] = 1.0;
 }
@@ -512,7 +511,7 @@ void SimplexBasisFuncs(SimplexBasis *basis, const double *x, Vector F)
    double legendre[(deg+1)];
    double jacobi[dim-1][SQUARE(deg+1)];
 
-   LegendrePolyAccurate(deg+1, (2.0*x[dim-1]-x[dim-2])/x[dim-2], legendre);
+   LegendrePoly(deg+1, (2.0*x[dim-1]-x[dim-2])/x[dim-2], legendre);
    double xCoord[dim-1];
    for(int d = 0; d < dim-2; ++d)
       xCoord[d] = x[dim-d-2]/x[dim-d-3];
@@ -526,7 +525,7 @@ void SimplexBasisFuncs(SimplexBasis *basis, const double *x, Vector F)
    for(int d = 1; d < dim; ++d) {
       for(int j = 0; j < deg+1; ++j) {
          int nextAlpha = (deg+1)*j;
-         JacobiPolyWithTableAccurate(deg+1, jCoord[d], 2*j+d, &jacobi[d-1][nextAlpha], basis->table);
+         JacobiPolyWithTable(deg+1, jCoord[d], 2*j+d, &jacobi[d-1][nextAlpha], basis->table);
       }
    }
 
@@ -536,9 +535,11 @@ void SimplexBasisFuncs(SimplexBasis *basis, const double *x, Vector F)
       for(int k = 0; k < numFuncs; ++k)
             xFactor.rid[d][k] = DoubleIntPower(xCoord[d-1], xPower[id2(d, k, numFuncs)]);
 
+   #pragma omp simd
    for(int k = 0; k < numFuncs; ++k)
       F.id[k] = legendre[idMap[k]];
    for(int d = 1; d < dim; ++d)
+      #pragma omp simd
       for(int k = 0; k < numFuncs; ++k)
          F.id[k] *= jacobi[d-1][idMap[d*numFuncs+k] + (deg+1)*xPower[id2(d, k, numFuncs)]] * xFactor.rid[d][k];
 }
@@ -575,9 +576,8 @@ void SimplexBasisDer(SimplexBasis *basis, const double *x, Vector dF)
 }
 
 
-void SimplexBasisIntegrals(SimplexBasis *basis, Vector I)
+void SimplexBasisIntegrals(__attribute__unused SimplexBasis *basis, Vector I)
 {
-   assert(basis->numFuncs == I.len);
    VSetToZero(I);
    I.id[0] = 1.0 / (double)factorial(basis->dim);
 }

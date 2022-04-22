@@ -215,6 +215,12 @@ LSQ_out LeastSquaresNewton(const bool_enum CONSTR_OPT, quadrature *q_orig)
 
 
 FREERETURN:
+//   if(lsq_out.SOL_FLAG == SOL_NOT_FOUND)
+//   {
+//      PrintInt(lsq_out.its, "its_when_failed");
+//      PrintDouble(errorNormUpdate, "errorNormUpdate");
+//      PrintBool(QuadInDomain(q_next), "InDomain");
+//   }
 #ifdef _OPENMP
    if(is_alloc_omp)
    {
@@ -267,8 +273,8 @@ LSQ_out LevenbergMarquardt(const bool_enum CONSTR_OPT, quadrature *q_orig)
    CMatrix JT_J_lmd     = CMatrix_init(ncols, ncols);
 
    double alpha_lvmr = 0.;
-   if(CONSTR_OPT == OFF)     alpha_lvmr = 0.0001;                 // more local initial guess, consider other values
-   else if(CONSTR_OPT == ON) alpha_lvmr = 100;                    // more global search when solution is harder to find, consider other values
+   if(CONSTR_OPT == OFF)     alpha_lvmr = 1.;                    // more local initial guess, consider other values
+   else if(CONSTR_OPT == ON) alpha_lvmr = 100.;                  // more global search when solution is harder to find, consider other values
 
    Vector FPrev     = Vector_init(nrows);
    Vector FCur      = Vector_init(nrows);
@@ -332,18 +338,32 @@ LSQ_out LevenbergMarquardt(const bool_enum CONSTR_OPT, quadrature *q_orig)
 
    while( (lsq_out.its < maxiter) && (errorNormUpdate > q_tol) )  // while infinity norm > q_tol
    {
-      const double alpha_lvmr_down = alpha_lvmr / 3.0;            // consider dividing by 5
+      double alpha_lvmr_down;
+      if( errorNormUpdate > POW_DOUBLE(10, -8) )
+         alpha_lvmr_down = alpha_lvmr / 3.0;                                                         // consider dividing by 5
+      else alpha_lvmr_down = alpha_lvmr / 5.;
 
       getFunctionAndJacobian_ptr(q_prev, FPrev, JACOBIAN);                                           // J(xp)                            m x n
       CMatrix_Assign_Transpose(JACOBIAN, JACOBIAN_TR);                                               // JT(xp)                           n x m
 
       double start_time = get_cur_time();                                                            // include dgemm in LSQ_TIME
-      dgemm_ptr(JACOBIAN_TR, JACOBIAN, JT_J_lmd);                                                    // JT_J_lmd = JT * J                n x n
+      int INFO = 0;
+      if( errorNormUpdate > POW_DOUBLE(10, -10) )
+      {
 
-      for(int i = 0; i < JT_J_lmd.rows; ++i) JT_J_lmd.cid[i][i] += alpha_lvmr * JT_J_lmd.cid[i][i];  // JT_J_lmd += λ*D                  n x n
-      CMatVecAccurate(JACOBIAN_TR, FPrev, LevMarRHS);                                                        // LevMarRHS = JT * F               n x m * m -> n
-      VScale(-1.0, LevMarRHS);
-      int INFO = leastsquares_ptr(JT_J_lmd, LevMarRHS, dz);                                          // dz = -(JT * J + λD) \ (JT * F)   n x n * n -> n
+         dgemm_ptr(JACOBIAN_TR, JACOBIAN, JT_J_lmd);                                                 // JT_J_lmd = JT * J                n x n
+         for(int i = 0; i < JT_J_lmd.rows; ++i)
+            JT_J_lmd.cid[i][i] += alpha_lvmr * JT_J_lmd.cid[i][i];                                   // JT_J_lmd += λ*D                  n x n
+         CMatVecAccurate(JACOBIAN_TR, FPrev, LevMarRHS);                                             // LevMarRHS = JT * F               n x m * m -> n
+         VScale(-1.0, LevMarRHS);
+         INFO = leastsquares_ptr(JT_J_lmd, LevMarRHS, dz);                                           // dz = -(JT * J + λD) \ (JT * F)   n x n * n -> n
+      }
+      else                                                                                           // apply pseudoinverse directly when error is small enough
+      {
+         INFO = leastsquares_ptr(JACOBIAN, FPrev, dz);
+         VScale(-1.0, dz);
+
+      }
       LSQ_TIME += get_cur_time() - start_time;
 
       if(INFO != 0)                                                                                  // \\\\\ return if could not solve the system /////
@@ -360,7 +380,7 @@ LSQ_out LevenbergMarquardt(const bool_enum CONSTR_OPT, quadrature *q_orig)
          alpha_lvmr = MIN(alpha_lvmr*2.0, POW_DOUBLE(10.0, 7));
       }
       else {                                                                                         // else if F(q_cur) < F(q_prev) : alpha /= 3, update z_next
-         alpha_lvmr = MAX(alpha_lvmr_down, POW_DOUBLE(10.0, -7));
+         alpha_lvmr = MAX(alpha_lvmr_down, POW_DOUBLE(10.0, -9));
          Vector_Assign(*z_cur, *z_next);                                                             // z_next = z_cur, z_next might be updated below
 
          if( CONSTR_OPT == OFF && !QuadInConstraint(q_next) )                                        // \\\\\ return if not inside the boundary in UNCONSTRAINED mode /////
@@ -395,13 +415,9 @@ LSQ_out LevenbergMarquardt(const bool_enum CONSTR_OPT, quadrature *q_orig)
                   Vector_free(dz_short);
                }
             }
-            else if(lsq_out.its < 25) {                                                                 // add boundary penalty
-               double alpha = ComputePenalty(q_prev, q_next);                                           //
-               if(alpha < 1.0)                                                                          // alpha >= 0
-                  VAddScale(1.0, *z_prev, alpha, dz, *z_next);                                          // z_next = z_prev + alpha * dz
-            }
          }
-         else if(lsq_out.its < 25) {                                                                 // add boundary penalty
+
+         if(lsq_out.its < 25) {                                                                      // add boundary penalty
             double alpha = ComputePenalty(q_prev, q_next);                                           //
             if(alpha < 1.0)                                                                          // alpha >= 0
                VAddScale(1.0, *z_prev, alpha, dz, *z_next);                                          // z_next = z_prev + alpha * dz
@@ -430,6 +446,12 @@ LSQ_out LevenbergMarquardt(const bool_enum CONSTR_OPT, quadrature *q_orig)
 
 
 FREERETURN:
+//   if(lsq_out.SOL_FLAG == SOL_NOT_FOUND)
+//   {
+//      PrintInt(lsq_out.its, "its_when_failed");
+//      PrintDouble(errorNormUpdate, "errorNormUpdate");
+//      PrintBool(QuadInDomain(q_next), "InDomain");
+//   }
 #ifdef _OPENMP
    if(is_alloc_omp)
    {

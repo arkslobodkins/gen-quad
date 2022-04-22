@@ -120,12 +120,14 @@ int DGELS_LAPACK(CMatrix A, Vector b, Vector x)
    int LEAD_DIM = MAX(A.rows, A.cols);
 
    Vector RHS_TO_X = Vector_init(MAX(rows, cols));
+   #pragma omp simd
    for(int i = 0; i < rows; ++i)
       RHS_TO_X.id[i] = b.id[i];
 
    int INFO = LAPACKE_dgels( LAPACK_COL_MAJOR, TRANS, A.rows,
                              A.cols, NRHS, A.id, LDA, RHS_TO_X.id, LEAD_DIM );
 
+   #pragma omp simd
    for(int i = 0; i < cols; ++i)
       x.id[i] = RHS_TO_X.id[i];
    Vector_free(RHS_TO_X);
@@ -192,6 +194,7 @@ int DGELS_PLASMA(CMatrix A, Vector b, Vector x)
    int LEAD_DIM = MAX(A.rows, A.cols);
 
    Vector RHS_TO_X = Vector_init(MAX(rows, cols));
+   #pragma omp simd
    for(int i = 0; i < rows; ++i)
       RHS_TO_X.id[i] = b.id[i];
 
@@ -204,6 +207,7 @@ int DGELS_PLASMA(CMatrix A, Vector b, Vector x)
    plasma_desc_destroy(&T);
    plasma_finalize();
 
+   #pragma omp simd
    for(int i = 0; i < cols; ++i)
       x.id[i] = RHS_TO_X.id[i];
    Vector_free(RHS_TO_X);

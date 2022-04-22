@@ -69,6 +69,7 @@ __attribute__unused static RMatrix PredictorSimple(quadrature *q, DistanceStruct
 
 static void ExtractFromPredictor(RMatrix Z, int arrayIndex, quadrature *q);
 static void ExtractFromPredictorFull(RMatrix Z, int arrayIndex, quadrature *q);
+__attribute__unused static int PredictorInConstraintCount(RMatrix Z, const quadrature *q);
 __attribute__unused static void ReorderWithBoundaryDist(RMatrix predictor, quadrature *q, DistanceStruct *arrayIndex);
 __attribute__unused static void InsertionSort(int num_entries, double *norms, int *arrayIndex);
 __attribute__unused static void TestInsertionSort(int num_entries, double *norms); // must be called right after InsertionSort
@@ -109,7 +110,7 @@ Predictor_Ptr set_predictor_ptr(quadrature *q)
    #endif
 }
 
-static void updateHistory(int n, int snode, int its, int nsols, history *hist)
+static void UpdateHistory(int n, int snode, int its, int nsols, history *hist)
 {
    hist->hist_array[hist->total_elims].nodes_tot    = n;
    hist->hist_array[hist->total_elims].success_node = snode;
@@ -147,7 +148,7 @@ void NodeElimination(const quadrature *q_initial, quadrature *q_final, history *
    if(fabs(res) > tol)
    {
       quadrature *q_temp = quadrature_make_full_copy(q_initial);
-      LSQ_out lsq_out = LeastSquaresNewton(ON, q_temp);
+      LSQ_out lsq_out = LevenbergMarquardt(ON, q_temp);
       if(lsq_out.SOL_FLAG == SOL_FOUND) {
          quadrature_assign_resize(q_temp, q_new);
          quadrature_free(q_temp);
@@ -169,7 +170,7 @@ void NodeElimination(const quadrature *q_initial, quadrature *q_final, history *
    PrintElimInfo(dim, n_cur , n_opt, efficiency);
    while( (n_cur > n_opt) && (n_cur >= 2) )
    {
-      SOL_FLAG = LsqSearch(OFF, q_new, hist, lsq);
+      SOL_FLAG = LsqSearch(OFF, q_new, hist, lev_mar);
       if(dim == MAX_DIM)
          if(SOL_FLAG == SOL_NOT_FOUND)
          {
@@ -215,6 +216,7 @@ static bool LsqSearch(bool_enum CONSTR_FLAG, quadrature *q_new, history *hist, s
    quadrature *q_temp = quadrature_make_full_copy(q_new);
    quadrature_realloc_array(n_cur-1, q_temp);
    ReorderWithBoundaryDist(Z, q_new, distanceWeight);
+
    for(int i = 0; i < n_cur; ++i)
    {
       ExtractFromPredictor(Z, distanceWeight[i].index, q_temp); // store ith initial quadrature guess in q_temp
@@ -226,9 +228,8 @@ static bool LsqSearch(bool_enum CONSTR_FLAG, quadrature *q_new, history *hist, s
       lsq_out = nonlinear_solve_ptr(CONSTR_FLAG, q_temp);
       if(lsq_out.SOL_FLAG == SOL_FOUND)
       {
-         n_cur = q_temp->num_nodes;
          quadrature_assign_resize(q_temp, q_new);
-         updateHistory(n_cur, failCount, lsq_out.its, 0, hist);
+         UpdateHistory(q_temp->num_nodes, failCount, lsq_out.its, 0, hist);
          break;
       }
       else if(lsq_out.SOL_FLAG == SOL_NOT_FOUND)
@@ -242,6 +243,7 @@ static bool LsqSearch(bool_enum CONSTR_FLAG, quadrature *q_new, history *hist, s
 
    return lsq_out.SOL_FLAG;
 }
+
 
 
 
@@ -298,7 +300,7 @@ static bool WideLsqSearch(bool_enum CONSTR_FLAG, quadrature *q_new, history *his
    n_cur = q_temp[successQuad]->num_nodes;
    quadrature_assign_resize(q_temp[successQuad], q_new);
 
-   updateHistory(n_cur, successQuad, lsq_out[successQuad].its, count, hist);
+   UpdateHistory(n_cur, successQuad, lsq_out[successQuad].its, count, hist);
 
    for(int i = 0; i < search_size; ++i)
       quadrature_free(q_temp[i]);
@@ -519,10 +521,12 @@ static RMatrix PredictorLapack(quadrature *q, DistanceStruct *distance)
 
    // extract Q2
    for(int j = 0; j < Q2.cols; ++j)
+      #pragma omp simd
       for(int i = 0; i < Q2.rows; ++i)
          C_ELEM_ID(Q2, i, j) = C_ELEM_ID(QFull, i, j+numFuncs);
    // extract ith rows of Q2 corresponding to weights
    for(int j = 0; j < Q2Weight.cols; ++j)
+      #pragma omp simd
       for(int i = 0; i < Q2Weight.rows; ++i)
          C_ELEM_ID(Q2Weight, i, j) = C_ELEM_ID(QFull, i, j+numFuncs);
 
@@ -539,11 +543,13 @@ static RMatrix PredictorLapack(quadrature *q, DistanceStruct *distance)
 
    double *w = q->w;
    for(int i = 0; i < Q2Mult.cols; ++i)
+      #pragma omp simd
       for(int j = 0; j < Q2Mult.rows; ++j)
          dZ.rid[i][j] = C_ELEM_ID(Q2Mult, j, i) * w[i]/SQUARE(norm_Q2_ROW.id[i]);
 
    Vector qz = q->z;
    for(int i = 0; i < Z.rows; ++i)
+      #pragma omp simd
       for(int j = 0; j < Z.cols; ++j)
          Z.rid[i][j] = qz.id[j] - dZ.rid[i][j];
 
@@ -613,10 +619,12 @@ static RMatrix PredictorPlasma(quadrature *q, DistanceStruct *distance)
 
    // extract Q2
    for(int j = 0; j < Q2.cols; ++j)
+      #pragma omp simd
       for(int i = 0; i < Q2.rows; ++i)
          C_ELEM_ID(Q2, i, j) = C_ELEM_ID(QFull, i, j+numFuncs);
    // extract ith rows of Q2 corresponding to weights
    for(int j = 0; j < Q2Weight.cols; ++j)
+      #pragma omp simd
       for(int i = 0; i < Q2Weight.rows; ++i)
          C_ELEM_ID(Q2Weight, i, j) = C_ELEM_ID(QFull, i, j+numFuncs);
 
@@ -635,11 +643,13 @@ static RMatrix PredictorPlasma(quadrature *q, DistanceStruct *distance)
 
    double *w = q->w;
    for(int i = 0; i < Q2Mult.cols; ++i)
+      #pragma omp simd
       for(int j = 0; j < Q2Mult.rows; ++j)
          dZ.rid[i][j] = C_ELEM_ID(Q2Mult, j, i) * w[i]/SQUARE(norm_Q2_ROW.id[i]);
 
    Vector qz = q->z;
    for(int i = 0; i < Z.rows; ++i)
+      #pragma omp simd
       for(int j = 0; j < Z.cols; ++j)
          Z.rid[i][j] = qz.id[j] - dZ.rid[i][j];
 
@@ -672,6 +682,8 @@ static RMatrix PredictorSimple(quadrature *q, DistanceStruct *distance)
    for(int i = 0; i < Z.rows; ++i)
       for(int j = 0; j < Z.cols; ++j)
          Z.rid[i][j] = q->z.id[j];
+   for(int i = 0; i < Z.rows; ++i)
+      Z.rid[i][i] = 0.0;
 
    for(int i = 0; i < Z.rows; ++i)
       distance[i].d = 0.0;
@@ -692,6 +704,21 @@ static RMatrix PredictorSimple(quadrature *q, DistanceStruct *distance)
    return Z;
 }
 
+static int PredictorInConstraintCount(RMatrix Z, const quadrature *q)
+{
+   quadrature *q_temp = quadrature_make_full_copy(q);
+
+   int count = 0;
+   for(int i = 0; i < Z.rows; ++i)
+   {
+      ExtractFromPredictor(Z, i, q_temp);
+      if(QuadInConstraint(q_temp))
+         ++count;
+   }
+   quadrature_free(q_temp);
+
+   return count;
+}
 
 static void ReorderWithBoundaryDist(RMatrix predictor, quadrature *q, DistanceStruct *distance)
 {
@@ -794,6 +821,7 @@ static void ExtractFromPredictor(RMatrix Z, int arrayIndex, quadrature *q)
 
    for(count = 0, j = 0; j < numNodes; ++j) {
       if(j == arrayIndex) continue;
+      #pragma omp simd
       for(d = 0; d < dim; ++d)
          q->x[count*dim+d] = Z.rid[arrayIndex][numNodes+j*dim+d];
       ++count;
