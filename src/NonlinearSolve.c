@@ -350,7 +350,6 @@ LSQ_out LevenbergMarquardt(const bool_enum CONSTR_OPT, quadrature *q_orig)
       int INFO = 0;
       if( errorNormUpdate > POW_DOUBLE(10, -10) )
       {
-
          dgemm_ptr(JACOBIAN_TR, JACOBIAN, JT_J_lmd);                                                 // JT_J_lmd = JT * J                n x n
          for(int i = 0; i < JT_J_lmd.rows; ++i)
             JT_J_lmd.cid[i][i] += alpha_lvmr * JT_J_lmd.cid[i][i];                                   // JT_J_lmd += λ*D                  n x n
@@ -371,7 +370,6 @@ LSQ_out LevenbergMarquardt(const bool_enum CONSTR_OPT, quadrature *q_orig)
          lsq_out.SOL_FLAG = SOL_NOT_FOUND;
          goto FREERETURN;
       }
-
       VAdd(*z_prev, dz, *z_cur);                                                                     // z_cur = z_prev + dz -> q_cur = q_prev + dz
 
       // |||||||||| start region for updating q_next === z_next and alpha_lvmr ||||||||||

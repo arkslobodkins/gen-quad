@@ -675,6 +675,8 @@ static RMatrix PredictorPlasma(quadrature *q, DistanceStruct *distance)
 
 static RMatrix PredictorSimple(quadrature *q, DistanceStruct *distance)
 {
+   double start_time = get_cur_time();
+
    const int dim = q->dim;
    const int n_cur = q->num_nodes;
    RMatrix Z = RMatrix_init(n_cur, n_cur*(dim+1));
@@ -701,6 +703,7 @@ static RMatrix PredictorSimple(quadrature *q, DistanceStruct *distance)
       distance[i].d *= q->w[i];
    qsort(distance, n_cur, sizeof(DistanceStruct), compareDouble);
 
+   PREDICTOR_TIME += get_cur_time() - start_time;
    return Z;
 }
 
