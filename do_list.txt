@@ -1,0 +1,5 @@
+// TODO: think what should be initialized, when, and how
+// think whether Omega should be inherited from Polytope or make it a separate class
+// it seems like it needs to inherit, which requires inequality constraints
+// think whether routines should return Point<2> or dynamic array
+// that depends on how it will be incorporated in the code
