@@ -4,7 +4,9 @@
 #error requires c++14 or higher
 #else
 
+#ifdef _OPENMP
 #include <omp.h>
+#endif
 
 #include <array>
 #include <cassert>

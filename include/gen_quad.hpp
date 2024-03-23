@@ -16,9 +16,9 @@
 #define EIGEN_USE_MKL_ALL
 #endif
 
-#include "../eigen-3.4.0/Eigen/Dense"
 #include "exceptions.hpp"
 #include "headers.hpp"
+#include "../eigen-3.4.0/Eigen/Dense"
 
 namespace gquad {
 
@@ -88,32 +88,32 @@ public:
    StdVector(std::initializer_list<T> list) : std::vector<T>(list) {
    }
 
-   explicit StdVector(gq_int i) : std::vector<T>(static_cast<VSizeType>(i)) {
+   explicit StdVector(gq_int i) : std::vector<T>(static_cast<vsize_t>(i)) {
       GEN_QUAD_ASSERT_DEBUG(i > -1);
    }
 
-   explicit StdVector(gq_int i, const T& val) : std::vector<T>(static_cast<VSizeType>(i), val) {
+   explicit StdVector(gq_int i, const T& val) : std::vector<T>(static_cast<vsize_t>(i), val) {
       GEN_QUAD_ASSERT_DEBUG(i > 0);
    }
 
    T& operator[](gq_int i) {
       GEN_QUAD_ASSERT_DEBUG(i > -1);
-      return std::vector<T>::operator[](static_cast<VSizeType>(i));
+      return std::vector<T>::operator[](static_cast<vsize_t>(i));
    }
 
    const T& operator[](gq_int i) const {
       GEN_QUAD_ASSERT_DEBUG(i > -1);
-      return std::vector<T>::operator[](static_cast<VSizeType>(i));
+      return std::vector<T>::operator[](static_cast<vsize_t>(i));
    }
 
    T& at(gq_int i) {
       GEN_QUAD_ASSERT_DEBUG(i > -1);
-      return std::vector<T>::at(static_cast<VSizeType>(i));
+      return std::vector<T>::at(static_cast<vsize_t>(i));
    }
 
    const T& at(gq_int i) const {
       GEN_QUAD_ASSERT_DEBUG(i > -1);
-      return std::vector<T>::at(static_cast<VSizeType>(i));
+      return std::vector<T>::at(static_cast<vsize_t>(i));
    }
 
    gq_int size() const {
@@ -122,12 +122,12 @@ public:
 
    void resize(gq_int i) {
       GEN_QUAD_ASSERT_DEBUG(i > -1);
-      std::vector<T>::resize(static_cast<VSizeType>(i));
+      std::vector<T>::resize(static_cast<vsize_t>(i));
    }
 
    void reserve(gq_int i) {
       GEN_QUAD_ASSERT_DEBUG(i > -1);
-      std::vector<T>::reserve(static_cast<VSizeType>(i));
+      std::vector<T>::reserve(static_cast<vsize_t>(i));
    }
 
    using std::vector<T>::push_back;
@@ -139,17 +139,17 @@ public:
    using std::vector<T>::empty;
 
 private:
-   using VSizeType = typename std::vector<T>::size_type;
+   using vsize_t = typename std::vector<T>::size_type;
 };
 
 StdVector<gq_int> sequence(gq_int first, gq_int last, gq_int stride = 1);
 
 template <typename T>
-gq_int max_index(const T& container) {
-   GEN_QUAD_ASSERT_DEBUG(container.size() > 0);
+gq_int max_index(const T& z) {
+   GEN_QUAD_ASSERT_DEBUG(z.size() > 0);
    gq_int max_ind = 0;
-   for(gq_int i = 1; i < container.size(); ++i) {
-      if(container(i) > container(max_ind)) {
+   for(gq_int i = 1; i < z.size(); ++i) {
+      if(z(i) > z(max_ind)) {
          max_ind = i;
       }
    }

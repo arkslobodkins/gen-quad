@@ -935,10 +935,6 @@ BasisTable::BasisTable(gq_int deg, gq_int dim, gq_int num_elem)
    GEN_QUAD_ASSERT_DEBUG(m_num_elem >= 1);
 }
 
-BasisTable::BasisTable(const BasisTable& t) : BasisTable{t.deg(), t.dim(), t.num_elem()} {
-   data = t.data;
-}
-
 std::ostream& operator<<(std::ostream& os, const BasisTable& t) {
    for(gq_int i = 0; i < t.num_elem(); ++i) {
       for(gq_int j = 0; j < t.dim(); ++j) {

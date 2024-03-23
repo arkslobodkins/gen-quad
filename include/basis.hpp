@@ -23,7 +23,7 @@ public:
    explicit BasisTable(gq_int deg,
                        gq_int dim);  // number of rows will be set to the number of basis functions
    explicit BasisTable(gq_int deg, gq_int dim, gq_int num_elem);  // number of rows will be set to num_elem
-   BasisTable(const BasisTable& t);
+   BasisTable(const BasisTable& t) = default;
    BasisTable& operator=(const BasisTable& t) = delete;
 
    int& operator()(gq_int d, gq_int j) {
@@ -313,6 +313,7 @@ public:
    void TestOrthogonal(gq_int max_deg, bool verbose);
 
 private:
+   // types are incomplete so pointers are used
    QuadSimplex* qts;
    QuadOmega2D* qt_omega;
    const Omega2D omega;
