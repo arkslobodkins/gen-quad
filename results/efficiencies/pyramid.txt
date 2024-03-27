@@ -1,0 +1,7 @@
+
+efficiency for quad_pyramid_deg5.txt = 0.736842
+efficiency for quad_pyramid_deg6.txt = 0.913043
+efficiency for quad_pyramid_deg7.txt = 0.9375
+
+average efficiency index = 0.862462
+

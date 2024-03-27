@@ -16,9 +16,9 @@
 #define EIGEN_USE_MKL_ALL
 #endif
 
+#include "../eigen-3.4.0/Eigen/Dense"
 #include "exceptions.hpp"
 #include "headers.hpp"
-#include "../eigen-3.4.0/Eigen/Dense"
 
 namespace gquad {
 
@@ -201,6 +201,14 @@ double stable_sum(const EigenType& A) {
 }
 
 template <typename T>
+auto two_sum(T x, T y) {
+   volatile T r = x + y;
+   volatile T z = r - x;
+   T s = ((x - (r - z)) + (y - z));
+   return std::pair<T, T>{r, s};
+}
+
+template <typename T>
 auto two_prod(T v1, T v2) {
    auto r = v1 * v2;
    auto s = std::fma<T>(v1, v2, -r);
@@ -208,49 +216,19 @@ auto two_prod(T v1, T v2) {
 }
 
 template <typename EigenType1, typename EigenType2>
-class prod_proxy_first {
-public:
-   prod_proxy_first(const EigenType1& A_, const EigenType2& B_) : A{A_}, B{B_} {
-      GEN_QUAD_ASSERT_DEBUG(A.size() == B.size());
+auto stable_dot_prod(const EigenType1& A, const EigenType2& B) {
+   using T = typename EigenType1::value_type;
+   T p, s, q;
+
+   std::tie(p, s) = two_prod(A[0], B[0]);
+   for(gq_int i = 1; i < A.size(); ++i) {
+      T h, r;
+      std::tie(h, r) = two_prod(A[i], B[i]);
+      std::tie(p, q) = two_sum(p, h);
+      s = s + (q + r);
    }
 
-   auto size() const {
-      return A.size();
-   }
-
-   double operator[](gq_int i) const {
-      return two_prod(A[i], B[i]).first;
-   }
-
-private:
-   const EigenType1& A;
-   const EigenType2& B;
-};
-
-template <typename EigenType1, typename EigenType2>
-class prod_proxy_second {
-public:
-   prod_proxy_second(const EigenType1& A_, const EigenType2& B_) : A{A_}, B{B_} {
-      GEN_QUAD_ASSERT_DEBUG(A.size() == B.size());
-   }
-
-   auto size() const {
-      return A.size();
-   }
-
-   double operator[](gq_int i) const {
-      return two_prod(A[i], B[i]).second;
-   }
-
-private:
-   const EigenType1& A;
-   const EigenType2& B;
-};
-
-template <typename EigenType1, typename EigenType2>
-double stable_dot_prod(const EigenType1& A, const EigenType2& B) {
-   return stable_sum(prod_proxy_first<decltype(A), decltype(B)>(A, B))
-        + stable_sum(prod_proxy_second<decltype(A), decltype(B)>(A, B));
+   return p + s;
 }
 
 struct SearchWidth {

@@ -1,0 +1,7 @@
+
+efficiency for quad_irreg_trapezoid_deg5.txt = 0.875
+efficiency for quad_irreg_trapezoid_deg6.txt = 0.833333
+efficiency for quad_irreg_trapezoid_deg7.txt = 0.857143
+
+average efficiency index = 0.855159
+
