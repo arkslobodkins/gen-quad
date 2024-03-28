@@ -50,7 +50,7 @@ std::pair<Point<2>, Point<2>> get_bounding_box_2D(const std::vector<Vertex>& v) 
    Point<2> ll{v[0].x[0], v[0].x[1]};
    Point<2> uu = ll;
 
-   for(gq_int i = 1; i < v.size(); ++i) {
+   for(std::size_t i = 1; i < v.size(); ++i) {
       if(v[i].x[0] < ll[0]) {
          ll[0] = v[i].x[0];
       }
@@ -171,7 +171,7 @@ bool Omega2D::in_domain(const Array1D& x) const {
    Simplex s(2);
    Array1D xmap(2);
 
-   for(gq_int nt = 0; nt < this->triang.size(); ++nt) {
+   for(std::size_t nt = 0; nt < this->triang.size(); ++nt) {
       map_to_unit(this->triang[nt], x, xmap);
       if(s.in_domain(xmap)) {
          return true;
@@ -185,10 +185,10 @@ std::tuple<bool, gq_int, Point<2>> Omega2D::in_domain_info(const Array1D& x) con
    Simplex s(2);
    Array1D xmap(2);
 
-   for(gq_int nt = 0; nt < this->triang.size(); ++nt) {
+   for(std::size_t nt = 0; nt < this->triang.size(); ++nt) {
       map_to_unit(this->triang[nt], x, xmap);
       if(s.in_domain(xmap)) {
-         return {true, nt, {xmap[0], xmap[1]}};
+         return {true, gq_int(nt), {xmap[0], xmap[1]}};
       }
    }
 
@@ -200,7 +200,7 @@ std::tuple<bool, gq_int, Point<2>> Omega2D::in_domain_info(const Array1D& x) con
 
 double Omega2D::dist_from_boundary(const Array1D& x) const {
    double dist = std::numeric_limits<double>::infinity();
-   for(gq_int k = 0; k < edg.size(); ++k) {
+   for(std::size_t k = 0; k < edg.size(); ++k) {
       const auto params = edg[k].getparams();
 
       if(edg_on_boundary[k]) {
@@ -230,7 +230,7 @@ double Omega2D::dist_from_boundary(const Array1D& x) const {
 
 double Omega2D::area() const {
    double a = 0.;
-   for(gq_int n = 0; n < triang.size(); ++n) {
+   for(std::size_t n = 0; n < triang.size(); ++n) {
       a += triang[n].jacobian();
    }
    return a *= 0.5;
@@ -400,17 +400,17 @@ Omega2D CreateIrreg5() {
 
 std::ostream& operator<<(std::ostream& os, const Omega2D& omega) {
    std::cout << "vertexes:" << "\n\n";
-   for(gq_int i = 0; i < omega.vert.size(); ++i) {
+   for(std::size_t i = 0; i < omega.vert.size(); ++i) {
       std::cout << omega.vert[i] << ",  " << omega.vert_on_boundary[i] << '\n';
    }
 
    std::cout << "\nedges:" << "\n\n";
-   for(gq_int i = 0; i < omega.edg.size(); ++i) {
+   for(std::size_t i = 0; i < omega.edg.size(); ++i) {
       std::cout << omega.edg[i] << ",  " << omega.edg_on_boundary[i] << '\n';
    }
 
    std::cout << "\ntriangles:" << "\n\n";
-   for(gq_int i = 0; i < omega.triang.size(); ++i) {
+   for(std::size_t i = 0; i < omega.triang.size(); ++i) {
       std::cout << omega.triang[i] << '\n';
    }
 

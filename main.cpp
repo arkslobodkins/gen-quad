@@ -19,10 +19,9 @@ int main() {
    // and CreateHexagon() defined in src/mesh.cpp demonstrate how to construct such objects.
    // Another option is to call ReadOmega()(also in mesh.cpp) routine and supply 3 files that contain appropriate
    // arguments to constructor of Omega2D.
-   if(ComputeAndOutputOmega2D(CreateIrregTrapezoid(), degrees) != 0) {
+   if(ComputeAndOutputOmega2D(CreateIrregTrapezoid(), degrees, SearchWidth{1}) != 0) {
       assert(false);
    }
-
    if(ComputeAndOutputPentagons(degrees, SearchWidth{1}) != 0) {
       assert(false);
    }
@@ -30,11 +29,10 @@ int main() {
       assert(false);
    }
 
+   gq_int dim = 3;
    if(ComputeAndOutputPyramids3D(degrees) != 0) {
       assert(false);
    }
-
-   gq_int dim = 3;
    if(ComputeAndOutputCubes(degrees, dim) != 0) {
       assert(false);
    }
@@ -48,7 +46,6 @@ int main() {
    if(ComputeAndOutputCubeSimplexes(degrees, dim1, dim2) != 0) {
       assert(false);
    }
-
    // T2 x T2
    if(ComputeAndOutputSimplexSimplexes(degrees, dim1, dim2) != 0) {
       assert(false);
