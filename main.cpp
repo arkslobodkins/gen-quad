@@ -11,7 +11,7 @@
 using namespace gquad;
 
 int main() {
-   StdVector<gq_int> degrees = sequence(1, 40);  // degrees 5, 6, 7
+   StdVector<gq_int> degrees = sequence(5, 7);  // degrees 5, 6, 7
 
    // examples:
    // The first argument to ComputeAndOutputOmega2D is an object of type Omega2D,

@@ -1,0 +1,494 @@
+*********************************************************
+
+dimension                 = 2
+degree of precision       = 20
+domain type               = irreg_trapezoid
+number of basis functions = 231
+initial number of nodes   = 160
+final number of nodes     = 80
+optimal number of nodes   = 77
+total eliminations        = 80
+final residual            = 2.4424906541753444e-15
+efficiency                = 0.962500
+
+1 solution in wide search
+0 failures in wide search
+number of nodes = 159
+success_node[0] = 0
+Converged in 2 iterations
+
+1 solution in wide search
+0 failures in wide search
+number of nodes = 158
+success_node[1] = 0
+Converged in 2 iterations
+
+1 solution in wide search
+0 failures in wide search
+number of nodes = 157
+success_node[2] = 0
+Converged in 3 iterations
+
+1 solution in wide search
+0 failures in wide search
+number of nodes = 156
+success_node[3] = 0
+Converged in 2 iterations
+
+1 solution in wide search
+0 failures in wide search
+number of nodes = 155
+success_node[4] = 0
+Converged in 2 iterations
+
+1 solution in wide search
+0 failures in wide search
+number of nodes = 154
+success_node[5] = 0
+Converged in 2 iterations
+
+1 solution in wide search
+0 failures in wide search
+number of nodes = 153
+success_node[6] = 0
+Converged in 2 iterations
+
+1 solution in wide search
+0 failures in wide search
+number of nodes = 152
+success_node[7] = 0
+Converged in 2 iterations
+
+1 solution in wide search
+0 failures in wide search
+number of nodes = 151
+success_node[8] = 0
+Converged in 3 iterations
+
+1 solution in wide search
+0 failures in wide search
+number of nodes = 150
+success_node[9] = 0
+Converged in 2 iterations
+
+1 solution in wide search
+0 failures in wide search
+number of nodes = 149
+success_node[10] = 0
+Converged in 2 iterations
+
+1 solution in wide search
+0 failures in wide search
+number of nodes = 148
+success_node[11] = 0
+Converged in 2 iterations
+
+1 solution in wide search
+0 failures in wide search
+number of nodes = 147
+success_node[12] = 0
+Converged in 2 iterations
+
+1 solution in wide search
+0 failures in wide search
+number of nodes = 146
+success_node[13] = 0
+Converged in 2 iterations
+
+1 solution in wide search
+0 failures in wide search
+number of nodes = 145
+success_node[14] = 0
+Converged in 4 iterations
+
+1 solution in wide search
+0 failures in wide search
+number of nodes = 144
+success_node[15] = 0
+Converged in 2 iterations
+
+1 solution in wide search
+0 failures in wide search
+number of nodes = 143
+success_node[16] = 0
+Converged in 3 iterations
+
+1 solution in wide search
+0 failures in wide search
+number of nodes = 142
+success_node[17] = 0
+Converged in 3 iterations
+
+1 solution in wide search
+0 failures in wide search
+number of nodes = 141
+success_node[18] = 0
+Converged in 3 iterations
+
+1 solution in wide search
+0 failures in wide search
+number of nodes = 140
+success_node[19] = 0
+Converged in 3 iterations
+
+1 solution in wide search
+0 failures in wide search
+number of nodes = 139
+success_node[20] = 0
+Converged in 3 iterations
+
+1 solution in wide search
+0 failures in wide search
+number of nodes = 138
+success_node[21] = 0
+Converged in 3 iterations
+
+1 solution in wide search
+0 failures in wide search
+number of nodes = 137
+success_node[22] = 0
+Converged in 7 iterations
+
+1 solution in wide search
+0 failures in wide search
+number of nodes = 136
+success_node[23] = 0
+Converged in 3 iterations
+
+1 solution in wide search
+0 failures in wide search
+number of nodes = 135
+success_node[24] = 0
+Converged in 3 iterations
+
+1 solution in wide search
+0 failures in wide search
+number of nodes = 134
+success_node[25] = 0
+Converged in 3 iterations
+
+1 solution in wide search
+0 failures in wide search
+number of nodes = 133
+success_node[26] = 0
+Converged in 3 iterations
+
+1 solution in wide search
+0 failures in wide search
+number of nodes = 132
+success_node[27] = 0
+Converged in 3 iterations
+
+1 solution in wide search
+0 failures in wide search
+number of nodes = 131
+success_node[28] = 0
+Converged in 3 iterations
+
+1 solution in wide search
+0 failures in wide search
+number of nodes = 130
+success_node[29] = 0
+Converged in 3 iterations
+
+1 solution in wide search
+0 failures in wide search
+number of nodes = 129
+success_node[30] = 0
+Converged in 3 iterations
+
+1 solution in wide search
+0 failures in wide search
+number of nodes = 128
+success_node[31] = 0
+Converged in 3 iterations
+
+1 solution in wide search
+0 failures in wide search
+number of nodes = 127
+success_node[32] = 0
+Converged in 4 iterations
+
+1 solution in wide search
+0 failures in wide search
+number of nodes = 126
+success_node[33] = 0
+Converged in 3 iterations
+
+1 solution in wide search
+1 failure in wide search
+number of nodes = 125
+success_node[34] = 1
+Converged in 4 iterations
+
+1 solution in wide search
+0 failures in wide search
+number of nodes = 124
+success_node[35] = 0
+Converged in 6 iterations
+
+1 solution in wide search
+0 failures in wide search
+number of nodes = 123
+success_node[36] = 0
+Converged in 3 iterations
+
+1 solution in wide search
+0 failures in wide search
+number of nodes = 122
+success_node[37] = 0
+Converged in 4 iterations
+
+1 solution in wide search
+0 failures in wide search
+number of nodes = 121
+success_node[38] = 0
+Converged in 4 iterations
+
+1 solution in wide search
+0 failures in wide search
+number of nodes = 120
+success_node[39] = 0
+Converged in 3 iterations
+
+1 solution in wide search
+0 failures in wide search
+number of nodes = 119
+success_node[40] = 0
+Converged in 3 iterations
+
+1 solution in wide search
+0 failures in wide search
+number of nodes = 118
+success_node[41] = 0
+Converged in 3 iterations
+
+1 solution in wide search
+0 failures in wide search
+number of nodes = 117
+success_node[42] = 0
+Converged in 3 iterations
+
+1 solution in wide search
+0 failures in wide search
+number of nodes = 116
+success_node[43] = 0
+Converged in 3 iterations
+
+1 solution in wide search
+0 failures in wide search
+number of nodes = 115
+success_node[44] = 0
+Converged in 3 iterations
+
+1 solution in wide search
+0 failures in wide search
+number of nodes = 114
+success_node[45] = 0
+Converged in 4 iterations
+
+1 solution in wide search
+0 failures in wide search
+number of nodes = 113
+success_node[46] = 0
+Converged in 3 iterations
+
+1 solution in wide search
+0 failures in wide search
+number of nodes = 112
+success_node[47] = 0
+Converged in 4 iterations
+
+1 solution in wide search
+0 failures in wide search
+number of nodes = 111
+success_node[48] = 0
+Converged in 3 iterations
+
+1 solution in wide search
+0 failures in wide search
+number of nodes = 110
+success_node[49] = 0
+Converged in 3 iterations
+
+1 solution in wide search
+0 failures in wide search
+number of nodes = 109
+success_node[50] = 0
+Converged in 3 iterations
+
+1 solution in wide search
+0 failures in wide search
+number of nodes = 108
+success_node[51] = 0
+Converged in 5 iterations
+
+1 solution in wide search
+0 failures in wide search
+number of nodes = 107
+success_node[52] = 0
+Converged in 4 iterations
+
+1 solution in wide search
+0 failures in wide search
+number of nodes = 106
+success_node[53] = 0
+Converged in 3 iterations
+
+1 solution in wide search
+0 failures in wide search
+number of nodes = 105
+success_node[54] = 0
+Converged in 4 iterations
+
+1 solution in wide search
+0 failures in wide search
+number of nodes = 104
+success_node[55] = 0
+Converged in 4 iterations
+
+1 solution in wide search
+0 failures in wide search
+number of nodes = 103
+success_node[56] = 0
+Converged in 5 iterations
+
+1 solution in wide search
+0 failures in wide search
+number of nodes = 102
+success_node[57] = 0
+Converged in 3 iterations
+
+1 solution in wide search
+0 failures in wide search
+number of nodes = 101
+success_node[58] = 0
+Converged in 4 iterations
+
+1 solution in wide search
+1 failure in wide search
+number of nodes = 100
+success_node[59] = 1
+Converged in 4 iterations
+
+1 solution in wide search
+0 failures in wide search
+number of nodes = 99
+success_node[60] = 0
+Converged in 4 iterations
+
+1 solution in wide search
+1 failure in wide search
+number of nodes = 98
+success_node[61] = 1
+Converged in 3 iterations
+
+1 solution in wide search
+0 failures in wide search
+number of nodes = 97
+success_node[62] = 0
+Converged in 3 iterations
+
+1 solution in wide search
+0 failures in wide search
+number of nodes = 96
+success_node[63] = 0
+Converged in 4 iterations
+
+1 solution in wide search
+0 failures in wide search
+number of nodes = 95
+success_node[64] = 0
+Converged in 4 iterations
+
+1 solution in wide search
+2 failures in wide search
+number of nodes = 94
+success_node[65] = 2
+Converged in 4 iterations
+
+1 solution in wide search
+0 failures in wide search
+number of nodes = 93
+success_node[66] = 0
+Converged in 4 iterations
+
+1 solution in wide search
+0 failures in wide search
+number of nodes = 92
+success_node[67] = 0
+Converged in 6 iterations
+
+1 solution in wide search
+0 failures in wide search
+number of nodes = 91
+success_node[68] = 0
+Converged in 4 iterations
+
+1 solution in wide search
+0 failures in wide search
+number of nodes = 90
+success_node[69] = 0
+Converged in 4 iterations
+
+1 solution in wide search
+0 failures in wide search
+number of nodes = 89
+success_node[70] = 0
+Converged in 3 iterations
+
+1 solution in wide search
+1 failure in wide search
+number of nodes = 88
+success_node[71] = 1
+Converged in 4 iterations
+
+1 solution in wide search
+0 failures in wide search
+number of nodes = 87
+success_node[72] = 0
+Converged in 4 iterations
+
+1 solution in wide search
+0 failures in wide search
+number of nodes = 86
+success_node[73] = 0
+Converged in 4 iterations
+
+1 solution in wide search
+3 failures in wide search
+number of nodes = 85
+success_node[74] = 3
+Converged in 4 iterations
+
+1 solution in wide search
+0 failures in wide search
+number of nodes = 84
+success_node[75] = 0
+Converged in 3 iterations
+
+1 solution in wide search
+0 failures in wide search
+number of nodes = 83
+success_node[76] = 0
+Converged in 5 iterations
+
+1 solution in wide search
+0 failures in wide search
+number of nodes = 82
+success_node[77] = 0
+Converged in 4 iterations
+
+1 solution in wide search
+1 failure in wide search
+number of nodes = 81
+success_node[78] = 1
+Converged in 9 iterations
+
+1 solution in wide search
+0 failures in wide search
+number of nodes = 80
+success_node[79] = 0
+Converged in 5 iterations
+
+

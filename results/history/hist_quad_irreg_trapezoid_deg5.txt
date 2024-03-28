@@ -1,0 +1,50 @@
+*********************************************************
+
+dimension                 = 2
+degree of precision       = 5
+domain type               = irreg_trapezoid
+number of basis functions = 21
+initial number of nodes   = 16
+final number of nodes     = 10
+optimal number of nodes   = 7
+total eliminations        = 6
+final residual            = 1.2212453270876722e-15
+efficiency                = 0.700000
+
+1 solution in wide search
+0 failures in wide search
+number of nodes = 15
+success_node[0] = 0
+Converged in 3 iterations
+
+1 solution in wide search
+0 failures in wide search
+number of nodes = 14
+success_node[1] = 0
+Converged in 3 iterations
+
+1 solution in wide search
+0 failures in wide search
+number of nodes = 13
+success_node[2] = 0
+Converged in 3 iterations
+
+1 solution in wide search
+0 failures in wide search
+number of nodes = 12
+success_node[3] = 0
+Converged in 4 iterations
+
+1 solution in wide search
+0 failures in wide search
+number of nodes = 11
+success_node[4] = 0
+Converged in 4 iterations
+
+1 solution in wide search
+0 failures in wide search
+number of nodes = 10
+success_node[5] = 0
+Converged in 4 iterations
+
+

@@ -1,0 +1,86 @@
+*********************************************************
+
+dimension                 = 2
+degree of precision       = 7
+domain type               = irreg_trapezoid
+number of basis functions = 36
+initial number of nodes   = 24
+final number of nodes     = 12
+optimal number of nodes   = 12
+total eliminations        = 12
+final residual            = 1.1102230246251565e-15
+efficiency                = 1.000000
+
+1 solution in wide search
+0 failures in wide search
+number of nodes = 23
+success_node[0] = 0
+Converged in 3 iterations
+
+1 solution in wide search
+0 failures in wide search
+number of nodes = 22
+success_node[1] = 0
+Converged in 3 iterations
+
+1 solution in wide search
+0 failures in wide search
+number of nodes = 21
+success_node[2] = 0
+Converged in 4 iterations
+
+1 solution in wide search
+0 failures in wide search
+number of nodes = 20
+success_node[3] = 0
+Converged in 4 iterations
+
+1 solution in wide search
+0 failures in wide search
+number of nodes = 19
+success_node[4] = 0
+Converged in 4 iterations
+
+1 solution in wide search
+0 failures in wide search
+number of nodes = 18
+success_node[5] = 0
+Converged in 4 iterations
+
+1 solution in wide search
+0 failures in wide search
+number of nodes = 17
+success_node[6] = 0
+Converged in 3 iterations
+
+1 solution in wide search
+0 failures in wide search
+number of nodes = 16
+success_node[7] = 0
+Converged in 4 iterations
+
+1 solution in wide search
+2 failures in wide search
+number of nodes = 15
+success_node[8] = 2
+Converged in 6 iterations
+
+1 solution in wide search
+0 failures in wide search
+number of nodes = 14
+success_node[9] = 0
+Converged in 4 iterations
+
+1 solution in wide search
+0 failures in wide search
+number of nodes = 13
+success_node[10] = 0
+Converged in 4 iterations
+
+1 solution in wide search
+0 failures in wide search
+number of nodes = 12
+success_node[11] = 0
+Converged in 9 iterations
+
+
