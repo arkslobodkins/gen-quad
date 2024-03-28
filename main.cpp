@@ -19,13 +19,13 @@ int main() {
    // and CreateHexagon() defined in src/mesh.cpp demonstrate how to construct such objects.
    // Another option is to call ReadOmega()(also in mesh.cpp) routine and supply 3 files that contain
    // appropriate arguments to constructor of Omega2D.
-   if(ComputeAndOutputOmega2D(CreateIrreg5(), degrees, SearchWidth{1}) != 0) {
+   if(ComputeAndOutputOmega2D(CreateIrreg5(), degrees) != 0) {
       assert(false);
    }
-   if(ComputeAndOutputPentagons(degrees, SearchWidth{1}) != 0) {
+   if(ComputeAndOutputPentagons(degrees) != 0) {
       assert(false);
    }
-   if(ComputeAndOutputHexagons(degrees, SearchWidth{1}) != 0) {
+   if(ComputeAndOutputHexagons(degrees) != 0) {
       assert(false);
    }
 
