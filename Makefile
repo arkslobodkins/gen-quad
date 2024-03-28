@@ -37,7 +37,7 @@ OBJS = $(addprefix $(ODIR), $(OBJ))
 DEPS = gen_quad.hpp nonlinear_solve.hpp util.hpp domain.hpp node_elimination.hpp function.hpp basis.hpp quadrature.hpp \
 compute_quad.hpp quad_tensor.hpp quad_driver.hpp math_func.hpp exceptions.hpp headers.hpp mesh.hpp
 
-all: objdir results quad
+all: objdir results results_dir quad
 
 $(ODIR)%.o: %.cpp $(DEPS)
 	$(CXX) $(CXXFLAGS) $(IPATH) -c $< -o $@
@@ -48,7 +48,10 @@ objdir:
 	mkdir -vp 'src/objdir'
 
 results:
-	mkdir -vp 'results' 'results/times' 'results/history' 'results/quad_rules' 'results/efficiencies'
+	mkdir -vp 'results'
+
+results_dir:
+	mkdir -vp 'results/times' 'results/history' 'results/quad_rules' 'results/efficiencies'
 
 ####################################################################
 .PHONY: clean

@@ -1,44 +1,7 @@
 
-efficiency for quad_irreg5_deg1.txt = 0.5
-efficiency for quad_irreg5_deg2.txt = 0.666667
-efficiency for quad_irreg5_deg3.txt = 1
-efficiency for quad_irreg5_deg4.txt = 0.714286
 efficiency for quad_irreg5_deg5.txt = 0.777778
-efficiency for quad_irreg5_deg6.txt = 0.625
-efficiency for quad_irreg5_deg7.txt = 0.8
-efficiency for quad_irreg5_deg8.txt = 0.789474
-efficiency for quad_irreg5_deg9.txt = 0.791667
-efficiency for quad_irreg5_deg10.txt = 0.733333
-efficiency for quad_irreg5_deg11.txt = 0.866667
-efficiency for quad_irreg5_deg12.txt = 0.756098
-efficiency for quad_irreg5_deg13.txt = 0.945946
-efficiency for quad_irreg5_deg14.txt = 0.701754
-efficiency for quad_irreg5_deg15.txt = 0.938776
-efficiency for quad_irreg5_deg16.txt = 0.772727
-efficiency for quad_irreg5_deg17.txt = 0.904762
-efficiency for quad_irreg5_deg18.txt = 0.888889
-efficiency for quad_irreg5_deg19.txt = 0.972222
-efficiency for quad_irreg5_deg20.txt = 0.9625
-efficiency for quad_irreg5_deg21.txt = 0.988372
-efficiency for quad_irreg5_deg22.txt = 0.884615
-efficiency for quad_irreg5_deg23.txt = 0.840336
-efficiency for quad_irreg5_deg24.txt = 0.762238
-efficiency for quad_irreg5_deg25.txt = 0.906977
-efficiency for quad_irreg5_deg26.txt = 0.745562
-efficiency for quad_irreg5_deg27.txt = 0.964539
-efficiency for quad_irreg5_deg28.txt = 0.659091
-efficiency for quad_irreg5_deg29.txt = 0.922619
-efficiency for quad_irreg5_deg30.txt = 0.878307
-efficiency for quad_irreg5_deg31.txt = 0.81106
-efficiency for quad_irreg5_deg32.txt = 0.963918
-efficiency for quad_irreg5_deg33.txt = 0.956731
-efficiency for quad_irreg5_deg34.txt = 0.967742
-efficiency for quad_irreg5_deg35.txt = 0.902439
-efficiency for quad_irreg5_deg36.txt = 0.914397
-efficiency for quad_irreg5_deg37.txt = 0.898182
-efficiency for quad_irreg5_deg38.txt = 0.966543
-efficiency for quad_irreg5_deg39.txt = 0.971631
-efficiency for quad_irreg5_deg40.txt = 0.986254
+efficiency for quad_irreg5_deg6.txt = 0.588235
+efficiency for quad_irreg5_deg7.txt = 0.923077
 
-average efficiency index = 0.850002
+average efficiency index = 0.76303
 
