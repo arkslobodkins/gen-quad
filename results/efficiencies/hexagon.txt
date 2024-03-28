@@ -1,7 +1,44 @@
 
+efficiency for quad_hexagon_deg1.txt = 1
+efficiency for quad_hexagon_deg2.txt = 0.666667
+efficiency for quad_hexagon_deg3.txt = 1
+efficiency for quad_hexagon_deg4.txt = 0.714286
 efficiency for quad_hexagon_deg5.txt = 0.875
 efficiency for quad_hexagon_deg6.txt = 0.909091
 efficiency for quad_hexagon_deg7.txt = 0.857143
+efficiency for quad_hexagon_deg8.txt = 0.882353
+efficiency for quad_hexagon_deg9.txt = 0.904762
+efficiency for quad_hexagon_deg10.txt = 0.88
+efficiency for quad_hexagon_deg11.txt = 0.928571
+efficiency for quad_hexagon_deg12.txt = 0.96875
+efficiency for quad_hexagon_deg13.txt = 0.945946
+efficiency for quad_hexagon_deg14.txt = 0.97561
+efficiency for quad_hexagon_deg15.txt = 0.958333
+efficiency for quad_hexagon_deg16.txt = 0.87931
+efficiency for quad_hexagon_deg17.txt = 0.850746
+efficiency for quad_hexagon_deg18.txt = 0.941176
+efficiency for quad_hexagon_deg19.txt = 0.945946
+efficiency for quad_hexagon_deg20.txt = 0.905882
+efficiency for quad_hexagon_deg21.txt = 0.977011
+efficiency for quad_hexagon_deg22.txt = 0.978723
+efficiency for quad_hexagon_deg23.txt = 0.970874
+efficiency for quad_hexagon_deg24.txt = 1
+efficiency for quad_hexagon_deg25.txt = 0.795918
+efficiency for quad_hexagon_deg26.txt = 0.954545
+efficiency for quad_hexagon_deg27.txt = 0.985507
+efficiency for quad_hexagon_deg28.txt = 0.986395
+efficiency for quad_hexagon_deg29.txt = 0.95092
+efficiency for quad_hexagon_deg30.txt = 0.965116
+efficiency for quad_hexagon_deg31.txt = 0.977778
+efficiency for quad_hexagon_deg32.txt = 0.989418
+efficiency for quad_hexagon_deg33.txt = 0.985149
+efficiency for quad_hexagon_deg34.txt = 0.850202
+efficiency for quad_hexagon_deg35.txt = 0.986667
+efficiency for quad_hexagon_deg36.txt = 0.995763
+efficiency for quad_hexagon_deg37.txt = 0.991968
+efficiency for quad_hexagon_deg38.txt = 0.973783
+efficiency for quad_hexagon_deg39.txt = 0.968198
+efficiency for quad_hexagon_deg40.txt = 0.99308
 
-average efficiency index = 0.880411
+average efficiency index = 0.931665
 

@@ -1,6 +1,6 @@
 # gen-quad 
 **Note**    
-*Rules up to dimension 4 for all domains are already provided in ComputedRules directory.     
+*Rules up to dimension 4 for multiple domains are already provided in ComputedRules directory.     
 If you want to obtain rules for higher degrees and/or dimensions, follow use instructions below.*  
  
 **gen-quad is a package that computes efficient quadrature rules of moderate and high  

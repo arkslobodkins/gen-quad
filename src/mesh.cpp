@@ -307,31 +307,25 @@ Omega2D CreateSquare() {
 }
 
 Omega2D CreatePentagon() {
-   std::vector<bool> vb{0, 1, 1, 1, 1, 1};
-   std::vector<Vertex> v{Vertex{0., 0.},
-                         Vertex{0., 1.},
+   std::vector<bool> vb{1, 1, 1, 1, 1};
+   std::vector<Vertex> v{Vertex{0., 1.},
                          Vertex{0.951056516295154, 0.309016994374947},
                          Vertex{0.587785252292473, -0.809016994374947},
                          Vertex{-0.587785252292473, -0.809016994374948},
                          Vertex{-0.951056516295154, 0.309016994374947}};
 
-   std::vector<bool> eb{0, 0, 0, 0, 0, 1, 1, 1, 1, 1};
-   std::vector<Edge> e{Edge{v[0], v[1]},
-                       Edge{v[0], v[2]},
-                       Edge{v[0], v[3]},
-                       Edge{v[0], v[4]},
-                       Edge{v[0], v[5]},
-                       Edge{v[2], v[1]},
-                       Edge{v[3], v[2]},
-                       Edge{v[4], v[3]},
-                       Edge{v[5], v[4]},
-                       Edge{v[1], v[5]}};
+   std::vector<bool> eb{0, 0, 1, 1, 1, 1, 1};
+   std::vector<Edge> e{Edge{v[4], v[1]},
+                       Edge{v[4], v[2]},
+                       Edge{v[0], v[1]},
+                       Edge{v[1], v[2]},
+                       Edge{v[2], v[3]},
+                       Edge{v[3], v[4]},
+                       Edge{v[4], v[0]}};
 
-   std::vector<Triangle> t{Triangle{v[0], v[2], v[1]},
-                           Triangle{v[0], v[3], v[2]},
-                           Triangle{v[0], v[4], v[3]},
-                           Triangle{v[0], v[5], v[4]},
-                           Triangle{v[0], v[1], v[5]}};
+   std::vector<Triangle> t{Triangle{v[4], v[0], v[1]},
+                           Triangle{v[4], v[1], v[2]},
+                           Triangle{v[4], v[2], v[3]}};
 
    return Omega2D{std::move(v), std::move(e), std::move(t), std::move(vb), std::move(eb), "pentagon"};
 }

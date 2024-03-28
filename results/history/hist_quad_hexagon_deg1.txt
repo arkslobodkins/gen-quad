@@ -1,0 +1,32 @@
+*********************************************************
+
+dimension                 = 2
+degree of precision       = 1
+domain type               = hexagon
+number of basis functions = 3
+initial number of nodes   = 4
+final number of nodes     = 1
+optimal number of nodes   = 1
+total eliminations        = 3
+final residual            = 1.5999650476550747e-16
+efficiency                = 1.000000
+
+1 solution in wide search
+0 failures in wide search
+number of nodes = 3
+success_node[0] = 0
+Converged in 3 iterations
+
+1 solution in wide search
+0 failures in wide search
+number of nodes = 2
+success_node[1] = 0
+Converged in 2 iterations
+
+1 solution in wide search
+0 failures in wide search
+number of nodes = 1
+success_node[2] = 0
+Converged in 1 iterations
+
+

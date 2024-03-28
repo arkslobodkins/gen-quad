@@ -1,7 +1,0 @@
-
-efficiency for quad_simplex_deg5_dim3.txt = 0.875
-efficiency for quad_simplex_deg6_dim3.txt = 0.913043
-efficiency for quad_simplex_deg7_dim3.txt = 0.909091
-
-average efficiency index = 0.899045
-

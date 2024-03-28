@@ -1,7 +1,0 @@
-
-efficiency for quad_cube_deg5_dim3.txt = 0.875
-efficiency for quad_cube_deg6_dim3.txt = 0.807692
-efficiency for quad_cube_deg7_dim3.txt = 0.882353
-
-average efficiency index = 0.855015
-
