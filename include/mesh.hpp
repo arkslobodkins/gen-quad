@@ -13,12 +13,10 @@ template <gq_int dimension>
 using Point = StaticArray1D<dimension>;
 
 struct Vertex {
-   Vertex() : x{} {
-   }
-
-   explicit Vertex(double x1, double x2) : x{x1, x2} {
-   }
-
+   Vertex() = default;
+   Vertex(const Vertex&) = default;
+   Vertex& operator=(const Vertex&) = default;
+   explicit Vertex(double x1, double x2);
    bool operator==(const Vertex& v) const;
 
    Point<2> x;
@@ -27,36 +25,29 @@ struct Vertex {
 std::ostream& operator<<(std::ostream& os, const Vertex& vertex);
 
 struct Edge {
-   Edge() : vert{} {
-   }
-
-   explicit Edge(const Vertex& v1, const Vertex& v2) : vert{v1, v2} {
-   }
-
-   bool operator==(const Edge& e) const;
-
-   std::array<Vertex, 2> vert;
-
    struct EdgeParams {
       StaticArray1D<2> tangent;
       StaticArray1D<2> normal;
       double length;
    };
 
+   Edge() = default;
+   Edge(const Edge&) = default;
+   Edge& operator=(const Edge&) = default;
+   explicit Edge(const Vertex& v1, const Vertex& v2);
+   bool operator==(const Edge& e) const;
    EdgeParams getparams() const;
+
+   std::array<Vertex, 2> vert;
 };
 
 std::ostream& operator<<(std::ostream& os, const Edge& edge);
 
 struct Triangle {
-   Triangle() : vert{}, edg{} {
-   }
-
-   explicit Triangle(const Vertex& v1, const Vertex& v2, const Vertex& v3)
-       : vert{v1, v2, v3},
-         edg{Edge{v1, v2}, Edge{v2, v3}, Edge{v3, v1}} {
-   }
-
+   Triangle() = default;
+   Triangle(const Triangle&) = default;
+   Triangle& operator=(const Triangle&) = default;
+   explicit Triangle(const Vertex& v1, const Vertex& v2, const Vertex& v3);
    bool operator==(const Triangle& t) const;
    double jacobian() const;
 
@@ -73,14 +64,6 @@ struct Omega2D : public Polytope {
    Omega2D(const Omega2D&) = default;
    Omega2D& operator=(const Omega2D&);  // asserts that all members are equal
 
-   const std::vector<Vertex> vert;
-   const std::vector<Edge> edg;
-   const std::vector<Triangle> triang;
-   const std::vector<bool> vert_on_boundary;
-   const std::vector<bool> edg_on_boundary;
-   const Point<2> lower_left;
-   const Point<2> upper_right;
-
    bool in_domain(const Array1D& x) const override;
    std::tuple<bool, gq_int, Point<2>> in_domain_info(const Array1D& x) const;
    double dist_from_boundary(const Array1D& x) const override;
@@ -94,6 +77,14 @@ struct Omega2D : public Polytope {
    }
 
    double area() const;
+
+   const std::vector<Vertex> vert;
+   const std::vector<Edge> edg;
+   const std::vector<Triangle> triang;
+   const std::vector<bool> vert_on_boundary;
+   const std::vector<bool> edg_on_boundary;
+   const Point<2> lower_left;
+   const Point<2> upper_right;
 
 private:
    std::string name;

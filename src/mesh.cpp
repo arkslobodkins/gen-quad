@@ -13,6 +13,17 @@
 
 namespace gquad {
 
+Vertex::Vertex(double x1, double x2) : x{x1, x2} {
+}
+
+Edge::Edge(const Vertex& v1, const Vertex& v2) : vert{v1, v2} {
+}
+
+Triangle::Triangle(const Vertex& v1, const Vertex& v2, const Vertex& v3)
+    : vert{v1, v2, v3},
+      edg{Edge{v1, v2}, Edge{v2, v3}, Edge{v3, v1}} {
+}
+
 static std::istream& operator>>(std::istream& is, std::pair<Vertex, bool>& vb) {
    is >> vb.first.x[0];
    is >> vb.first.x[1];
@@ -323,9 +334,8 @@ Omega2D CreatePentagon() {
                        Edge{v[3], v[4]},
                        Edge{v[4], v[0]}};
 
-   std::vector<Triangle> t{Triangle{v[4], v[0], v[1]},
-                           Triangle{v[4], v[1], v[2]},
-                           Triangle{v[4], v[2], v[3]}};
+   std::vector<Triangle> t{
+       Triangle{v[4], v[0], v[1]}, Triangle{v[4], v[1], v[2]}, Triangle{v[4], v[2], v[3]}};
 
    return Omega2D{std::move(v), std::move(e), std::move(t), std::move(vb), std::move(eb), "pentagon"};
 }
