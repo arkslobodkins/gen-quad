@@ -1,7 +1,0 @@
-
-efficiency for quad_irreg5_deg5.txt = 0.777778
-efficiency for quad_irreg5_deg6.txt = 0.588235
-efficiency for quad_irreg5_deg7.txt = 0.923077
-
-average efficiency index = 0.76303
-

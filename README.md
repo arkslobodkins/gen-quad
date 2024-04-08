@@ -38,10 +38,10 @@ appropriate driver routines must be called. Examples are provided in main.cpp.
 To make an executable, type "make all" in the main project directory  
 (executable will be produced in the same directory).   
 By default "make all" uses gcc compiler, but other compilers can be used also.  
-For example, use "make all CXX=clang++" or "make all CXX=icpx" for clang and intel compilers, respectively.  
-Similarly, "make all -j4 CXX=clang++" will compile in parallel.  
+For example, use "make all compiler=clang" or "make all compiler=icpx" for clang and intel compilers, respectively.  
+Similarly, "make all -j8 compiler=clang" will compile in parallel.  
 Makefile contains instructions for enabling/disabling debugging mode.  
-Has been tested with GCC and Clang compiler on multiple Linux platforms.    
+Has been tested with GCC and Clang compilers on multiple Linux platforms.    
  
 
 Additional notes:

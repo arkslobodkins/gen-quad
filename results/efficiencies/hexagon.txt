@@ -1,7 +1,0 @@
-
-efficiency for quad_hexagon_deg5.txt = 0.875
-efficiency for quad_hexagon_deg6.txt = 0.909091
-efficiency for quad_hexagon_deg7.txt = 0.857143
-
-average efficiency index = 0.880411
-

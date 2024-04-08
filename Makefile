@@ -2,8 +2,21 @@
 debug = 0
 MKL = 1
 
+compiler = gcc
+
+ifeq ($(compiler), gcc)
 CXX = g++
-CXXFLAGS =-std=c++14 -O3 -fopenmp
+CXXFLAGS =-fopenmp
+else ifeq ($(compiler), clang)
+CXX = clang++
+CXXFLAGS =-fopenmp
+else ifeq ($(compiler), icpx)
+CXX = icpx
+CXXFLAGS =-qopenmp -fp-model=precise
+endif
+
+
+CXXFLAGS +=-std=c++14 -O3
 LFLAGS = -lm
 
 IPATH = -I ./include/
@@ -11,7 +24,7 @@ VPATH = ./src/:./alglib/src/:./include/
 ODIR = ./src/objdir/
 
 ifeq ($(debug), 1)
-CXXFLAGS += -g -DGEN_QUAD_DEBUG_ON
+CXXFLAGS += -g -DGEN_QUAD_DEBUG_ON -D_GLIBCXX_DEBUG
 endif
 
 ifeq ($(debug), 2)

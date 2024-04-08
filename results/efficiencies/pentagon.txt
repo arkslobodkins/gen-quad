@@ -1,7 +1,0 @@
-
-efficiency for quad_pentagon_deg5.txt = 1
-efficiency for quad_pentagon_deg6.txt = 0.769231
-efficiency for quad_pentagon_deg7.txt = 0.923077
-
-average efficiency index = 0.897436
-
