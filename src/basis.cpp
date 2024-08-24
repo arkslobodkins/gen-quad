@@ -16,106 +16,122 @@
 
 namespace gquad {
 
+
 template <typename EigenType>
 static inline void Monomial(double x, EigenType&& p);
+
 
 template <typename EigenType>
 static inline void Legendre(double x, EigenType&& p);
 
+
 template <typename EigenType>
 static void Jacobi(gq_int alpha, double x, EigenType&& p);
+
 
 static void StandardMonomialFunctions(const BasisTable& index_table, const Array1D& x, Array1D& functions);
 static void StandardMonomialDerivatives(const BasisTable& index_table, const Array1D& x,
                                         Array2D& derivatives);
 
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 Basis::Basis(gq_int deg, gq_int dim, gq_int num_funcs)
-    : m_deg{deg},
-      m_dim{dim},
-      m_num_funcs{num_funcs},
-      functions(num_funcs),
-      derivatives(dim, num_funcs),
-      integrals(num_funcs) {
+    : deg_{deg},
+      dim_{dim},
+      num_funcs_{num_funcs},
+      functions_(num_funcs),
+      derivatives_(dim, num_funcs),
+      integrals_(num_funcs) {
 }
+
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 PolytopeBasis::PolytopeBasis(gq_int deg, gq_int dim, gq_int num_funcs) : Basis(deg, dim, num_funcs) {
 }
 
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Cube Basis
 CubeBasis::CubeBasis(gq_int deg, gq_int dim)
     : PolytopeBasis(deg, dim, CubeBasisSize(deg, dim)),
-      index_table(deg, dim),
-      fdiff{} {
-   GEN_QUAD_ASSERT_DEBUG(m_deg >= 1);
-   GEN_QUAD_ASSERT_DEBUG(m_dim >= 2);
+      index_table_(deg, dim),
+      fdiff_{} {
+   GEN_QUAD_ASSERT_DEBUG(deg_ >= 1);
+   GEN_QUAD_ASSERT_DEBUG(dim_ >= 2);
 
-   fdiff[0].resize(m_num_funcs);
-   fdiff[1].resize(m_num_funcs);
-   fdiff[2].resize(m_num_funcs);
-   fdiff[3].resize(m_num_funcs);
-   StandardBasisIndices(index_table);
+   fdiff_[0].resize(num_funcs_);
+   fdiff_[1].resize(num_funcs_);
+   fdiff_[2].resize(num_funcs_);
+   fdiff_[3].resize(num_funcs_);
+   StandardBasisIndices(index_table_);
 }
+
 
 const Array1D& CubeBasis::orthog_basis(const Array1D& x) {
-   orthog_basis_internal(x, functions);
-   return functions;
+   this->orthog_basis_internal(x, functions_);
+   return functions_;
 }
 
+
 void CubeBasis::orthog_basis_internal(const Array1D& x, Array1D& buff) {
-   Array2D legendre(m_dim, m_deg + 1);
-   for(gq_int d = 0; d < m_dim; ++d) {
+   Array2D legendre(dim_, deg_ + 1);
+   for(gq_int d = 0; d < dim_; ++d) {
       Legendre(x[d], legendre.row(d));
    }
 
-   for(gq_int k = 0; k < m_num_funcs; ++k) {
-      buff[k] = legendre(0, index_table(0, k));
+   for(gq_int k = 0; k < num_funcs_; ++k) {
+      buff[k] = legendre(0, index_table_(0, k));
    }
-   for(gq_int d = 1; d < m_dim; ++d) {
-      for(gq_int k = 0; k < m_num_funcs; ++k) {
-         buff[k] *= legendre(d, index_table(d, k));
+   for(gq_int d = 1; d < dim_; ++d) {
+      for(gq_int k = 0; k < num_funcs_; ++k) {
+         buff[k] *= legendre(d, index_table_(d, k));
       }
    }
 }
+
 
 const Array2D& CubeBasis::orthog_der(const Array1D& x) {
    internal::fourth_order_difference(*this, x);
-   return derivatives;
+   return derivatives_;
 }
+
 
 const Array1D& CubeBasis::orthog_integrals() {
-   integrals = 0.;
-   integrals[0] = 1.;
-   return integrals;
+   integrals_ = 0.;
+   integrals_[0] = 1.;
+   return integrals_;
 }
+
 
 const Array1D& CubeBasis::monomial_basis(const Array1D& x) {
-   StandardMonomialFunctions(index_table, x, functions);
-   return functions;
+   StandardMonomialFunctions(index_table_, x, functions_);
+   return functions_;
 }
+
 
 const Array2D& CubeBasis::monomial_der(const Array1D& x) {
-   StandardMonomialDerivatives(index_table, x, derivatives);
-   return derivatives;
+   StandardMonomialDerivatives(index_table_, x, derivatives_);
+   return derivatives_;
 }
 
+
 const Array1D& CubeBasis::monomial_integrals() {
-   for(gq_int k = 0; k < m_num_funcs; ++k) {
+   for(gq_int k = 0; k < num_funcs_; ++k) {
       gq_int prod = 1;  // use integer instead of double and perform multiplication instead of division
                         // to avoid error associated with intermediary divisions
-      for(gq_int d = 0; d < m_dim; ++d) {
-         prod *= (index_table(d, k) + 1);
+      for(gq_int d = 0; d < dim_; ++d) {
+         prod *= (index_table_(d, k) + 1);
       }
-      integrals[k] = 1. / prod;
+      integrals_[k] = 1. / prod;
    }
-   return integrals;
+   return integrals_;
 }
+
 
 std::unique_ptr<Basis> CubeBasis::clone() const {
    return std::make_unique<CubeBasis>(*this);
 }
+
 
 gq_int CubeBasisSize(gq_int deg, gq_int dim) {
    GEN_QUAD_ASSERT_DEBUG(deg >= 1);
@@ -123,110 +139,120 @@ gq_int CubeBasisSize(gq_int deg, gq_int dim) {
    return StandardBasisSize(deg, dim);
 }
 
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Simplex Basis
 SimplexBasis::SimplexBasis(gq_int deg, gq_int dim)
     : PolytopeBasis(deg, dim, SimplexBasisSize(deg, dim)),
-      power_table(deg, dim),
-      index_table(deg, dim),
-      fdiff{} {
-   GEN_QUAD_ASSERT_DEBUG(m_deg >= 1);
-   GEN_QUAD_ASSERT_DEBUG(m_dim >= 2);
+      power_table_(deg, dim),
+      index_table_(deg, dim),
+      fdiff_{} {
+   GEN_QUAD_ASSERT_DEBUG(deg_ >= 1);
+   GEN_QUAD_ASSERT_DEBUG(dim_ >= 2);
 
-   fdiff[0].resize(m_num_funcs);
-   fdiff[1].resize(m_num_funcs);
-   fdiff[2].resize(m_num_funcs);
-   fdiff[3].resize(m_num_funcs);
+   fdiff_[0].resize(num_funcs_);
+   fdiff_[1].resize(num_funcs_);
+   fdiff_[2].resize(num_funcs_);
+   fdiff_[3].resize(num_funcs_);
 
-   StandardBasisIndices(index_table);
-   for(gq_int d = 1; d < m_dim; ++d) {
+   StandardBasisIndices(index_table_);
+   for(gq_int d = 1; d < dim_; ++d) {
       for(gq_int i = 0; i < d; ++i) {
-         for(gq_int k = 0; k < m_num_funcs; ++k) {
-            power_table(d, k) += index_table(i, k);
+         for(gq_int k = 0; k < num_funcs_; ++k) {
+            power_table_(d, k) += index_table_(i, k);
          }
       }
    }
 }
 
+
 const Array1D& SimplexBasis::orthog_basis(const Array1D& x) {
-   orthog_basis_internal(x, functions);
-   return functions;
+   this->orthog_basis_internal(x, functions_);
+   return functions_;
 }
+
 
 const Array2D& SimplexBasis::orthog_der(const Array1D& x) {
    internal::fourth_order_difference(*this, x);
-   return derivatives;
+   return derivatives_;
 }
+
 
 const Array1D& SimplexBasis::orthog_integrals() {
-   integrals = 0.;
-   integrals[0] = 1. / math::factorial(m_dim);
-   return integrals;
+   integrals_ = 0.;
+   integrals_[0] = 1. / math::factorial(dim_);
+   return integrals_;
 }
+
 
 const Array1D& SimplexBasis::monomial_basis(const Array1D& x) {
-   StandardMonomialFunctions(index_table, x, functions);
-   return functions;
+   StandardMonomialFunctions(index_table_, x, functions_);
+   return functions_;
 }
+
 
 const Array2D& SimplexBasis::monomial_der(const Array1D& x) {
-   StandardMonomialDerivatives(index_table, x, derivatives);
-   return derivatives;
+   StandardMonomialDerivatives(index_table_, x, derivatives_);
+   return derivatives_;
 }
+
 
 const Array1D& SimplexBasis::monomial_integrals() {
-   for(gq_int k = 0; k < m_num_funcs; ++k) {
+   for(gq_int k = 0; k < num_funcs_; ++k) {
       gq_int prod = 1;
-      for(gq_int d = 0; d < m_dim; ++d) {
-         gq_int s = index_table.array()(seq(d, m_dim - 1), k).sum();
-         prod *= (s + m_dim - d);
+      for(gq_int d = 0; d < dim_; ++d) {
+         gq_int s = index_table_.array()(seq(d, dim_ - 1), k).sum();
+         prod *= (s + dim_ - d);
       }
-      integrals[k] = 1. / prod;
+      integrals_[k] = 1. / prod;
    }
-   return integrals;
+   return integrals_;
 }
 
+
 void SimplexBasis::orthog_basis_internal(const Array1D& x, Array1D& buff) {
-   Array1D legendre(m_deg + 1);
-   Legendre((x[m_dim - 2] - x[m_dim - 1]) / x[m_dim - 2], legendre);  // mapped (2y-x)/x to (x-y)/x
+   Array1D legendre(deg_ + 1);
+   Legendre((x[dim_ - 2] - x[dim_ - 1]) / x[dim_ - 2], legendre);  // mapped (2y-x)/x to (x-y)/x
 
-   Array1DLong xCoord(m_dim - 1);
-   Array1DLong jCoord(m_dim - 1);
-   for(gq_int d = 0; d < m_dim - 2; ++d) {
-      xCoord[d] = x[m_dim - d - 2] / x[m_dim - d - 3];
-      jCoord[d] = 1.L - 2.L * x[m_dim - d - 2] / x[m_dim - d - 3];
+   ArrayLong1D xCoord(dim_ - 1);
+   ArrayLong1D jCoord(dim_ - 1);
+   for(gq_int d = 0; d < dim_ - 2; ++d) {
+      xCoord[d] = x[dim_ - d - 2] / x[dim_ - d - 3];
+      jCoord[d] = 1.L - 2.L * x[dim_ - d - 2] / x[dim_ - d - 3];
    }
-   xCoord[m_dim - 2] = x[0];
-   jCoord[m_dim - 2] = 1.L - 2.L * x[0];
+   xCoord[dim_ - 2] = x[0];
+   jCoord[dim_ - 2] = 1.L - 2.L * x[0];
 
-   Array3D jacobi(m_dim, m_deg + 1, m_deg + 1);
-   for(gq_int d = 1; d < m_dim; ++d) {
-      for(gq_int j = 0; j < m_deg + 1; ++j) {
+   Array3D jacobi(dim_, deg_ + 1, deg_ + 1);
+   for(gq_int d = 1; d < dim_; ++d) {
+      for(gq_int j = 0; j < deg_ + 1; ++j) {
          Jacobi(2 * j + d, jCoord[d - 1], jacobi(d, j));
       }
    }
 
-   Array2D map_table(m_dim, m_deg + 1);
+   Array2D map_table(dim_, deg_ + 1);
    for(gq_int d = 1; d < map_table.rows(); ++d) {
       for(gq_int j = 0; j < map_table.cols(); ++j) {
          map_table(d, j) = std::pow<double>(xCoord[d - 1], j);
       }
    }
 
-   for(gq_int k = 0; k < m_num_funcs; ++k) {
-      buff[k] = legendre[index_table(0, k)];
+   for(gq_int k = 0; k < num_funcs_; ++k) {
+      buff[k] = legendre[index_table_(0, k)];
    }
 
-   for(gq_int d = 1; d < m_dim; ++d) {
-      for(gq_int k = 0; k < m_num_funcs; ++k) {
-         buff[k] *= jacobi(d, power_table(d, k), index_table(d, k)) * map_table(d, power_table(d, k));
+   for(gq_int d = 1; d < dim_; ++d) {
+      for(gq_int k = 0; k < num_funcs_; ++k) {
+         buff[k] *= jacobi(d, power_table_(d, k), index_table_(d, k)) * map_table(d, power_table_(d, k));
       }
    }
 }
 
+
 std::unique_ptr<Basis> SimplexBasis::clone() const {
    return std::make_unique<SimplexBasis>(*this);
 }
+
 
 gq_int SimplexBasisSize(gq_int deg, gq_int dim) {
    GEN_QUAD_ASSERT_DEBUG(deg >= 1);
@@ -234,143 +260,154 @@ gq_int SimplexBasisSize(gq_int deg, gq_int dim) {
    return StandardBasisSize(deg, dim);
 }
 
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 // CubeSimplex Basis
 CubeSimplexBasis::CubeSimplexBasis(gq_int deg, gq_int dim1, gq_int dim2)
     : PolytopeBasis(deg, dim1 + dim2, CubeSimplexBasisSize(deg, dim1 + dim2)),
-      m_dims{dim1, dim2},
-      power_table_second(deg, dim2, CubeSimplexBasisSize(deg, dim1 + dim2)),
-      index_table(deg, dim1 + dim2),
-      fdiff{} {
-   GEN_QUAD_ASSERT_DEBUG(m_deg >= 1);
-   GEN_QUAD_ASSERT_DEBUG(m_dims[0] >= 1);
-   GEN_QUAD_ASSERT_DEBUG(m_dims[1] >= 2);
+      dims_{dim1, dim2},
+      power_table_second_(deg, dim2, CubeSimplexBasisSize(deg, dim1 + dim2)),
+      index_table_(deg, dim1 + dim2),
+      fdiff_{} {
+   GEN_QUAD_ASSERT_DEBUG(deg_ >= 1);
+   GEN_QUAD_ASSERT_DEBUG(dims_[0] >= 1);
+   GEN_QUAD_ASSERT_DEBUG(dims_[1] >= 2);
 
-   fdiff[0].resize(m_num_funcs);
-   fdiff[1].resize(m_num_funcs);
-   fdiff[2].resize(m_num_funcs);
-   fdiff[3].resize(m_num_funcs);
+   fdiff_[0].resize(num_funcs_);
+   fdiff_[1].resize(num_funcs_);
+   fdiff_[2].resize(num_funcs_);
+   fdiff_[3].resize(num_funcs_);
 
-   StandardBasisIndices(index_table);
-   for(gq_int d = 1; d < m_dims[1]; ++d) {
+   StandardBasisIndices(index_table_);
+   for(gq_int d = 1; d < dims_[1]; ++d) {
       for(gq_int i = 0; i < d; ++i) {
-         for(gq_int k = 0; k < m_num_funcs; ++k) {
-            power_table_second(d, k) += index_table(m_dims[0] + i, k);
+         for(gq_int k = 0; k < num_funcs_; ++k) {
+            power_table_second_(d, k) += index_table_(dims_[0] + i, k);
          }
       }
    }
 }
 
+
 const Array1D& CubeSimplexBasis::orthog_basis(const Array1D& x) {
-   orthog_basis_internal(x, functions);
-   return functions;
+   this->orthog_basis_internal(x, functions_);
+   return functions_;
 }
+
 
 const Array2D& CubeSimplexBasis::orthog_der(const Array1D& x) {
    internal::fourth_order_difference(*this, x);
-   return derivatives;
+   return derivatives_;
 }
+
 
 const Array1D& CubeSimplexBasis::orthog_integrals() {
-   integrals = 0.;
-   integrals[0] = 1. / math::factorial(m_dims[1]);
-   return integrals;
+   integrals_ = 0.;
+   integrals_[0] = 1. / math::factorial(dims_[1]);
+   return integrals_;
 }
+
 
 const Array1D& CubeSimplexBasis::monomial_basis(const Array1D& x) {
-   StandardMonomialFunctions(index_table, x, functions);
-   return functions;
+   StandardMonomialFunctions(index_table_, x, functions_);
+   return functions_;
 }
 
+
 const Array2D& CubeSimplexBasis::monomial_der(const Array1D& x) {
-   StandardMonomialDerivatives(index_table, x, derivatives);
-   return derivatives;
+   StandardMonomialDerivatives(index_table_, x, derivatives_);
+   return derivatives_;
 }
+
 
 const Array1D& CubeSimplexBasis::monomial_integrals() {
    // integrals due to cube
-   for(gq_int k = 0; k < m_num_funcs; ++k) {
+   for(gq_int k = 0; k < num_funcs_; ++k) {
       gq_int prod = 1;
-      for(gq_int d = 0; d < m_dims[0]; ++d) {
-         prod *= (index_table(d, k) + 1);
+      for(gq_int d = 0; d < dims_[0]; ++d) {
+         prod *= (index_table_(d, k) + 1);
       }
-      integrals[k] = 1. / prod;
+      integrals_[k] = 1. / prod;
    }
 
    // integrals due to simplex
-   for(gq_int k = 0; k < m_num_funcs; ++k) {
+   for(gq_int k = 0; k < num_funcs_; ++k) {
       gq_int prod = 1;
-      for(gq_int d = 0; d < m_dims[1]; ++d) {
-         gq_int s = index_table.array()(seq(m_dims[0] + d, m_dim - 1), k).sum();
-         prod *= (s + m_dims[1] - d);
+      for(gq_int d = 0; d < dims_[1]; ++d) {
+         gq_int s = index_table_.array()(seq(dims_[0] + d, dim_ - 1), k).sum();
+         prod *= (s + dims_[1] - d);
       }
-      integrals[k] /= prod;
+      integrals_[k] /= prod;
    }
 
-   return integrals;
+   return integrals_;
 }
+
 
 void CubeSimplexBasis::orthog_basis_internal(const Array1D& x, Array1D& buff) {
-   orthog_basis_polytopic_two_internal(x, buff);
+   this->orthog_basis_polytopic_two_internal(x, buff);
 
-   Array1D legendre(m_deg + 1);
-   for(gq_int d = 0; d < m_dims[0]; ++d) {
+   Array1D legendre(deg_ + 1);
+   for(gq_int d = 0; d < dims_[0]; ++d) {
       Legendre(x[d], legendre);
-      for(gq_int k = 0; k < m_num_funcs; ++k) {
-         buff[k] *= legendre[index_table(d, k)];
+      for(gq_int k = 0; k < num_funcs_; ++k) {
+         buff[k] *= legendre[index_table_(d, k)];
       }
    }
 }
 
+
 void CubeSimplexBasis::orthog_basis_polytopic_two_internal(const Array1D& x, Array1D& buff) {
-   gq_int dim1{m_dims[0]};
-   gq_int dim2{m_dims[1]};
+   gq_int dim1{dims_[0]};
+   gq_int dim2{dims_[1]};
    gq_int dim_two{dim1 + dim2};
 
-   Array1D legendre(m_deg + 1);
+   Array1D legendre(deg_ + 1);
    Legendre((x[dim_two - 2] - x[dim_two - 1]) / x[dim_two - 2], legendre);  // mapped (2y-x)/x to (x-y)/x
 
-   Array1DLong xCoord(dim2 - 1);
+   ArrayLong1D xCoord(dim2 - 1);
    for(gq_int d = 0; d < dim2 - 2; ++d) {
       xCoord[d] = x[dim_two - d - 2] / x[dim_two - d - 3];
    }
    xCoord[dim2 - 2] = x[dim1];
 
-   Array1DLong jCoord(dim2 - 1);
+   ArrayLong1D jCoord(dim2 - 1);
    for(gq_int d = 1; d < dim2 - 1; ++d) {
       jCoord[d - 1] = 1.L - 2.L * x[dim_two - d - 1] / x[dim_two - d - 2];
    }
    jCoord[dim2 - 2] = 1.L - 2.L * x[dim1];
 
-   Array3D jacobi(dim2, m_deg + 1, m_deg + 1);
+   Array3D jacobi(dim2, deg_ + 1, deg_ + 1);
    for(gq_int d = 1; d < dim2; ++d) {
-      for(gq_int j = 0; j < m_deg + 1; ++j) {
+      for(gq_int j = 0; j < deg_ + 1; ++j) {
          Jacobi(2 * j + d, jCoord[d - 1], jacobi(d, j));
       }
    }
 
-   Array2D map_table(dim2, m_deg + 1);
+   Array2D map_table(dim2, deg_ + 1);
    for(gq_int d = 1; d < map_table.rows(); ++d) {
       for(gq_int j = 0; j < map_table.cols(); ++j) {
          map_table(d, j) = std::pow<double>(xCoord[d - 1], j);
       }
    }
 
-   for(gq_int k = 0; k < m_num_funcs; ++k) {
-      buff[k] = legendre[index_table(dim1, k)];
+   for(gq_int k = 0; k < num_funcs_; ++k) {
+      buff[k] = legendre[index_table_(dim1, k)];
    }
 
    for(gq_int d = 1; d < dim2; ++d) {
-      for(gq_int k = 0; k < m_num_funcs; ++k) {
-         buff[k] *= jacobi(d, power_table_second(d, k), index_table(dim1 + d, k))
-                  * map_table(d, power_table_second(d, k));
+      for(gq_int k = 0; k < num_funcs_; ++k) {
+         buff[k] *= jacobi(d, power_table_second_(d, k), index_table_(dim1 + d, k))
+                  * map_table(d, power_table_second_(d, k));
       }
    }
 }
 
+
 std::unique_ptr<Basis> CubeSimplexBasis::clone() const {
    return std::make_unique<CubeSimplexBasis>(*this);
 }
+
 
 gq_int CubeSimplexBasisSize(gq_int deg, gq_int dim) {
    GEN_QUAD_ASSERT_DEBUG(deg >= 1);
@@ -378,199 +415,211 @@ gq_int CubeSimplexBasisSize(gq_int deg, gq_int dim) {
    return StandardBasisSize(deg, dim);
 }
 
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 // SimplexSimplex Basis
 SimplexSimplexBasis::SimplexSimplexBasis(gq_int deg, gq_int dim1, gq_int dim2)
     : PolytopeBasis(deg, dim1 + dim2, SimplexSimplexBasisSize(deg, dim1 + dim2)),
-      m_dims{dim1, dim2},
-      power_table_first(deg, dim1, SimplexSimplexBasisSize(deg, dim1 + dim2)),
-      power_table_second(deg, dim2, SimplexSimplexBasisSize(deg, dim1 + dim2)),
-      index_table(deg, dim1 + dim2),
-      poly_buff1{},
-      poly_buff2{},
-      fdiff{} {
-   GEN_QUAD_ASSERT_DEBUG(m_deg >= 1);
-   GEN_QUAD_ASSERT_DEBUG(m_dims[0] >= 2);
-   GEN_QUAD_ASSERT_DEBUG(m_dims[1] >= 2);
+      dims_{dim1, dim2},
+      power_table_first_(deg, dim1, SimplexSimplexBasisSize(deg, dim1 + dim2)),
+      power_table_second_(deg, dim2, SimplexSimplexBasisSize(deg, dim1 + dim2)),
+      index_table_(deg, dim1 + dim2),
+      poly_buff1_{},
+      poly_buff2_{},
+      fdiff_{} {
+   GEN_QUAD_ASSERT_DEBUG(deg_ >= 1);
+   GEN_QUAD_ASSERT_DEBUG(dims_[0] >= 2);
+   GEN_QUAD_ASSERT_DEBUG(dims_[1] >= 2);
 
-   poly_buff1.resize(m_num_funcs);
-   poly_buff2.resize(m_num_funcs);
-   fdiff[0].resize(m_num_funcs);
-   fdiff[1].resize(m_num_funcs);
-   fdiff[2].resize(m_num_funcs);
-   fdiff[3].resize(m_num_funcs);
+   poly_buff1_.resize(num_funcs_);
+   poly_buff2_.resize(num_funcs_);
+   fdiff_[0].resize(num_funcs_);
+   fdiff_[1].resize(num_funcs_);
+   fdiff_[2].resize(num_funcs_);
+   fdiff_[3].resize(num_funcs_);
 
-   StandardBasisIndices(index_table);
+   StandardBasisIndices(index_table_);
 
-   for(gq_int d = 1; d < m_dims[0]; ++d) {
+   for(gq_int d = 1; d < dims_[0]; ++d) {
       for(gq_int i = 0; i < d; ++i) {
-         for(gq_int k = 0; k < m_num_funcs; ++k) {
-            power_table_first(d, k) += index_table(i, k);
+         for(gq_int k = 0; k < num_funcs_; ++k) {
+            power_table_first_(d, k) += index_table_(i, k);
          }
       }
    }
 
-   for(gq_int d = 1; d < m_dims[1]; ++d) {
+   for(gq_int d = 1; d < dims_[1]; ++d) {
       for(gq_int i = 0; i < d; ++i) {
-         for(gq_int k = 0; k < m_num_funcs; ++k) {
-            power_table_second(d, k) += index_table(m_dims[0] + i, k);
+         for(gq_int k = 0; k < num_funcs_; ++k) {
+            power_table_second_(d, k) += index_table_(dims_[0] + i, k);
          }
       }
    }
 }
+
 
 const Array1D& SimplexSimplexBasis::orthog_basis(const Array1D& x) {
-   orthog_basis_internal(x, functions);
-   return functions;
+   this->orthog_basis_internal(x, functions_);
+   return functions_;
 }
+
 
 const Array2D& SimplexSimplexBasis::orthog_der(const Array1D& x) {
    internal::fourth_order_difference(*this, x);
-   return derivatives;
+   return derivatives_;
 }
+
 
 const Array1D& SimplexSimplexBasis::orthog_integrals() {
-   integrals = 0.;
-   integrals[0] = 1. / (math::factorial(m_dims[0]) * math::factorial(m_dims[1]));
-   return integrals;
+   integrals_ = 0.;
+   integrals_[0] = 1. / (math::factorial(dims_[0]) * math::factorial(dims_[1]));
+   return integrals_;
 }
+
 
 const Array1D& SimplexSimplexBasis::monomial_basis(const Array1D& x) {
-   StandardMonomialFunctions(index_table, x, functions);
-   return functions;
+   StandardMonomialFunctions(index_table_, x, functions_);
+   return functions_;
 }
 
+
 const Array2D& SimplexSimplexBasis::monomial_der(const Array1D& x) {
-   StandardMonomialDerivatives(index_table, x, derivatives);
-   return derivatives;
+   StandardMonomialDerivatives(index_table_, x, derivatives_);
+   return derivatives_;
 }
+
 
 const Array1D& SimplexSimplexBasis::monomial_integrals() {
    // integrals due to simplex1
-   for(gq_int k = 0; k < m_num_funcs; ++k) {
+   for(gq_int k = 0; k < num_funcs_; ++k) {
       gq_int prod = 1;
-      for(gq_int d = 0; d < m_dims[0]; ++d) {
-         gq_int s = index_table.array()(seq(d, m_dims[0] - 1), k).sum();
-         prod *= (s + m_dims[0] - d);
+      for(gq_int d = 0; d < dims_[0]; ++d) {
+         gq_int s = index_table_.array()(seq(d, dims_[0] - 1), k).sum();
+         prod *= (s + dims_[0] - d);
       }
-      integrals[k] = 1. / prod;
+      integrals_[k] = 1. / prod;
    }
 
    // integrals due to simplex2
-   for(gq_int k = 0; k < m_num_funcs; ++k) {
+   for(gq_int k = 0; k < num_funcs_; ++k) {
       gq_int prod = 1;
-      for(gq_int d = 0; d < m_dims[1]; ++d) {
-         gq_int s = index_table.array()(seq(m_dims[0] + d, m_dim - 1), k).sum();
-         prod *= (s + m_dims[1] - d);
+      for(gq_int d = 0; d < dims_[1]; ++d) {
+         gq_int s = index_table_.array()(seq(dims_[0] + d, dim_ - 1), k).sum();
+         prod *= (s + dims_[1] - d);
       }
-      integrals[k] /= prod;
+      integrals_[k] /= prod;
    }
 
-   return integrals;
+   return integrals_;
 }
+
 
 void SimplexSimplexBasis::orthog_basis_internal(const Array1D& x, Array1D& buff) {
-   orthog_basis_polytopic_one_internal(x, poly_buff1);
-   orthog_basis_polytopic_two_internal(x, poly_buff2);
+   this->orthog_basis_polytopic_one_internal(x, poly_buff1_);
+   this->orthog_basis_polytopic_two_internal(x, poly_buff2_);
 
    buff = 1.;
-   buff *= poly_buff1;
-   buff *= poly_buff2;
+   buff *= poly_buff1_;
+   buff *= poly_buff2_;
 }
 
-void SimplexSimplexBasis::orthog_basis_polytopic_one_internal(const Array1D& x, Array1D& buff) {
-   gq_int dim1{m_dims[0]};
 
-   Array1D legendre(m_deg + 1);
+void SimplexSimplexBasis::orthog_basis_polytopic_one_internal(const Array1D& x, Array1D& buff) {
+   gq_int dim1{dims_[0]};
+
+   Array1D legendre(deg_ + 1);
    Legendre((x[dim1 - 2] - x[dim1 - 1]) / x[dim1 - 2], legendre);  // mapped (2y-x)/x to (x-y)/x
 
-   Array1DLong xCoord(dim1 - 1);
+   ArrayLong1D xCoord(dim1 - 1);
    for(gq_int d = 0; d < dim1 - 2; ++d) {
       xCoord[d] = x[dim1 - d - 2] / x[dim1 - d - 3];
    }
    xCoord[dim1 - 2] = x[0];
 
-   Array1DLong jCoord(dim1 - 1);
+   ArrayLong1D jCoord(dim1 - 1);
    for(gq_int d = 1; d < dim1 - 1; ++d) {
       jCoord[d - 1] = 1.L - 2.L * x[dim1 - d - 1] / x[dim1 - d - 2];
    }
    jCoord[dim1 - 2] = 1.L - 2.L * x[0];
 
-   Array3D jacobi(dim1, m_deg + 1, m_deg + 1);
+   Array3D jacobi(dim1, deg_ + 1, deg_ + 1);
    for(gq_int d = 1; d < dim1; ++d) {
-      for(gq_int j = 0; j < m_deg + 1; ++j) {
+      for(gq_int j = 0; j < deg_ + 1; ++j) {
          Jacobi(2 * j + d, jCoord[d - 1], jacobi(d, j));
       }
    }
 
-   Array2D map_table(dim1, m_deg + 1);
+   Array2D map_table(dim1, deg_ + 1);
    for(gq_int d = 1; d < map_table.rows(); ++d) {
       for(gq_int j = 0; j < map_table.cols(); ++j) {
          map_table(d, j) = std::pow<double>(xCoord[d - 1], j);
       }
    }
 
-   for(gq_int k = 0; k < m_num_funcs; ++k) {
-      buff[k] = legendre[index_table(0, k)];
+   for(gq_int k = 0; k < num_funcs_; ++k) {
+      buff[k] = legendre[index_table_(0, k)];
    }
 
    for(gq_int d = 1; d < dim1; ++d) {
-      for(gq_int k = 0; k < m_num_funcs; ++k) {
-         buff[k]
-             *= jacobi(d, power_table_first(d, k), index_table(d, k)) * map_table(d, power_table_first(d, k));
+      for(gq_int k = 0; k < num_funcs_; ++k) {
+         buff[k] *= jacobi(d, power_table_first_(d, k), index_table_(d, k))
+                  * map_table(d, power_table_first_(d, k));
       }
    }
 }
 
+
 void SimplexSimplexBasis::orthog_basis_polytopic_two_internal(const Array1D& x, Array1D& buff) {
-   gq_int dim1{m_dims[0]};
-   gq_int dim2{m_dims[1]};
+   gq_int dim1{dims_[0]};
+   gq_int dim2{dims_[1]};
    gq_int dim_two{dim1 + dim2};
 
-   Array1D legendre(m_deg + 1);
+   Array1D legendre(deg_ + 1);
    Legendre((x[dim_two - 2] - x[dim_two - 1]) / x[dim_two - 2], legendre);  // mapped (2y-x)/x to (x-y)/x
 
-   Array1DLong xCoord(dim2 - 1);
+   ArrayLong1D xCoord(dim2 - 1);
    for(gq_int d = 0; d < dim2 - 2; ++d) {
       xCoord[d] = x[dim_two - d - 2] / x[dim_two - d - 3];
    }
    xCoord[dim2 - 2] = x[dim1];
 
-   Array1DLong jCoord(dim2 - 1);
+   ArrayLong1D jCoord(dim2 - 1);
    for(gq_int d = 1; d < dim2 - 1; ++d) {
       jCoord[d - 1] = 1.L - 2.L * x[dim_two - d - 1] / x[dim_two - d - 2];
    }
    jCoord[dim2 - 2] = 1.L - 2.L * x[dim1];
 
-   Array3D jacobi(dim2, m_deg + 1, m_deg + 1);
+   Array3D jacobi(dim2, deg_ + 1, deg_ + 1);
    for(gq_int d = 1; d < dim2; ++d) {
-      for(gq_int j = 0; j < m_deg + 1; ++j) {
+      for(gq_int j = 0; j < deg_ + 1; ++j) {
          Jacobi(2 * j + d, jCoord[d - 1], jacobi(d, j));
       }
    }
 
-   Array2D map_table(dim2, m_deg + 1);
+   Array2D map_table(dim2, deg_ + 1);
    for(gq_int d = 1; d < map_table.rows(); ++d) {
       for(gq_int j = 0; j < map_table.cols(); ++j) {
          map_table(d, j) = std::pow<double>(xCoord[d - 1], j);
       }
    }
 
-   for(gq_int k = 0; k < m_num_funcs; ++k) {
-      buff[k] = legendre[index_table(dim1, k)];
+   for(gq_int k = 0; k < num_funcs_; ++k) {
+      buff[k] = legendre[index_table_(dim1, k)];
    }
 
    for(gq_int d = 1; d < dim2; ++d) {
-      for(gq_int k = 0; k < m_num_funcs; ++k) {
-         buff[k] *= jacobi(d, power_table_second(d, k), index_table(dim1 + d, k))
-                  * map_table(d, power_table_second(d, k));
+      for(gq_int k = 0; k < num_funcs_; ++k) {
+         buff[k] *= jacobi(d, power_table_second_(d, k), index_table_(dim1 + d, k))
+                  * map_table(d, power_table_second_(d, k));
       }
    }
 }
 
+
 std::unique_ptr<Basis> SimplexSimplexBasis::clone() const {
    return std::make_unique<SimplexSimplexBasis>(*this);
 }
+
 
 gq_int SimplexSimplexBasisSize(gq_int deg, gq_int dim) {
    GEN_QUAD_ASSERT_DEBUG(deg >= 1);
@@ -578,200 +627,220 @@ gq_int SimplexSimplexBasisSize(gq_int deg, gq_int dim) {
    return StandardBasisSize(deg, dim);
 }
 
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Pyramid3D Basis
 PyramidBasis3D::PyramidBasis3D(gq_int deg)
     : PolytopeBasis(deg, 3, Pyramid3DBasisSize(deg)),
-      index_table(deg, 3),
-      fdiff{} {
-   GEN_QUAD_ASSERT_DEBUG(m_deg >= 1);
+      index_table_(deg, 3),
+      fdiff_{} {
+   GEN_QUAD_ASSERT_DEBUG(deg_ >= 1);
 
-   fdiff[0].resize(m_num_funcs);
-   fdiff[1].resize(m_num_funcs);
-   fdiff[2].resize(m_num_funcs);
-   fdiff[3].resize(m_num_funcs);
-   StandardBasisIndices(index_table);
+   fdiff_[0].resize(num_funcs_);
+   fdiff_[1].resize(num_funcs_);
+   fdiff_[2].resize(num_funcs_);
+   fdiff_[3].resize(num_funcs_);
+   StandardBasisIndices(index_table_);
 }
+
 
 const Array1D& PyramidBasis3D::orthog_basis(const Array1D& x) {
-   orthog_basis_internal(x, functions);
-   return functions;
+   this->orthog_basis_internal(x, functions_);
+   return functions_;
 }
+
 
 const Array2D& PyramidBasis3D::orthog_der(const Array1D& x) {
    internal::fourth_order_difference(*this, x);
-   return derivatives;
+   return derivatives_;
 }
+
 
 const Array1D& PyramidBasis3D::orthog_integrals() {
-   integrals = 0.;
-   integrals[0] = 1. / 3.;
-   return integrals;
+   integrals_ = 0.;
+   integrals_[0] = 1. / 3.;
+   return integrals_;
 }
+
 
 const Array1D& PyramidBasis3D::monomial_basis(const Array1D& x) {
-   StandardMonomialFunctions(index_table, x, functions);
-   return functions;
+   StandardMonomialFunctions(index_table_, x, functions_);
+   return functions_;
 }
+
 
 const Array2D& PyramidBasis3D::monomial_der(const Array1D& x) {
-   StandardMonomialDerivatives(index_table, x, derivatives);
-   return derivatives;
+   StandardMonomialDerivatives(index_table_, x, derivatives_);
+   return derivatives_;
 }
+
 
 const Array1D& PyramidBasis3D::monomial_integrals() {
-   for(gq_int k = 0; k < m_num_funcs; ++k) {
-      integrals[k] = 1.
-                   / ((index_table(1, k) + 1) * (index_table(2, k) + 1)
-                      * (index_table(0, k) + index_table(1, k) + index_table(2, k) + 3));
+   for(gq_int k = 0; k < num_funcs_; ++k) {
+      integrals_[k] = 1.
+                    / ((index_table_(1, k) + 1) * (index_table_(2, k) + 1)
+                       * (index_table_(0, k) + index_table_(1, k) + index_table_(2, k) + 3));
    }
-   return integrals;
+   return integrals_;
 }
 
+
 void PyramidBasis3D::orthog_basis_internal(const Array1D& x, Array1D& buff) {
-   Array2D legendre(2, m_deg + 1);
+   Array2D legendre(2, deg_ + 1);
    Legendre(1.L - (x[1] / x[0]), legendre.row(0));  // mapped 2(y/x)-1 to 1-y/x
    Legendre(1.L - (x[2] / x[0]), legendre.row(1));  // mapped 2(z/x)-1 to 1-z/x
 
-   Array2D jacobi(m_deg + 1, m_deg + 1);
-   for(gq_int j = 0; j < m_deg + 1; ++j) {
+   Array2D jacobi(deg_ + 1, deg_ + 1);
+   for(gq_int j = 0; j < deg_ + 1; ++j) {
       Jacobi(2 * j + 2, 1.L - 2.L * x[0], jacobi.row(j));
    }
 
-   Array1D xpower(m_deg + 1);
+   Array1D xpower(deg_ + 1);
    Monomial(x[0], xpower);
 
    gq_int count = 0;
-   for(gq_int k = 0; k < m_deg + 1; ++k) {
-      for(gq_int j = 0; j < m_deg + 1 - k; ++j) {
-         for(gq_int i = 0; i < m_deg + 1 - j - k; ++i) {
+   for(gq_int k = 0; k < deg_ + 1; ++k) {
+      for(gq_int j = 0; j < deg_ + 1 - k; ++j) {
+         for(gq_int i = 0; i < deg_ + 1 - j - k; ++i) {
             buff[count++] = xpower[j + k] * jacobi(j + k, i) * legendre(0, j) * legendre(1, k);
          }
       }
    }
 }
 
+
 std::unique_ptr<Basis> PyramidBasis3D::clone() const {
    return std::make_unique<PyramidBasis3D>(*this);
 }
+
 
 gq_int Pyramid3DBasisSize(gq_int deg) {
    GEN_QUAD_ASSERT_DEBUG(deg >= 1);
    return StandardBasisSize(deg, 3);
 }
 
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Omega2D Basis
-OmegaBasis2D::OmegaBasis2D(Omega2D omega_, gq_int deg)
+OmegaBasis2D::OmegaBasis2D(Omega2D omega, gq_int deg)
     : Basis(deg, 2, Omega2DBasisSize(deg)),
-      qts(new QuadSimplex{GaussTensorSimplex(2 * deg + 1, 2)}),
-      qt_omega(new QuadOmega2D{CreateOmegaComposite(omega_, GaussTensorSimplex(deg, 2))}),
-      omega(std::move(omega_)),
-      index_table(deg, 2),
-      fdiff{},
-      A{},
-      B{},
-      C{},
-      D{},
-      phi_pos{},
-      phi0{} {
-   GEN_QUAD_ASSERT_DEBUG(m_deg >= 1);
+      quad_simplex_(new QuadSimplex{GaussTensorSimplex(2 * deg + 1, 2)}),
+      quad_omega_(new QuadOmega2D{CreateOmegaComposite(omega, GaussTensorSimplex(deg, 2))}),
+      omega_(std::move(omega)),
+      index_table_(deg, 2),
+      fdiff_{},
+      A_{},
+      B_{},
+      C_{},
+      D_{},
+      phi_pos_{},
+      phi0_{} {
+   GEN_QUAD_ASSERT_DEBUG(deg_ >= 1);
 
-   fdiff[0].resize(m_num_funcs);
-   fdiff[1].resize(m_num_funcs);
-   fdiff[2].resize(m_num_funcs);
-   fdiff[3].resize(m_num_funcs);
+   fdiff_[0].resize(num_funcs_);
+   fdiff_[1].resize(num_funcs_);
+   fdiff_[2].resize(num_funcs_);
+   fdiff_[3].resize(num_funcs_);
 
-   phi_pos.resize(m_deg + 2);
-   phi_pos[0] = 0;
-   for(gq_int n = 1; n <= m_deg + 1; ++n) {
-      phi_pos[n] = (n * (n + 1)) / 2;
+   phi_pos_.resize(deg_ + 2);
+   phi_pos_[0] = 0;
+   for(gq_int n = 1; n <= deg_ + 1; ++n) {
+      phi_pos_[n] = (n * (n + 1)) / 2;
    }
 
-   phi0 = std::pow<double>(omega.area(), -0.5);
+   phi0_ = std::pow<double>(omega_.area(), -0.5);
 
-   A.resize(m_deg);
-   B.resize(m_deg);
-   C.resize(m_deg);
-   D.resize(m_deg);
-   for(gq_int n = 0; n < A.size(); ++n) {
-      A[n].resize((n + 1), (n + 2));
-      B[n].resize((n + 1), (n + 2));
-      C[n].resize((n + 1), (n + 2));
+   A_.resize(deg_);
+   B_.resize(deg_);
+   C_.resize(deg_);
+   D_.resize(deg_);
+   for(gq_int n = 0; n < A_.size(); ++n) {
+      A_[n].resize((n + 1), (n + 2));
+      B_[n].resize((n + 1), (n + 2));
+      C_[n].resize((n + 1), (n + 2));
       if(n > 0) {
-         D[n].resize(n, (n + 2));
+         D_[n].resize(n, (n + 2));
       }
       recurrence_coeffs(n);
    }
 
-   StandardBasisIndices(index_table);
+   StandardBasisIndices(index_table_);
 }
+
 
 OmegaBasis2D::OmegaBasis2D(const OmegaBasis2D& b)
     : Basis(b),
-      qts(new QuadSimplex{*b.qts}),
-      qt_omega(new QuadOmega2D{*b.qt_omega}),
-      omega(b.omega),
-      index_table(b.index_table) {
+      quad_simplex_(new QuadSimplex{*b.quad_simplex_}),
+      quad_omega_(new QuadOmega2D{*b.quad_omega_}),
+      omega_(b.omega_),
+      index_table_(b.index_table_) {
    for(gq_int i = 0; i < 4; ++i) {
-      fdiff[i].resize(b.fdiff[i].size());
+      fdiff_[i].resize(b.fdiff_[i].size());
    }
-   A = b.A;
-   B = b.B;
-   C = b.C;
-   D = b.D;
-   phi_pos = b.phi_pos;
-   phi0 = b.phi0;
+   A_ = b.A_;
+   B_ = b.B_;
+   C_ = b.C_;
+   D_ = b.D_;
+   phi_pos_ = b.phi_pos_;
+   phi0_ = b.phi0_;
 }
+
 
 OmegaBasis2D::~OmegaBasis2D() {
-   delete qts;
-   delete qt_omega;
+   delete quad_simplex_;
+   delete quad_omega_;
 }
 
+
 const Array1D& OmegaBasis2D::orthog_basis(const Array1D& x) {
-   orthog_basis_internal(x, functions);
-   return functions;
+   this->orthog_basis_internal(x, functions_);
+   return functions_;
 }
+
 
 const Array2D& OmegaBasis2D::orthog_der(const Array1D& x) {
    internal::fourth_order_difference(*this, x);
-   return derivatives;
+   return derivatives_;
 }
+
 
 const Array1D& OmegaBasis2D::orthog_integrals() {
-   integrals = 0.;
-   integrals[0] = 1. / phi0;
-   return integrals;
+   integrals_ = 0.;
+   integrals_[0] = 1. / phi0_;
+   return integrals_;
 }
+
 
 const Array1D& OmegaBasis2D::monomial_basis(const Array1D& x) {
-   StandardMonomialFunctions(index_table, x, functions);
-   return functions;
+   StandardMonomialFunctions(index_table_, x, functions_);
+   return functions_;
 }
+
 
 const Array2D& OmegaBasis2D::monomial_der(const Array1D& x) {
-   StandardMonomialDerivatives(index_table, x, derivatives);
-   return derivatives;
+   StandardMonomialDerivatives(index_table_, x, derivatives_);
+   return derivatives_;
 }
+
 
 const Array1D& OmegaBasis2D::monomial_integrals() {
-   for(gq_int k = 0; k < m_num_funcs; ++k) {
+   for(gq_int k = 0; k < num_funcs_; ++k) {
       auto monomial_k = [k, this](const auto& x) {
-         return std::pow<double>(x[0], index_table(0, k)) * std::pow<double>(x[1], index_table(1, k));
+         return std::pow<double>(x[0], index_table_(0, k)) * std::pow<double>(x[1], index_table_(1, k));
       };
-      integrals[k] = quad_approx(*qt_omega, monomial_k);
+      integrals_[k] = quad_approx(*quad_omega_, monomial_k);
    }
 
-   return integrals;
+   return integrals_;
 }
+
 
 void OmegaBasis2D::recurrence_coeffs(gq_int n) {
    Matrix2D ALoc(2 * n + 1, 2 * n + 2);
    Matrix2D MLoc(2 * n + 2, 2 * n + 2);
 
    Array1D phi((n + 1) * (n + 2) / 2);
-   double* phin = &phi[phi_pos[n]];
+   double* phin = &phi[phi_pos_[n]];
 
    StaticArray1D<2> x;
    double* L = &x[0];
@@ -779,12 +848,12 @@ void OmegaBasis2D::recurrence_coeffs(gq_int n) {
       L = &phi[1];
    }
 
-   for(gq_int nt = 0; nt < omega.triang.size(); ++nt) {
-      for(gq_int np = 0; np < qts->num_nodes(); ++np) {
-         const auto w = qts->w(np) * omega.triang[nt].jacobian();
-         map_from_unit(omega.triang[nt], qts->node(np), x);
+   for(gq_int nt = 0; nt < omega_.triang.size(); ++nt) {
+      for(gq_int np = 0; np < quad_simplex_->num_nodes(); ++np) {
+         const auto w = quad_simplex_->w(np) * omega_.triang[nt].jacobian();
+         map_from_unit(omega_.triang[nt], quad_simplex_->node(np), x);
 
-         orthog_basis_internal_p(n, x, phi);
+         this->orthog_basis_internal_p(n, x, phi);
 
          for(gq_int l = 0; l <= n; ++l) {
             StaticArrayInt1D<2> row_m{l, l + n + 1};
@@ -794,7 +863,7 @@ void OmegaBasis2D::recurrence_coeffs(gq_int n) {
             StaticArray1D<2> phi_loc;
             gq_int sz;
             if(l < n) {
-               double* phin1 = &phi[phi_pos[n - 1]];
+               double* phin1 = &phi[phi_pos_[n - 1]];
                phi_loc[0] = phin1[l];
                phi_loc[1] = phin[l];
                row_a[0] = l;
@@ -831,39 +900,39 @@ void OmegaBasis2D::recurrence_coeffs(gq_int n) {
    auto eig_val = eig_solve.eigenvalues();
    auto eig_vec = eig_solve.eigenvectors();
 
-   Matrix2D PLoc(2 * A[n].rows(), A[n].cols());
+   Matrix2D PLoc(2 * A_[n].rows(), A_[n].cols());
    for(gq_int k = 0; k < PLoc.cols(); ++k) {
       PLoc.col(k) = eig_vec.col(2 * n + 1 - k) * std::pow(eig_val[2 * n + 1 - k], -0.5);
    }
 
    Matrix2D QLoc = -(ALoc * PLoc);
 
-   A[n] = PLoc(seqN(0, A[n].rows()), all);
-   B[n] = PLoc(seqN(n + 1, B[n].rows()), all);
+   A_[n] = PLoc(seqN(0, A_[n].rows()), all);
+   B_[n] = PLoc(seqN(n + 1, B_[n].rows()), all);
 
    if(n > 0) {
-      D[n] = QLoc(seqN(0, D[n].rows()), all);
-      C[n] = QLoc(seqN(n, C[n].rows()), all);
+      D_[n] = QLoc(seqN(0, D_[n].rows()), all);
+      C_[n] = QLoc(seqN(n, C_[n].rows()), all);
    } else {
-      C[n] = QLoc;
+      C_[n] = QLoc;
    }
 }
 
-void OmegaBasis2D::TestOrthogonal(gq_int p, bool verbose) {
-   GEN_QUAD_ASSERT_DEBUG(p <= m_deg);
+
+void OmegaBasis2D::test_orthogonal(gq_int p, bool verbose) {
+   GEN_QUAD_ASSERT_DEBUG(p <= deg_);
 
    gq_int N = ((p + 2) * (p + 1)) / 2;
    Array1D x(2);
    Array1D phi(N);
    Matrix2D I(N, N);
 
-   for(gq_int nt = 0; nt < omega.triang.size(); ++nt) {
-      for(gq_int np = 0; np < qts->num_nodes(); ++np) {
-         const auto w = qts->w(np) * omega.triang[nt].jacobian();
-         map_from_unit(omega.triang[nt], qts->node(np), x);
+   for(gq_int nt = 0; nt < omega_.triang.size(); ++nt) {
+      for(gq_int np = 0; np < quad_simplex_->num_nodes(); ++np) {
+         const auto w = quad_simplex_->w(np) * omega_.triang[nt].jacobian();
+         map_from_unit(omega_.triang[nt], quad_simplex_->node(np), x);
 
-         orthog_basis_internal_p(p, x, phi);
-
+         this->orthog_basis_internal_p(p, x, phi);
          for(gq_int i = 0; i < N; ++i) {
             for(gq_int j = 0; j < N; ++j) {
                I(i, j) += phi[i] * phi[j] * w;
@@ -878,75 +947,79 @@ void OmegaBasis2D::TestOrthogonal(gq_int p, bool verbose) {
 
    Eigen::SelfAdjointEigenSolver<Matrix2D> eig_solve{I};
    auto eig_val = eig_solve.eigenvalues();
-   double cond = eig_val[N - 1] / eig_val[0];
-   std::cout << "Condition number of mass matrix using orthogonal polynomials: " << cond << std::endl;
+   double cnd_num = eig_val[N - 1] / eig_val[0];
+   std::cout << "Condition number of mass matrix using orthogonal polynomials: " << cnd_num << std::endl;
 }
+
 
 void OmegaBasis2D::orthog_basis_internal(const Array1D& x, Array1D& buff) {
-   return orthog_basis_internal_p(m_deg, x, buff);
+   return this->orthog_basis_internal_p(deg_, x, buff);
 }
 
+
 void OmegaBasis2D::orthog_basis_internal_p(gq_int p, const Array1D& x, Array1D& buff) {
-   GEN_QUAD_ASSERT_DEBUG(p <= m_deg);
-   buff[0] = phi0;
+   GEN_QUAD_ASSERT_DEBUG(p <= deg_);
+   buff[0] = phi0_;
    if(p == 0) {
       return;
    }
 
-   buff[1] = (A[0](0, 0) * x[0] + B[0](0, 0) * x[1] + C[0](0, 0)) * buff[0];
-   buff[2] = (A[0](0, 1) * x[0] + B[0](0, 1) * x[1] + C[0](0, 1)) * buff[0];
+   buff[1] = (A_[0](0, 0) * x[0] + B_[0](0, 0) * x[1] + C_[0](0, 0)) * buff[0];
+   buff[2] = (A_[0](0, 1) * x[0] + B_[0](0, 1) * x[1] + C_[0](0, 1)) * buff[0];
 
    for(gq_int n = 1; n < p; ++n) {
-      const auto yp = buff(seqN(phi_pos[n - 1], D[n].rows()));
-      const auto yc = buff(seqN(phi_pos[n], A[n].rows()));
-      auto yn = buff(seqN(phi_pos[n + 1], A[n].cols()));
-      yn = ((A[n].transpose() * buff[1] + B[n].transpose() * buff[2] + C[n].transpose()) * yc.matrix())
+      const auto yp = buff(seqN(phi_pos_[n - 1], D_[n].rows()));
+      const auto yc = buff(seqN(phi_pos_[n], A_[n].rows()));
+      auto yn = buff(seqN(phi_pos_[n + 1], A_[n].cols()));
+      yn = ((A_[n].transpose() * buff[1] + B_[n].transpose() * buff[2] + C_[n].transpose()) * yc.matrix())
                .array();
-      yn += (D[n].transpose() * yp.matrix()).array();
+      yn += (D_[n].transpose() * yp.matrix()).array();
    }
 }
+
 
 std::unique_ptr<Basis> OmegaBasis2D::clone() const {
    return std::make_unique<OmegaBasis2D>(*this);
 }
+
 
 gq_int Omega2DBasisSize(gq_int deg) {
    GEN_QUAD_ASSERT_DEBUG(deg >= 1);
    return StandardBasisSize(deg, 2);
 }
 
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 BasisTable::BasisTable(gq_int deg, gq_int dim)
-    : m_deg{deg},
-      m_dim{dim},
-      m_num_elem{StandardBasisSize(deg, dim)},
-      data(m_dim, m_num_elem) {
-   GEN_QUAD_ASSERT_DEBUG(m_deg >= 0);
-   GEN_QUAD_ASSERT_DEBUG(m_dim >= 1);
+    : deg_{deg},
+      dim_{dim},
+      num_bfuncs_{StandardBasisSize(deg, dim)},
+      data_(dim_, num_bfuncs_) {
+   GEN_QUAD_ASSERT_DEBUG(deg_ >= 0);
+   GEN_QUAD_ASSERT_DEBUG(dim_ >= 1);
 }
 
-BasisTable::BasisTable(gq_int deg, gq_int dim, gq_int num_elem)
-    : m_deg{deg},
-      m_dim{dim},
-      m_num_elem{num_elem},
-      data(m_dim, m_num_elem) {
-   GEN_QUAD_ASSERT_DEBUG(m_deg >= 0);
-   GEN_QUAD_ASSERT_DEBUG(m_dim >= 1);
-   GEN_QUAD_ASSERT_DEBUG(m_num_elem >= 1);
+
+BasisTable::BasisTable(gq_int deg, gq_int dim, gq_int num_bfuncs)
+    : deg_{deg},
+      dim_{dim},
+      num_bfuncs_{num_bfuncs},
+      data_(dim_, num_bfuncs_) {
+   GEN_QUAD_ASSERT_DEBUG(deg_ >= 0);
+   GEN_QUAD_ASSERT_DEBUG(dim_ >= 1);
+   GEN_QUAD_ASSERT_DEBUG(num_bfuncs_ >= 1);
 }
 
-std::ostream& operator<<(std::ostream& os, const BasisTable& t) {
-   for(gq_int i = 0; i < t.num_elem(); ++i) {
-      for(gq_int j = 0; j < t.dim(); ++j) {
-         os << t(j, i) << "  ";
-      }
-      os << "\n";
-   }
-   return os;
+
+// print transpose
+std::ostream& operator<<(std::ostream& os, const BasisTable& table) {
+   return os << table.array().transpose();
 }
+
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 namespace internal {
+
 
 template <typename BasisType>
 void fourth_order_difference(BasisType& basis, const Array1D& x) {
@@ -970,19 +1043,21 @@ void fourth_order_difference(BasisType& basis, const Array1D& x) {
       x_forw1[d] += h;
       x_forw2[d] += 2. * h;
 
-      basis.orthog_basis_internal(x_backw2, basis.fdiff[0]);
-      basis.orthog_basis_internal(x_backw1, basis.fdiff[1]);
-      basis.orthog_basis_internal(x_forw1, basis.fdiff[2]);
-      basis.orthog_basis_internal(x_forw2, basis.fdiff[3]);
+      basis.orthog_basis_internal(x_backw2, basis.fdiff_[0]);
+      basis.orthog_basis_internal(x_backw1, basis.fdiff_[1]);
+      basis.orthog_basis_internal(x_forw1, basis.fdiff_[2]);
+      basis.orthog_basis_internal(x_forw2, basis.fdiff_[3]);
       for(gq_int k = 0; k < num_funcs; ++k) {
-         basis.derivatives(d, k) = (1. * basis.fdiff[0][k] - 8. * basis.fdiff[1][k] + 8. * basis.fdiff[2][k]
-                                    - 1. * basis.fdiff[3][k])
-                                 / (12. * h);
+         basis.derivatives_(d, k) = (1. * basis.fdiff_[0][k] - 8. * basis.fdiff_[1][k]
+                                     + 8. * basis.fdiff_[2][k] - 1. * basis.fdiff_[3][k])
+                                  / (12. * h);
       }
    }
 }
 
+
 }  // namespace internal
+
 
 // computes fact(deg+dim)/( fact(deg) * fact(dim) )
 // special care is taken to avoid integer overflow
@@ -991,8 +1066,9 @@ gq_int StandardBasisSize(gq_int deg, gq_int dim) {
    for(gq_int dd = deg + 1, dimc = 1; dd <= deg + dim; ++dd, ++dimc) {
       product = product * dd / dimc;  // can prove that (product * dd) is divisible by dimc
    }
-   return static_cast<gq_int>(product);
+   return product;
 }
+
 
 void StandardBasisIndices(BasisTable& table) {
    gq_int deg{table.deg()};
@@ -1012,17 +1088,18 @@ void StandardBasisIndices(BasisTable& table) {
       StandardBasisIndices(table_cur);
 
       for(gq_int d = 0; d < dim - 1; ++d) {
-         for(gq_int k = 0; k < table_cur.num_elem(); ++k) {
+         for(gq_int k = 0; k < table_cur.num_bfuncs(); ++k) {
             table(d, elem_count + k) = table_cur(d, k);
          }
       }
-      for(gq_int k = 0; k < table_cur.num_elem(); ++k) {
+      for(gq_int k = 0; k < table_cur.num_bfuncs(); ++k) {
          table(dim - 1, elem_count + k) = deg_cur;
       }
 
-      elem_count += table_cur.num_elem();
+      elem_count += table_cur.num_bfuncs();
    }
 }
+
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////
 template <typename EigenType>
@@ -1032,6 +1109,7 @@ static inline void Monomial(double x, EigenType&& p) {
       p[i] = std::pow<double>(x, i);
    }
 }
+
 
 template <typename EigenType>
 static inline void Legendre(double x, EigenType&& p) {
@@ -1052,6 +1130,7 @@ static inline void Legendre(double x, EigenType&& p) {
       cur = next;
    }
 }
+
 
 template <typename EigenType>
 static void Jacobi(gq_int alpha, double x, EigenType&& p) {
@@ -1081,10 +1160,11 @@ static void Jacobi(gq_int alpha, double x, EigenType&& p) {
    }
 }
 
+
 static void StandardMonomialFunctions(const BasisTable& index_table, const Array1D& x, Array1D& functions) {
    gq_int deg{index_table.deg()};
    gq_int dim{index_table.dim()};
-   gq_int num_funcs{index_table.num_elem()};
+   gq_int num_funcs{index_table.num_bfuncs()};
 
    Array2D monomial(dim, deg + 1);
    for(gq_int d = 0; d < dim; ++d) {
@@ -1099,15 +1179,16 @@ static void StandardMonomialFunctions(const BasisTable& index_table, const Array
    }
 }
 
+
 static void StandardMonomialDerivatives(const BasisTable& index_table, const Array1D& x,
                                         Array2D& derivatives) {
    gq_int dim{index_table.dim()};
-   gq_int num_funcs{index_table.num_elem()};
+   gq_int num_funcs{index_table.num_bfuncs()};
    constexpr double h{5.e-5};
 
    Array1D fdiff[4];
-   for(auto& v : fdiff) {
-      v.resize(num_funcs);
+   for(auto& fd : fdiff) {
+      fd.resize(num_funcs);
    }
 
    Array1D x_backw2(dim);
@@ -1136,6 +1217,7 @@ static void StandardMonomialDerivatives(const BasisTable& index_table, const Arr
       }
    }
 }
+
 
 }  // namespace gquad
 

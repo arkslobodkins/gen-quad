@@ -11,13 +11,13 @@
 
 namespace gquad {
 
-namespace {
-void assert_tensor_common(const QuadDomain& q1, const QuadDomain& q2, const QuadDomain& q3) {
+
+static void assert_tensor_common(const QuadDomain& q1, const QuadDomain& q2, const QuadDomain& q3) {
    GEN_QUAD_ASSERT_DEBUG(q1.deg() == q2.deg() && q2.deg() == q3.deg());
    GEN_QUAD_ASSERT_DEBUG(q1.dim() + q2.dim() == q3.dim());
    GEN_QUAD_ASSERT_DEBUG(q1.num_nodes() * q2.num_nodes() == q3.num_nodes());
 }
-}  // namespace
+
 
 QuadCube GaussTensorCube(gq_int deg, gq_int dim) {
    GEN_QUAD_ASSERT_DEBUG(deg > 0);
@@ -37,6 +37,7 @@ QuadCube GaussTensorCube(gq_int deg, gq_int dim) {
 
    return qc_next;
 }
+
 
 QuadSimplex GaussTensorSimplex(gq_int deg, gq_int dim) {
    GEN_QUAD_ASSERT_DEBUG(deg > 0);
@@ -60,6 +61,7 @@ QuadSimplex GaussTensorSimplex(gq_int deg, gq_int dim) {
    return qs_next;
 }
 
+
 QuadCubeSimplex GaussTensorCubeSimplex(gq_int deg, gq_int dim1, gq_int dim2) {
    GEN_QUAD_ASSERT_DEBUG(deg > 0);
    GEN_QUAD_ASSERT_DEBUG(dim1 > 0);
@@ -80,6 +82,7 @@ QuadCubeSimplex GaussTensorCubeSimplex(gq_int deg, gq_int dim1, gq_int dim2) {
    }
 }
 
+
 QuadSimplexSimplex GaussTensorSimplexSimplex(gq_int deg, gq_int dim1, gq_int dim2) {
    GEN_QUAD_ASSERT_DEBUG(deg > 0);
    GEN_QUAD_ASSERT_DEBUG(dim1 > 1);
@@ -92,6 +95,7 @@ QuadSimplexSimplex GaussTensorSimplexSimplex(gq_int deg, gq_int dim1, gq_int dim
 
    return qss;
 }
+
 
 void NodesTensor2D(const QuadInterval& q1, const QuadInterval& q2, QuadDomain& q3) {
    assert_tensor_common(q1, q2, q3);
@@ -110,6 +114,7 @@ void NodesTensor2D(const QuadInterval& q1, const QuadInterval& q2, QuadDomain& q
    }
 }
 
+
 void WeightsTensor2D(const QuadInterval& q1, const QuadInterval& q2, QuadDomain& q3) {
    assert_tensor_common(q1, q2, q3);
 
@@ -122,10 +127,12 @@ void WeightsTensor2D(const QuadInterval& q1, const QuadInterval& q2, QuadDomain&
    }
 }
 
+
 void Tensor2D(const QuadInterval& q1, const QuadInterval& q2, QuadDomain& q3) {
    NodesTensor2D(q1, q2, q3);
    WeightsTensor2D(q1, q2, q3);
 }
+
 
 static void WeightsTensor(const QuadDomain& q1, const QuadDomain& q2, QuadDomain& q3) {
    assert_tensor_common(q1, q2, q3);
@@ -138,6 +145,7 @@ static void WeightsTensor(const QuadDomain& q1, const QuadDomain& q2, QuadDomain
       }
    }
 }
+
 
 void MixedTensor(const QuadDomain& q1, const QuadDomain& q2, QuadDomain& q3) {
    assert_tensor_common(q1, q2, q3);
@@ -157,6 +165,7 @@ void MixedTensor(const QuadDomain& q1, const QuadDomain& q2, QuadDomain& q3) {
    }
    WeightsTensor(q1, q2, q3);
 }
+
 
 void AddLineCube(const QuadInterval& q1, const QuadDomain& q2, QuadDomain& q3) {
    assert_tensor_common(q1, q2, q3);
@@ -182,6 +191,7 @@ void AddLineCube(const QuadInterval& q1, const QuadDomain& q2, QuadDomain& q3) {
    WeightsTensor(q1, q2, q3);
 }
 
+
 void AddLineSimplex(const QuadInterval& q1, const QuadDomain& q2, QuadDomain& q3) {
    assert_tensor_common(q1, q2, q3);
 
@@ -194,6 +204,7 @@ void AddLineSimplex(const QuadInterval& q1, const QuadDomain& q2, QuadDomain& q3
    }
 }
 
+
 void AddLinePyramid(const QuadInterval& q1, const QuadDomain& q2, QuadDomain& q3) {
    assert_tensor_common(q1, q2, q3);
    assert(q3.dim() == 3);
@@ -204,6 +215,7 @@ void AddLinePyramid(const QuadInterval& q1, const QuadDomain& q2, QuadDomain& q3
       q3.node(i)(2) *= q3.node(i)(0);  // xz
    }
 }
+
 
 }  // namespace gquad
 

@@ -9,11 +9,10 @@
 #error requires c++14 or higher
 #else
 
-#include <omp.h>
-
 #include <cmath>
 
 namespace gquad { namespace math {
+
 
 // fast power function
 // may introduce slighly greater roundoff
@@ -34,13 +33,16 @@ inline RealType IntegerPower(RealType x, long int power) {
    return res;
 }
 
+
 inline long int factorial(long int n) {
    return n < 2L ? 1L : n * factorial(n - 1L);
 }
 
+
 inline long int binomial(long int k, long int n) {
    return factorial(n) / (factorial(k) * factorial(n - k));
 }
+
 
 // evaluate exponential product of doubles in long double precision
 inline long double expNDim(long int dim, const double x[]) {
@@ -52,9 +54,11 @@ inline long double expNDim(long int dim, const double x[]) {
    return expVal;
 }
 
+
 inline long double expIntegral1D(long double c) {
    return 1.L / c * (std::exp(c) - 1.L);
 }
+
 
 }}  // namespace gquad::math
 

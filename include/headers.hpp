@@ -8,6 +8,7 @@
 #include <omp.h>
 #endif
 
+
 #include <array>
 #include <cassert>
 #include <cmath>

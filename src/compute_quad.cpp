@@ -14,10 +14,12 @@
 
 namespace gquad {
 
+
 QuadInterval ComputeInterval(gq_int deg) {
    GEN_QUAD_ASSERT_ALWAYS(deg > 0);
    return quadrature_gauss_legendre(deg);
 }
+
 
 std::pair<QuadCube, StdVector<History>> ComputeCube(gq_int deg, gq_int dim, gq_int search_width) {
    GEN_QUAD_ASSERT_ALWAYS(deg > 0);
@@ -45,6 +47,7 @@ std::pair<QuadCube, StdVector<History>> ComputeCube(gq_int deg, gq_int dim, gq_i
 
    return {qc_cur, hist};
 }
+
 
 std::pair<QuadSimplex, StdVector<History>> ComputeSimplex(gq_int deg, gq_int dim, gq_int search_width) {
    GEN_QUAD_ASSERT_ALWAYS(deg > 0);
@@ -76,6 +79,7 @@ std::pair<QuadSimplex, StdVector<History>> ComputeSimplex(gq_int deg, gq_int dim
    return {qs_cur, hist};
 }
 
+
 std::pair<QuadCubeSimplex, StdVector<History>> ComputeCubeSimplex(gq_int deg, gq_int dim1, gq_int dim2,
                                                                   gq_int search_width) {
    GEN_QUAD_ASSERT_ALWAYS(deg > 0);
@@ -105,6 +109,7 @@ std::pair<QuadCubeSimplex, StdVector<History>> ComputeCubeSimplex(gq_int deg, gq
 
    return {qcs_cur, hist};
 }
+
 
 std::pair<QuadSimplexSimplex, StdVector<History>> ComputeSimplexSimplex(gq_int deg, gq_int dim1, gq_int dim2,
                                                                         gq_int search_width) {
@@ -139,6 +144,7 @@ std::pair<QuadSimplexSimplex, StdVector<History>> ComputeSimplexSimplex(gq_int d
    return {qss_update, hist};
 }
 
+
 std::pair<QuadPyramid3D, StdVector<History>> ComputePyramid3D(gq_int deg, gq_int search_width) {
    GEN_QUAD_ASSERT_ALWAYS(deg > 0);
 
@@ -158,33 +164,17 @@ std::pair<QuadPyramid3D, StdVector<History>> ComputePyramid3D(gq_int deg, gq_int
    return {qp_update, hist};
 }
 
+
 std::pair<QuadOmega2D, StdVector<History>> ComputePentagon(gq_int deg, gq_int search_width) {
    gq_int dim = 2;
-
-   QuadSimplex qs = ComputeSimplex(deg, dim, search_width).first;
-   QuadOmega2D quad_omega = CreateOmegaComposite(CreatePentagon(), qs);
-   auto update = NodeElimination(quad_omega, search_width);
-
-   const auto &q_update = dynamic_cast<QuadOmega2D &>(*update.first);
-   StdVector<History> hist;
-   hist.push_back(update.second);
-
-   return {q_update, hist};
+   return ComputeOmega2D(CreatePentagon(), deg, search_width);
 }
+
 
 std::pair<QuadOmega2D, StdVector<History>> ComputeHexagon(gq_int deg, gq_int search_width) {
-   gq_int dim = 2;
-
-   QuadSimplex qs = ComputeSimplex(deg, dim, search_width).first;
-   QuadOmega2D quad_omega = CreateOmegaComposite(CreateHexagon(), qs);
-   auto update = NodeElimination(quad_omega, search_width);
-
-   const auto &q_update = dynamic_cast<QuadOmega2D &>(*update.first);
-   StdVector<History> hist;
-   hist.push_back(update.second);
-
-   return {q_update, hist};
+   return ComputeOmega2D(CreateHexagon(), deg, search_width);
 }
+
 
 std::pair<QuadOmega2D, StdVector<History>> ComputeOmega2D(Omega2D omega, gq_int deg, gq_int search_width) {
    gq_int dim = 2;
@@ -199,6 +189,7 @@ std::pair<QuadOmega2D, StdVector<History>> ComputeOmega2D(Omega2D omega, gq_int 
 
    return {q_update, hist};
 }
+
 
 }  // namespace gquad
 

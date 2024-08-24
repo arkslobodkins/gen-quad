@@ -15,10 +15,12 @@
 #include <string>
 #include <vector>
 
+
 static inline std::string trace_err(const char* file, const char* func, long int line) {
    return "file: " + std::string(file) + ", function: " + std::string(func)
         + ", line: " + std::to_string(line);
 }
+
 
 #ifdef GEN_QUAD_DEBUG_ON
 #define GEN_QUAD_ASSERT_DEBUG(condition) assert(condition)
@@ -27,12 +29,14 @@ static inline std::string trace_err(const char* file, const char* func, long int
 #define EIGEN_NO_DEBUG
 #endif
 
+
 #define GEN_QUAD_ASSERT_ALWAYS(condition)                           \
    if(!(condition)) {                                               \
       std::cerr << trace_err(__FILE__, __func__, __LINE__) << ": "; \
       std::cerr << "Assertion " << (#condition) << " failed\n";     \
       std::exit(EXIT_FAILURE);                                      \
    }
+
 
 #define GEN_QUAD_ASSERT_ALWAYS_MSG(condition, msg)                  \
    if(!(condition)) {                                               \
@@ -41,6 +45,7 @@ static inline std::string trace_err(const char* file, const char* func, long int
       std::exit(EXIT_FAILURE);                                      \
    }
 
+
 #define GQ_THROW_RUNTIME_ERROR()                                                                 \
    do {                                                                                          \
       RuntimeError exc;                                                                          \
@@ -48,18 +53,21 @@ static inline std::string trace_err(const char* file, const char* func, long int
       throw exc;                                                                                 \
    } while(0)
 
-#define GQ_THROW_RUNTIME_ERROR_MSG(msg)                                                         \
-   do {                                                                                         \
-      RuntimeError exc(msg);                                                                    \
-      exc.stack_trace.push_back("Exception thrown:" + trace_err(__FILE__, __func__, __LINE__)); \
-      throw exc;                                                                                \
+
+#define GQ_THROW_RUNTIME_ERROR_MSG(msg)                                                          \
+   do {                                                                                          \
+      RuntimeError exc(msg);                                                                     \
+      exc.stack_trace.push_back("Exception thrown: " + trace_err(__FILE__, __func__, __LINE__)); \
+      throw exc;                                                                                 \
    } while(0)
+
 
 #define GQ_CATCH_AND_RETHROW()                                                                     \
    catch(ExceptionBase & exc) {                                                                    \
       exc.stack_trace.push_back("Exception rethrown: " + trace_err(__FILE__, __func__, __LINE__)); \
       throw;                                                                                       \
    }
+
 
 // Note if exception is not ExceptionBase trace_err is not used, since it returns
 // std::string, which uses memory allocation
@@ -82,22 +90,25 @@ static inline std::string trace_err(const char* file, const char* func, long int
       std::cerr << "unknown exception caught:" << std::endl;                                     \
    }
 
+
 namespace gquad {
+
 
 class ExceptionBase : public std::exception {
 public:
-   explicit ExceptionBase(const std::string& _msg) : msg(_msg) {
+   explicit ExceptionBase(const std::string& msg) : msg_(msg) {
    }
 
    const char* what() const noexcept override {
-      return msg.c_str();
+      return msg_.c_str();
    }
 
    std::vector<std::string> stack_trace;
 
 private:
-   std::string msg;
+   std::string msg_;
 };
+
 
 class RuntimeError : public ExceptionBase {
 public:
@@ -107,6 +118,7 @@ public:
    explicit RuntimeError(const std::string& msg) : ExceptionBase{"RUNTIME ERROR: " + msg} {
    }
 };
+
 
 }  // namespace gquad
 

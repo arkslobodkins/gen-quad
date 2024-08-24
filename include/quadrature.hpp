@@ -16,12 +16,13 @@
 
 namespace gquad {
 
+
 class QuadArray {
 private:
-   Array1D m_array;
-   gq_int m_deg;
-   gq_int m_dim;
-   gq_int m_num_nodes;
+   Array1D array_;
+   gq_int deg_;
+   gq_int dim_;
+   gq_int num_nodes_;
 
 public:
    explicit QuadArray(gq_int deg, gq_int dim, gq_int num_nodes);
@@ -40,67 +41,67 @@ public:
    inline const auto node_v(gq_int i) const&;
 
    auto weights() & {
-      return m_array(seq(0, m_num_nodes - 1));
+      return array_(seq(0, num_nodes_ - 1));
    }
 
    const auto weights() const& {
-      return m_array(seq(0, m_num_nodes - 1));
+      return array_(seq(0, num_nodes_ - 1));
    }
 
    auto nodes() & {
-      return m_array(seq(m_num_nodes, last));
+      return array_(seq(num_nodes_, last));
    }
 
    const auto nodes() const& {
-      return m_array(seq(m_num_nodes, last));
+      return array_(seq(num_nodes_, last));
    }
 
    double* w_ptr() & {
-      return &m_array[0];
+      return &array_[0];
    }
 
    const double* w_ptr() const& {
-      return &m_array[0];
+      return &array_[0];
    }
 
    double* x_ptr() & {
-      return &m_array[num_nodes()];
+      return &array_[num_nodes()];
    }
 
    const double* x_ptr() const& {
-      return &m_array[num_nodes()];
+      return &array_[num_nodes()];
    }
 
    double& operator[](gq_int i) & {
-      return m_array[i];
+      return array_[i];
    }
 
    const double& operator[](gq_int i) const& {
-      return m_array[i];
+      return array_[i];
    }
 
    Array1D& array() & {
-      return m_array;
+      return array_;
    }
 
    const Array1D& array() const& {
-      return m_array;
+      return array_;
    }
 
    gq_int deg() const {
-      return m_deg;
+      return deg_;
    }
 
    gq_int dim() const {
-      return m_dim;
+      return dim_;
    }
 
    gq_int num_nodes() const {
-      return m_num_nodes;
+      return num_nodes_;
    }
 
    gq_int size() const {
-      return m_array.size();
+      return array_.size();
    }
 
    void resize(gq_int new_num_nodes);
@@ -108,35 +109,42 @@ public:
    void reinit(gq_int new_dim, gq_int new_num_nodes);
 };
 
+
 inline auto QuadArray::node(gq_int i) & {
-   GEN_QUAD_ASSERT_DEBUG(i > -1 && i < m_num_nodes);
-   gq_int cur_index = m_num_nodes + i * m_dim;
-   return m_array(seqN(cur_index, m_dim));
+   GEN_QUAD_ASSERT_DEBUG(i > -1 && i < num_nodes_);
+   gq_int cur_index = num_nodes_ + i * dim_;
+   return array_(seqN(cur_index, dim_));
 }
 
+
 inline const auto QuadArray::node(gq_int i) const& {
-   GEN_QUAD_ASSERT_DEBUG(i > -1 && i < m_num_nodes);
-   gq_int cur_index = m_num_nodes + i * m_dim;
-   return m_array(seqN(cur_index, m_dim));
+   GEN_QUAD_ASSERT_DEBUG(i > -1 && i < num_nodes_);
+   gq_int cur_index = num_nodes_ + i * dim_;
+   return array_(seqN(cur_index, dim_));
 }
+
 
 inline auto QuadArray::node_v(gq_int i) & {
    return node(i).matrix();
 }
 
+
 inline const auto QuadArray::node_v(gq_int i) const& {
    return node(i).matrix();
 }
 
+
 inline double& QuadArray::w(gq_int i) & {
-   GEN_QUAD_ASSERT_DEBUG(i > -1 && i < m_num_nodes);
-   return m_array[i];
+   GEN_QUAD_ASSERT_DEBUG(i > -1 && i < num_nodes_);
+   return array_[i];
 }
 
+
 inline const double& QuadArray::w(gq_int i) const& {
-   GEN_QUAD_ASSERT_DEBUG(i > -1 && i < m_num_nodes);
-   return m_array[i];
+   GEN_QUAD_ASSERT_DEBUG(i > -1 && i < num_nodes_);
+   return array_[i];
 }
+
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Abstract class that is used to handle quadrature domains that are derived from it.
@@ -184,7 +192,9 @@ protected:
    friend std::ostream& operator<<(std::ostream& os, const QuadDomain& q);
 };
 
+
 double quad_exp_approx(const QuadDomain& q);
+
 
 template <typename F>
 double quad_approx(const QuadDomain& q, F f) {
@@ -196,17 +206,21 @@ double quad_approx(const QuadDomain& q, F f) {
    return stable_dot_prod(eval, q.weights());
 }
 
+
 inline gq_int mult_nodes(const QuadDomain& q1, const QuadDomain& q2) {
    return q1.num_nodes() * q2.num_nodes();
 }
+
 
 bool in_domain_elem(const QuadDomain& q, gq_int i);
 bool in_domain(const QuadDomain& q);
 bool in_constraint(const QuadDomain& q);
 bool pos_weights(const QuadDomain& q);
 
+
 std::ostream& operator<<(std::ostream& os, const QuadArray& q);
 std::ostream& operator<<(std::ostream& os, const QuadDomain& q);
+
 
 class QuadPolytope : public QuadDomain {
 public:
@@ -222,6 +236,7 @@ protected:
    QuadPolytope& operator=(QuadPolytope&&) = default;
 };
 
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 class QuadIdealPolytope : public QuadPolytope {
 public:
@@ -236,8 +251,10 @@ protected:
    QuadIdealPolytope& operator=(QuadIdealPolytope&&) = default;
 };
 
+
 double dist_from_boundary_min(const QuadPolytope& q);
 double dist_from_constr_min(const QuadPolytope& q);
+
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 class QuadInterval : public QuadIdealPolytope {
@@ -261,8 +278,10 @@ private:
    Interval interval;
 };
 
+
 QuadInterval quadrature_gauss_legendre(gq_int deg);
 QuadInterval quadrature_gauss_jacobi(gq_int deg, gq_int alpha, gq_int beta);
+
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 class QuadCube : public QuadIdealPolytope {
@@ -287,8 +306,9 @@ public:
    gq_int num_nodes_optimal() const override;
 
 private:
-   Cube cube;
+   Cube cube_;
 };
+
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 class QuadSimplex : public QuadIdealPolytope {
@@ -313,8 +333,9 @@ public:
    gq_int num_nodes_optimal() const override;
 
 private:
-   Simplex simplex;
+   Simplex simplex_;
 };
+
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 class QuadCubeSimplex : public QuadIdealPolytope {
@@ -337,18 +358,19 @@ public:
    std::string quad_dims_file_name() const override;
 
    gq_int dim1() const {
-      return cubesimplex.dim1();
+      return cubesimplex_.dim1();
    }
 
    gq_int dim2() const {
-      return cubesimplex.dim2();
+      return cubesimplex_.dim2();
    }
 
    gq_int num_nodes_optimal() const override;
 
 private:
-   CubeSimplex cubesimplex;
+   CubeSimplex cubesimplex_;
 };
+
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 class QuadSimplexSimplex : public QuadIdealPolytope {
@@ -371,18 +393,19 @@ public:
    std::string quad_dims_file_name() const override;
 
    gq_int dim1() const {
-      return simplexsimplex.dim1();
+      return simplexsimplex_.dim1();
    }
 
    gq_int dim2() const {
-      return simplexsimplex.dim2();
+      return simplexsimplex_.dim2();
    }
 
    gq_int num_nodes_optimal() const override;
 
 private:
-   SimplexSimplex simplexsimplex;
+   SimplexSimplex simplexsimplex_;
 };
+
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 class QuadPyramid3D : public QuadIdealPolytope {
@@ -404,8 +427,9 @@ public:
    gq_int num_nodes_optimal() const override;
 
 private:
-   Pyramid3D pyramid3D;
+   Pyramid3D pyramid3D_;
 };
+
 
 class QuadOmega2D : public QuadPolytope {
 public:
@@ -428,10 +452,12 @@ public:
    gq_int num_nodes_optimal() const override;
 
 private:
-   const Omega2D omega;
+   const Omega2D omega_;
 };
 
+
 QuadOmega2D CreateOmegaComposite(Omega2D omega, const QuadSimplex& qs);
+
 
 }  // namespace gquad
 

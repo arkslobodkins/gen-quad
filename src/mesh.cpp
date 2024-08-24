@@ -13,100 +13,48 @@
 
 namespace gquad {
 
+
+static std::istream& operator>>(std::istream& is, std::pair<Vertex, bool>& vb);
+static std::istream& operator>>(std::istream& is, std::tuple<gq_int, gq_int, bool>& ib);
+static std::istream& operator>>(std::istream& is, std::tuple<gq_int, gq_int, gq_int>& iii);
+
+template <typename T>
+static bool equal_members(const StdVector<T>& v1, const StdVector<T>& v2);
+
+
 Vertex::Vertex(double x1, double x2) : x{x1, x2} {
 }
 
-Edge::Edge(const Vertex& v1, const Vertex& v2) : vert{v1, v2} {
+
+bool Vertex::operator==(const Vertex& v) const {
+   return (x[0] == v.x[0]) && (x[1] == v.x[1]);
 }
 
-Triangle::Triangle(const Vertex& v1, const Vertex& v2, const Vertex& v3)
-    : vert{v1, v2, v3},
-      edg{Edge{v1, v2}, Edge{v2, v3}, Edge{v3, v1}} {
-}
 
-static std::istream& operator>>(std::istream& is, std::pair<Vertex, bool>& vb) {
-   is >> vb.first.x[0];
-   is >> vb.first.x[1];
-   is >> vb.second;
-   return is;
-}
-
-static std::istream& operator>>(std::istream& is, std::tuple<gq_int, gq_int, bool>& ib) {
-   is >> std::get<0>(ib);
-   is >> std::get<1>(ib);
-   is >> std::get<2>(ib);
-   return is;
-}
-
-static std::istream& operator>>(std::istream& is, std::tuple<gq_int, gq_int, gq_int>& iii) {
-   is >> std::get<0>(iii);
-   is >> std::get<1>(iii);
-   is >> std::get<2>(iii);
-   return is;
-}
-
-template <typename T>
-static bool equal_members(const std::vector<T>& v1, const std::vector<T>& v2) {
-   GEN_QUAD_ASSERT_DEBUG(v1.size() == v2.size());
-   for(std::size_t i = 0; i < v1.size(); ++i) {
-      if(!(v1[i] == v2[i])) {
-         return false;
-      }
-   }
-   return true;
-}
-
-std::pair<Point<2>, Point<2>> get_bounding_box_2D(const std::vector<Vertex>& v) {
-   GEN_QUAD_ASSERT_DEBUG(!v.empty());
-   Point<2> ll{v[0].x[0], v[0].x[1]};
-   Point<2> uu = ll;
-
-   for(std::size_t i = 1; i < v.size(); ++i) {
-      if(v[i].x[0] < ll[0]) {
-         ll[0] = v[i].x[0];
-      }
-      if(v[i].x[1] < ll[1]) {
-         ll[1] = v[i].x[1];
-      }
-
-      if(v[i].x[0] > uu[0]) {
-         uu[0] = v[i].x[0];
-      }
-      if(v[i].x[1] > uu[1]) {
-         uu[1] = v[i].x[1];
-      }
-   }
-   return {ll, uu};
-}
-
-std::ostream& operator<<(std::ostream& os, const Vertex& vertex) {
+std::ostream& operator<<(std::ostream& os, const Vertex& v) {
    char s1{}, s2{};
-   if(vertex.x[0] >= 0) {
+   if(v.x[0] >= 0) {
       s1 = ' ';
    }
-   if(vertex.x[1] >= 0) {
+   if(v.x[1] >= 0) {
       s2 = ' ';
    }
 
    std::cout << std::fixed;
    std::cout << std::setprecision(4);
-   std::cout << "(" << s1 << vertex.x[0] << "  " << s2 << vertex.x[1] << ")";
+   std::cout << "(" << s1 << v.x[0] << "  " << s2 << v.x[1] << ")";
    return os;
 }
 
-std::ostream& operator<<(std::ostream& os, const Edge& edge) {
-   std::cout << std::fixed;
-   std::cout << std::setprecision(4);
-   std::cout << "{ " << edge.vert[0] << ",  " << edge.vert[1] << " }";
-   return os;
+
+Edge::Edge(const Vertex& v1, const Vertex& v2) : vert{v1, v2} {
 }
 
-std::ostream& operator<<(std::ostream& os, const Triangle& triangle) {
-   std::cout << std::fixed;
-   std::cout << std::setprecision(4);
-   std::cout << "{ " << triangle.vert[0] << ",  " << triangle.vert[1] << ",  " << triangle.vert[2] << " }";
-   return os;
+
+bool Edge::operator==(const Edge& e) const {
+   return (vert[0] == e.vert[0]) && (vert[1] == e.vert[1]);
 }
+
 
 Edge::EdgeParams Edge::getparams() const {
    EdgeParams ep;
@@ -122,17 +70,25 @@ Edge::EdgeParams Edge::getparams() const {
    return {ep};
 }
 
-bool Vertex::operator==(const Vertex& v) const {
-   return (x[0] == v.x[0]) && (x[1] == v.x[1]);
+
+std::ostream& operator<<(std::ostream& os, const Edge& edge) {
+   std::cout << std::fixed;
+   std::cout << std::setprecision(4);
+   std::cout << "{ " << edge.vert[0] << ",  " << edge.vert[1] << " }";
+   return os;
 }
 
-bool Edge::operator==(const Edge& e) const {
-   return (vert[0] == e.vert[0]) && (vert[1] == e.vert[1]);
+
+Triangle::Triangle(const Vertex& v1, const Vertex& v2, const Vertex& v3)
+    : vert{v1, v2, v3},
+      edg{Edge{v1, v2}, Edge{v2, v3}, Edge{v3, v1}} {
 }
+
 
 bool Triangle::operator==(const Triangle& t) const {
    return (vert[0] == t.vert[0]) && (vert[1] == t.vert[1]) && (vert[2] == t.vert[2]);
 }
+
 
 double Triangle::jacobian() const {
    StaticArray1D<2> a1, a2;
@@ -144,17 +100,26 @@ double Triangle::jacobian() const {
    return std::fabs(a1[0] * a2[1] - a1[1] * a2[0]);
 }
 
-Omega2D::Omega2D(std::vector<Vertex> vert_, std::vector<Edge> edg_, std::vector<Triangle> triang_,
-                 std::vector<bool> vert_on_boundary_, std::vector<bool> edg_on_boundary_, std::string name_)
+
+std::ostream& operator<<(std::ostream& os, const Triangle& triangle) {
+   std::cout << std::fixed;
+   std::cout << std::setprecision(4);
+   std::cout << "{ " << triangle.vert[0] << ",  " << triangle.vert[1] << ",  " << triangle.vert[2] << " }";
+   return os;
+}
+
+
+Omega2D::Omega2D(StdVector<Vertex> vertexes, StdVector<Edge> edges, StdVector<Triangle> triangles,
+                 StdVector<bool> vertexes_on_boundary, StdVector<bool> edges_on_boundary, std::string name)
     : Polytope{},
-      vert{std::move(vert_)},
-      edg{std::move(edg_)},
-      triang{std::move(triang_)},
-      vert_on_boundary{std::move(vert_on_boundary_)},
-      edg_on_boundary{std::move(edg_on_boundary_)},
+      vert{std::move(vertexes)},
+      edg{std::move(edges)},
+      triang{std::move(triangles)},
+      vert_on_boundary{std::move(vertexes_on_boundary)},
+      edg_on_boundary{std::move(edges_on_boundary)},
       lower_left{get_bounding_box_2D(vert).first},
       upper_right{get_bounding_box_2D(vert).second},
-      name{std::move(name_)} {
+      s{std::move(name)} {
    GEN_QUAD_ASSERT_DEBUG(!vert.empty());
    GEN_QUAD_ASSERT_DEBUG(!edg.empty());
    GEN_QUAD_ASSERT_DEBUG(!triang.empty());
@@ -162,6 +127,7 @@ Omega2D::Omega2D(std::vector<Vertex> vert_, std::vector<Edge> edg_, std::vector<
    GEN_QUAD_ASSERT_DEBUG(vert.size() == vert_on_boundary.size());
    GEN_QUAD_ASSERT_DEBUG(edg.size() == edg_on_boundary.size());
 }
+
 
 Omega2D& Omega2D::operator=(const Omega2D& omega) {
    GEN_QUAD_ASSERT_DEBUG(vert.size() == omega.vert.size());
@@ -178,19 +144,11 @@ Omega2D& Omega2D::operator=(const Omega2D& omega) {
    return *this;
 }
 
+
 bool Omega2D::in_domain(const Array1D& x) const {
-   Simplex s(2);
-   Array1D xmap(2);
-
-   for(std::size_t nt = 0; nt < this->triang.size(); ++nt) {
-      map_to_unit(this->triang[nt], x, xmap);
-      if(s.in_domain(xmap)) {
-         return true;
-      }
-   }
-
-   return false;
+   return std::get<0>(in_domain_info(x));
 }
+
 
 std::tuple<bool, gq_int, Point<2>> Omega2D::in_domain_info(const Array1D& x) const {
    Simplex s(2);
@@ -208,6 +166,7 @@ std::tuple<bool, gq_int, Point<2>> Omega2D::in_domain_info(const Array1D& x) con
    z[1] = std::numeric_limits<double>::infinity();
    return {false, -1, z};
 }
+
 
 double Omega2D::dist_from_boundary(const Array1D& x) const {
    double dist = std::numeric_limits<double>::infinity();
@@ -239,6 +198,7 @@ double Omega2D::dist_from_boundary(const Array1D& x) const {
    return -dist;
 }
 
+
 double Omega2D::area() const {
    double a = 0.;
    for(std::size_t n = 0; n < triang.size(); ++n) {
@@ -247,13 +207,14 @@ double Omega2D::area() const {
    return a *= 0.5;
 }
 
+
 Omega2D ReadOmega(const std::string& file_vert, const std::string& file_edg, const std::string& file_triang,
                   const std::string domain_name) {
-   std::vector<Vertex> vert;
-   std::vector<Edge> edg;
-   std::vector<Triangle> triang;
-   std::vector<bool> vert_bound;
-   std::vector<bool> edg_bound;
+   StdVector<Vertex> vert;
+   StdVector<Edge> edg;
+   StdVector<Triangle> triang;
+   StdVector<bool> vert_bound;
+   StdVector<bool> edg_bound;
 
    std::ifstream ifs_vert{file_vert};
    std::ifstream ifs_edg{file_edg};
@@ -304,103 +265,107 @@ Omega2D ReadOmega(const std::string& file_vert, const std::string& file_edg, con
                   domain_name};
 }
 
-Omega2D CreateSquare() {
-   std::vector<bool> vb{1, 1, 1, 1};
-   std::vector<Vertex> v{Vertex{0., 0.}, Vertex{1., 0.}, Vertex{1., 1.}, Vertex{0., 1.}};
 
-   std::vector<bool> eb{1, 1, 1, 1, 0};
-   std::vector<Edge> e{
+Omega2D CreateSquare() {
+   StdVector<bool> vb{1, 1, 1, 1};
+   StdVector<Vertex> v{Vertex{0., 0.}, Vertex{1., 0.}, Vertex{1., 1.}, Vertex{0., 1.}};
+
+   StdVector<bool> eb{1, 1, 1, 1, 0};
+   StdVector<Edge> e{
        Edge{v[0], v[1]}, Edge{v[1], v[2]}, Edge{v[2], v[3]}, Edge{v[3], v[0]}, Edge{v[0], v[2]}};
 
-   std::vector<Triangle> t{Triangle{v[0], v[1], v[2]}, Triangle{v[2], v[3], v[0]}};
+   StdVector<Triangle> t{Triangle{v[0], v[1], v[2]}, Triangle{v[2], v[3], v[0]}};
 
    return Omega2D{std::move(v), std::move(e), std::move(t), std::move(vb), std::move(eb), "square"};
 }
 
+
 Omega2D CreatePentagon() {
-   std::vector<bool> vb{1, 1, 1, 1, 1};
-   std::vector<Vertex> v{Vertex{0., 1.},
-                         Vertex{0.951056516295154, 0.309016994374947},
-                         Vertex{0.587785252292473, -0.809016994374947},
-                         Vertex{-0.587785252292473, -0.809016994374948},
-                         Vertex{-0.951056516295154, 0.309016994374947}};
+   StdVector<bool> vb{1, 1, 1, 1, 1};
+   StdVector<Vertex> v{Vertex{0., 1.},
+                       Vertex{0.951056516295154, 0.309016994374947},
+                       Vertex{0.587785252292473, -0.809016994374947},
+                       Vertex{-0.587785252292473, -0.809016994374948},
+                       Vertex{-0.951056516295154, 0.309016994374947}};
 
-   std::vector<bool> eb{0, 0, 1, 1, 1, 1, 1};
-   std::vector<Edge> e{Edge{v[4], v[1]},
-                       Edge{v[4], v[2]},
-                       Edge{v[0], v[1]},
-                       Edge{v[1], v[2]},
-                       Edge{v[2], v[3]},
-                       Edge{v[3], v[4]},
-                       Edge{v[4], v[0]}};
+   StdVector<bool> eb{0, 0, 1, 1, 1, 1, 1};
+   StdVector<Edge> e{Edge{v[4], v[1]},
+                     Edge{v[4], v[2]},
+                     Edge{v[0], v[1]},
+                     Edge{v[1], v[2]},
+                     Edge{v[2], v[3]},
+                     Edge{v[3], v[4]},
+                     Edge{v[4], v[0]}};
 
-   std::vector<Triangle> t{
-       Triangle{v[4], v[0], v[1]}, Triangle{v[4], v[1], v[2]}, Triangle{v[4], v[2], v[3]}};
+   StdVector<Triangle> t{Triangle{v[4], v[0], v[1]}, Triangle{v[4], v[1], v[2]}, Triangle{v[4], v[2], v[3]}};
 
    return Omega2D{std::move(v), std::move(e), std::move(t), std::move(vb), std::move(eb), "pentagon"};
 }
 
+
 Omega2D CreateHexagon() {
-   std::vector<bool> vb{1, 1, 1, 1, 1, 1};
+   StdVector<bool> vb{1, 1, 1, 1, 1, 1};
    double sqt32 = std::sqrt(3.) / 2.;
-   std::vector<Vertex> v{Vertex{1., 0.},
-                         Vertex{0.5, sqt32},
-                         Vertex{-0.5, sqt32},
-                         Vertex{-1., 0.},
-                         Vertex{-0.5, -sqt32},
-                         Vertex{0.5, -sqt32}};
+   StdVector<Vertex> v{Vertex{1., 0.},
+                       Vertex{0.5, sqt32},
+                       Vertex{-0.5, sqt32},
+                       Vertex{-1., 0.},
+                       Vertex{-0.5, -sqt32},
+                       Vertex{0.5, -sqt32}};
 
-   std::vector<bool> eb{0, 0, 0, 1, 1, 1, 1, 1, 1};
-   std::vector<Edge> e{Edge{v[2], v[4]},
-                       Edge{v[4], v[1]},
-                       Edge{v[1], v[5]},
-                       Edge{v[1], v[0]},
-                       Edge{v[2], v[1]},
-                       Edge{v[3], v[2]},
-                       Edge{v[4], v[3]},
-                       Edge{v[5], v[4]},
-                       Edge{v[0], v[5]}};
+   StdVector<bool> eb{0, 0, 0, 1, 1, 1, 1, 1, 1};
+   StdVector<Edge> e{Edge{v[2], v[4]},
+                     Edge{v[4], v[1]},
+                     Edge{v[1], v[5]},
+                     Edge{v[1], v[0]},
+                     Edge{v[2], v[1]},
+                     Edge{v[3], v[2]},
+                     Edge{v[4], v[3]},
+                     Edge{v[5], v[4]},
+                     Edge{v[0], v[5]}};
 
-   std::vector<Triangle> t{Triangle{v[2], v[3], v[4]},
-                           Triangle{v[2], v[4], v[1]},
-                           Triangle{v[1], v[4], v[5]},
-                           Triangle{v[5], v[0], v[1]}};
+   StdVector<Triangle> t{Triangle{v[2], v[3], v[4]},
+                         Triangle{v[2], v[4], v[1]},
+                         Triangle{v[1], v[4], v[5]},
+                         Triangle{v[5], v[0], v[1]}};
 
    return Omega2D{std::move(v), std::move(e), std::move(t), std::move(vb), std::move(eb), "hexagon"};
 }
 
-Omega2D CreateIrregTrapezoid() {
-   std::vector<bool> vb{1, 1, 1, 1};
-   std::vector<Vertex> v{Vertex{-1., 0.}, Vertex{-0.5, 1.}, Vertex{0.75, 0.75}, Vertex{1., 0.}};
 
-   std::vector<bool> eb{0, 1, 1, 1, 1};
-   std::vector<Edge> e{
+Omega2D CreateIrregTrapezoid() {
+   StdVector<bool> vb{1, 1, 1, 1};
+   StdVector<Vertex> v{Vertex{-1., 0.}, Vertex{-0.5, 1.}, Vertex{0.75, 0.75}, Vertex{1., 0.}};
+
+   StdVector<bool> eb{0, 1, 1, 1, 1};
+   StdVector<Edge> e{
        Edge{v[0], v[2]}, Edge{v[0], v[1]}, Edge{v[1], v[2]}, Edge{v[2], v[3]}, Edge{v[3], v[0]}};
 
-   std::vector<Triangle> t{Triangle{v[0], v[1], v[2]}, Triangle{v[2], v[3], v[0]}};
+   StdVector<Triangle> t{Triangle{v[0], v[1], v[2]}, Triangle{v[2], v[3], v[0]}};
    return Omega2D{std::move(v), std::move(e), std::move(t), std::move(vb), std::move(eb), "irreg_trapezoid"};
 }
 
+
 Omega2D CreateIrreg5() {
-   std::vector<bool> vb{1, 1, 1, 1, 1};
-   std::vector<Vertex> v{Vertex{0., 0.},
-                         Vertex{0., 1.},
-                         Vertex{0.951056516295154, 0.309016994374947},
-                         Vertex{0.587785252292473, -0.809016994374947},
-                         Vertex{-0.587785252292473, -0.809016994374947}};
+   StdVector<bool> vb{1, 1, 1, 1, 1};
+   StdVector<Vertex> v{Vertex{0., 0.},
+                       Vertex{0., 1.},
+                       Vertex{0.951056516295154, 0.309016994374947},
+                       Vertex{0.587785252292473, -0.809016994374947},
+                       Vertex{-0.587785252292473, -0.809016994374947}};
 
-   std::vector<bool> eb{0, 0, 1, 1, 1, 1};
-   std::vector<Edge> e{Edge{v[0], v[2]},
-                       Edge{v[0], v[3]},
-                       Edge{v[0], v[4]},
-                       Edge{v[2], v[1]},
-                       Edge{v[3], v[2]},
-                       Edge{v[4], v[3]}};
+   StdVector<bool> eb{0, 0, 1, 1, 1, 1};
+   StdVector<Edge> e{Edge{v[0], v[2]},
+                     Edge{v[0], v[3]},
+                     Edge{v[0], v[4]},
+                     Edge{v[2], v[1]},
+                     Edge{v[3], v[2]},
+                     Edge{v[4], v[3]}};
 
-   std::vector<Triangle> t{
-       Triangle{v[0], v[1], v[2]}, Triangle{v[0], v[2], v[3]}, Triangle{v[0], v[3], v[4]}};
+   StdVector<Triangle> t{Triangle{v[0], v[1], v[2]}, Triangle{v[0], v[2], v[3]}, Triangle{v[0], v[3], v[4]}};
    return Omega2D{std::move(v), std::move(e), std::move(t), std::move(vb), std::move(eb), "irreg5"};
 }
+
 
 std::ostream& operator<<(std::ostream& os, const Omega2D& omega) {
    std::cout << "vertexes:" << "\n\n";
@@ -426,6 +391,67 @@ std::ostream& operator<<(std::ostream& os, const Omega2D& omega) {
 
    return os;
 }
+
+
+std::pair<Point<2>, Point<2>> get_bounding_box_2D(const StdVector<Vertex>& v) {
+   GEN_QUAD_ASSERT_DEBUG(!v.empty());
+   Point<2> ll{v[0].x[0], v[0].x[1]};
+   Point<2> uu = ll;
+
+   for(std::size_t i = 1; i < v.size(); ++i) {
+      if(v[i].x[0] < ll[0]) {
+         ll[0] = v[i].x[0];
+      }
+      if(v[i].x[1] < ll[1]) {
+         ll[1] = v[i].x[1];
+      }
+
+      if(v[i].x[0] > uu[0]) {
+         uu[0] = v[i].x[0];
+      }
+      if(v[i].x[1] > uu[1]) {
+         uu[1] = v[i].x[1];
+      }
+   }
+   return {ll, uu};
+}
+
+
+static std::istream& operator>>(std::istream& is, std::pair<Vertex, bool>& vb) {
+   is >> vb.first.x[0];
+   is >> vb.first.x[1];
+   is >> vb.second;
+   return is;
+}
+
+
+static std::istream& operator>>(std::istream& is, std::tuple<gq_int, gq_int, bool>& ib) {
+   is >> std::get<0>(ib);
+   is >> std::get<1>(ib);
+   is >> std::get<2>(ib);
+   return is;
+}
+
+
+static std::istream& operator>>(std::istream& is, std::tuple<gq_int, gq_int, gq_int>& iii) {
+   is >> std::get<0>(iii);
+   is >> std::get<1>(iii);
+   is >> std::get<2>(iii);
+   return is;
+}
+
+
+template <typename T>
+static bool equal_members(const StdVector<T>& v1, const StdVector<T>& v2) {
+   GEN_QUAD_ASSERT_DEBUG(v1.size() == v2.size());
+   for(std::size_t i = 0; i < v1.size(); ++i) {
+      if(!(v1[i] == v2[i])) {
+         return false;
+      }
+   }
+   return true;
+}
+
 
 }  // namespace gquad
 

@@ -13,14 +13,17 @@
 
 namespace gquad {
 
+
 // Node Elimination driver routine. It expects input to be initial(preferably exact)
 // quadrature rule of the desired degree and dimension.
 std::pair<std::unique_ptr<QuadDomain>, History> NodeElimination(const QuadDomain& quad_init,
                                                                 gq_int search_width);
 
+
 struct PredictorTimer {
    static double predictor_time_total;
 };
+
 
 }  // namespace gquad
 

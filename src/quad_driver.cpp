@@ -3,72 +3,95 @@
 // SMU Mathematics
 // Copyright 2022
 
-#include <memory>
 #if __cplusplus < 201402L
 #error requires c++14 or higher
 #else
+
+#include "../include/quad_driver.hpp"
 
 #include "../include/compute_quad.hpp"
 #include "../include/function.hpp"
 #include "../include/node_elimination.hpp"
 #include "../include/nonlinear_solve.hpp"
-#include "../include/quad_driver.hpp"
 #include "../include/util.hpp"
 
-#define GEN_QUAD_CHECK_AND_TRACE_DEG_DIM(degree, dimension)                                  \
-   for(auto d : degree) {                                                                    \
-      if(!is_reasonable_degree_and_dimension(d, dimension)) {                                \
-         std::cerr << trace_err(__FILE__, __func__, __LINE__)                                \
-                   << ": At least one of the specified combinations of degree and dimension" \
-                      " is outside of currently acceptable range.\n\n";                      \
-         return 1;                                                                           \
-      }                                                                                      \
+
+#define GEN_QUAD_CHECK_AND_TRACE_DEG_DIM(degree, dimension)             \
+   for(auto d : degree) {                                               \
+      if(!is_reasonable_degree_and_dimension(d, dimension)) {           \
+         std::cerr << trace_err(__FILE__, __func__, __LINE__)           \
+                   << ": Specified degree and/or dimension"             \
+                      " is outside of currently acceptable range.\n\n"; \
+         return 1;                                                      \
+      }                                                                 \
    }
 
-#define GEN_QUAD_CHECK_AND_TRACE_DEG_DIM_PTR(degree, dimension)          \
-   if(!is_reasonable_degree_and_dimension(degree, dimension)) {          \
-      std::cerr << trace_err(__FILE__, __func__, __LINE__)               \
-                << ": Specified combination of degree and dimension is " \
-                   "outside of currently acceptable range.\n\n";         \
-      return nullptr;                                                    \
+
+#define GEN_QUAD_CHECK_AND_TRACE_DEG_DIM_PTR(degree, dimension)  \
+   if(!is_reasonable_degree_and_dimension(degree, dimension)) {  \
+      std::cerr << trace_err(__FILE__, __func__, __LINE__)       \
+                << ": Specified degree and/or dimension is "     \
+                   "outside of currently acceptable range.\n\n"; \
+      return nullptr;                                            \
    }
+
 
 namespace gquad {
 
+
 static std::unique_ptr<QuadInterval> QuadDriverInterval(gq_int deg);
+
+
 static std::unique_ptr<std::pair<QuadPyramid3D, StdVector<History>>> QuadDriverPyramid3D(
     gq_int deg, SearchWidth search_width);
+
+
 static std::unique_ptr<std::pair<QuadCube, StdVector<History>>> QuadDriverCube(gq_int deg, gq_int dim,
                                                                                SearchWidth search_width);
+
 static std::unique_ptr<std::pair<QuadSimplex, StdVector<History>>> QuadDriverSimplex(
     gq_int deg, gq_int dim, SearchWidth search_width);
+
+
 static std::unique_ptr<std::pair<QuadCubeSimplex, StdVector<History>>> QuadDriverCubeSimplex(
     gq_int deg, gq_int dim1, gq_int dim2, SearchWidth search_width);
+
+
 static std::unique_ptr<std::pair<QuadSimplexSimplex, StdVector<History>>> QuadDriverSimplexSimplex(
     gq_int deg, gq_int dim1, gq_int dim2, SearchWidth search_width);
 
+
 static std::unique_ptr<std::pair<QuadOmega2D, StdVector<History>>> QuadDriverPentagon(
     gq_int deg, SearchWidth search_width);
+
+
 static std::unique_ptr<std::pair<QuadOmega2D, StdVector<History>>> QuadDriverHexagon(
     gq_int deg, SearchWidth search_width);
+
+
 static std::unique_ptr<std::pair<QuadOmega2D, StdVector<History>>> QuadDriverOmega2D(
     gq_int deg, Omega2D omega, SearchWidth search_width);
 
+
 static void OutputAll(double ttotal, QuadDomain& q, StdVector<History>& h);
+
 
 template <typename F, typename... DimArgs>
 static gq_int ComputeAndOutputAll(F func_ptr, const StdVector<gq_int>& deg, DimArgs... dargs);
+
 
 static void HistToFile(const QuadDomain& q, const StdVector<History>& hist);
 static void TimesToFile(double total_time, const QuadDomain& q);
 static void TimesToScreen(double total_time);
 static void EfficiencyToFile(const std::pair<StdVector<double>, StdVector<std::string>>&, const std::string&);
 
+
 static void PrintDebugAndOmpInfo();
 static gq_int hours(double x);
 static gq_int minutes(double x);
 static double seconds(double x);
 static void reset_timers();
+
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 gq_int ComputeAndOutputIntervals(const StdVector<gq_int>& deg) {
@@ -89,6 +112,7 @@ gq_int ComputeAndOutputIntervals(const StdVector<gq_int>& deg) {
    return 1;
 }
 
+
 gq_int ComputeAndOutputCubes(const StdVector<gq_int>& deg, gq_int dim, SearchWidth search_width) {
    GEN_QUAD_CHECK_AND_TRACE_DEG_DIM(deg, dim);
    if(ComputeAndOutputAll(&QuadDriverCube, deg, dim, search_width) != 0) {
@@ -100,6 +124,7 @@ gq_int ComputeAndOutputCubes(const StdVector<gq_int>& deg, gq_int dim, SearchWid
    std::cout << std::endl << std::endl;
    return 0;
 }
+
 
 gq_int ComputeAndOutputSimplexes(const StdVector<gq_int>& deg, gq_int dim, SearchWidth search_width) {
    GEN_QUAD_CHECK_AND_TRACE_DEG_DIM(deg, dim);
@@ -113,6 +138,7 @@ gq_int ComputeAndOutputSimplexes(const StdVector<gq_int>& deg, gq_int dim, Searc
    return 0;
 }
 
+
 gq_int ComputeAndOutputPyramids3D(const StdVector<gq_int>& deg, SearchWidth search_width) {
    GEN_QUAD_CHECK_AND_TRACE_DEG_DIM(deg, 3);
    if(ComputeAndOutputAll(&QuadDriverPyramid3D, deg, search_width) != 0) {
@@ -124,6 +150,7 @@ gq_int ComputeAndOutputPyramids3D(const StdVector<gq_int>& deg, SearchWidth sear
    std::cout << std::endl << std::endl;
    return 0;
 }
+
 
 gq_int ComputeAndOutputCubeSimplexes(const StdVector<gq_int>& deg, gq_int dim1, gq_int dim2,
                                      SearchWidth search_width) {
@@ -138,6 +165,7 @@ gq_int ComputeAndOutputCubeSimplexes(const StdVector<gq_int>& deg, gq_int dim1, 
    return 0;
 }
 
+
 gq_int ComputeAndOutputSimplexSimplexes(const StdVector<gq_int>& deg, gq_int dim1, gq_int dim2,
                                         SearchWidth search_width) {
    GEN_QUAD_CHECK_AND_TRACE_DEG_DIM(deg, dim1 + dim2);
@@ -151,6 +179,7 @@ gq_int ComputeAndOutputSimplexSimplexes(const StdVector<gq_int>& deg, gq_int dim
    return 0;
 }
 
+
 gq_int ComputeAndOutputPentagons(const StdVector<gq_int>& deg, SearchWidth search_width) {
    GEN_QUAD_CHECK_AND_TRACE_DEG_DIM(deg, 2);
    if(ComputeAndOutputAll(&QuadDriverPentagon, deg, search_width) != 0) {
@@ -162,6 +191,7 @@ gq_int ComputeAndOutputPentagons(const StdVector<gq_int>& deg, SearchWidth searc
    std::cout << std::endl << std::endl;
    return 0;
 }
+
 
 gq_int ComputeAndOutputHexagons(const StdVector<gq_int>& deg, SearchWidth search_width) {
    GEN_QUAD_CHECK_AND_TRACE_DEG_DIM(deg, 2);
@@ -175,6 +205,7 @@ gq_int ComputeAndOutputHexagons(const StdVector<gq_int>& deg, SearchWidth search
    return 0;
 }
 
+
 gq_int ComputeAndOutputOmega2D(Omega2D omega, const StdVector<gq_int>& deg, SearchWidth search_width) {
    GEN_QUAD_CHECK_AND_TRACE_DEG_DIM(deg, 2);
    if(ComputeAndOutputAll(&QuadDriverOmega2D, deg, std::move(omega), search_width) != 0) {
@@ -187,11 +218,14 @@ gq_int ComputeAndOutputOmega2D(Omega2D omega, const StdVector<gq_int>& deg, Sear
    return 0;
 }
 
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
 std::unique_ptr<QuadInterval> Quadrature_Interval(gq_int deg) {
    auto q = QuadDriverInterval(deg);
    std::cout << std::endl << std::endl;
    return q;
 }
+
 
 std::unique_ptr<QuadPyramid3D> Quadrature_Pyramid3D(gq_int deg, SearchWidth search_width) {
    try {
@@ -208,6 +242,7 @@ std::unique_ptr<QuadPyramid3D> Quadrature_Pyramid3D(gq_int deg, SearchWidth sear
    return nullptr;
 }
 
+
 std::unique_ptr<QuadCube> Quadrature_Cube(gq_int deg, gq_int dim, SearchWidth search_width) {
    try {
       auto qh = QuadDriverCube(deg, dim, search_width);
@@ -223,6 +258,7 @@ std::unique_ptr<QuadCube> Quadrature_Cube(gq_int deg, gq_int dim, SearchWidth se
    return nullptr;
 }
 
+
 std::unique_ptr<QuadSimplex> Quadrature_Simplex(gq_int deg, gq_int dim, SearchWidth search_width) {
    try {
       auto qh = QuadDriverSimplex(deg, dim, search_width);
@@ -237,6 +273,7 @@ std::unique_ptr<QuadSimplex> Quadrature_Simplex(gq_int deg, gq_int dim, SearchWi
    GQ_CATCH_LAST_LEVEL();
    return nullptr;
 }
+
 
 std::unique_ptr<QuadCubeSimplex> Quadrature_CubeSimplex(gq_int deg, gq_int dim1, gq_int dim2,
                                                         SearchWidth search_width) {
@@ -254,6 +291,7 @@ std::unique_ptr<QuadCubeSimplex> Quadrature_CubeSimplex(gq_int deg, gq_int dim1,
    return nullptr;
 }
 
+
 std::unique_ptr<QuadSimplexSimplex> Quadrature_SimplexSimplex(gq_int deg, gq_int dim1, gq_int dim2,
                                                               SearchWidth search_width) {
    try {
@@ -270,6 +308,7 @@ std::unique_ptr<QuadSimplexSimplex> Quadrature_SimplexSimplex(gq_int deg, gq_int
    return nullptr;
 }
 
+
 std::unique_ptr<QuadOmega2D> Quadrature_Pentagon(gq_int deg, SearchWidth search_width) {
    try {
       auto qh = QuadDriverPentagon(deg, search_width);
@@ -284,6 +323,7 @@ std::unique_ptr<QuadOmega2D> Quadrature_Pentagon(gq_int deg, SearchWidth search_
    GQ_CATCH_LAST_LEVEL();
    return nullptr;
 }
+
 
 std::unique_ptr<QuadOmega2D> Quadrature_Hexagon(gq_int deg, SearchWidth search_width) {
    try {
@@ -300,6 +340,7 @@ std::unique_ptr<QuadOmega2D> Quadrature_Hexagon(gq_int deg, SearchWidth search_w
    return nullptr;
 }
 
+
 std::unique_ptr<QuadOmega2D> Quadrature_Omega2D(Omega2D omega, gq_int deg, SearchWidth search_width) {
    try {
       auto qh = QuadDriverOmega2D(deg, std::move(omega), search_width);
@@ -315,6 +356,7 @@ std::unique_ptr<QuadOmega2D> Quadrature_Omega2D(Omega2D omega, gq_int deg, Searc
    return nullptr;
 }
 
+
 //////////////////////////////////////////////////////////////////////////////////////////////////
 static std::unique_ptr<QuadInterval> QuadDriverInterval(gq_int deg) {
    GEN_QUAD_ASSERT_ALWAYS(deg > 0);
@@ -328,6 +370,7 @@ static std::unique_ptr<QuadInterval> QuadDriverInterval(gq_int deg) {
    GQ_CATCH_LAST_LEVEL()
    return nullptr;
 }
+
 
 static std::unique_ptr<std::pair<QuadCube, StdVector<History>>> QuadDriverCube(gq_int deg, gq_int dim,
                                                                                SearchWidth search_width) {
@@ -348,6 +391,7 @@ static std::unique_ptr<std::pair<QuadCube, StdVector<History>>> QuadDriverCube(g
    GQ_CATCH_LAST_LEVEL()
    return nullptr;
 }
+
 
 static std::unique_ptr<std::pair<QuadSimplex, StdVector<History>>> QuadDriverSimplex(
     gq_int deg, gq_int dim, SearchWidth search_width) {
@@ -370,6 +414,7 @@ static std::unique_ptr<std::pair<QuadSimplex, StdVector<History>>> QuadDriverSim
    return nullptr;
 }
 
+
 static std::unique_ptr<std::pair<QuadPyramid3D, StdVector<History>>> QuadDriverPyramid3D(
     gq_int deg, SearchWidth search_width) {
    GEN_QUAD_ASSERT_ALWAYS(deg > 0);
@@ -389,6 +434,7 @@ static std::unique_ptr<std::pair<QuadPyramid3D, StdVector<History>>> QuadDriverP
    GQ_CATCH_LAST_LEVEL()
    return nullptr;
 }
+
 
 static std::unique_ptr<std::pair<QuadCubeSimplex, StdVector<History>>> QuadDriverCubeSimplex(
     gq_int deg, gq_int dim1, gq_int dim2, SearchWidth search_width) {
@@ -412,6 +458,7 @@ static std::unique_ptr<std::pair<QuadCubeSimplex, StdVector<History>>> QuadDrive
    return nullptr;
 }
 
+
 static std::unique_ptr<std::pair<QuadSimplexSimplex, StdVector<History>>> QuadDriverSimplexSimplex(
     gq_int deg, gq_int dim1, gq_int dim2, SearchWidth search_width) {
    GEN_QUAD_ASSERT_ALWAYS(deg > 0);
@@ -434,6 +481,7 @@ static std::unique_ptr<std::pair<QuadSimplexSimplex, StdVector<History>>> QuadDr
    return nullptr;
 }
 
+
 static std::unique_ptr<std::pair<QuadOmega2D, StdVector<History>>> QuadDriverPentagon(
     gq_int deg, SearchWidth search_width) {
    GEN_QUAD_ASSERT_ALWAYS(deg > 0);
@@ -452,6 +500,7 @@ static std::unique_ptr<std::pair<QuadOmega2D, StdVector<History>>> QuadDriverPen
    GQ_CATCH_LAST_LEVEL()
    return nullptr;
 }
+
 
 static std::unique_ptr<std::pair<QuadOmega2D, StdVector<History>>> QuadDriverHexagon(
     gq_int deg, SearchWidth search_width) {
@@ -472,6 +521,7 @@ static std::unique_ptr<std::pair<QuadOmega2D, StdVector<History>>> QuadDriverHex
    return nullptr;
 }
 
+
 static std::unique_ptr<std::pair<QuadOmega2D, StdVector<History>>> QuadDriverOmega2D(
     gq_int deg, Omega2D omega, SearchWidth search_width) {
    GEN_QUAD_ASSERT_ALWAYS(deg > 0);
@@ -491,6 +541,7 @@ static std::unique_ptr<std::pair<QuadOmega2D, StdVector<History>>> QuadDriverOme
    GQ_CATCH_LAST_LEVEL()
    return nullptr;
 }
+
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
 void PrintDebugAndOmpInfo() {
@@ -517,6 +568,7 @@ void PrintDebugAndOmpInfo() {
    }
 }
 
+
 //////////////////////////////////////////////////////////////////////////////////////////////////
 void QuadToFile(const QuadDomain& q) {
    std::string quad_path = std::string("results/quad_rules/") + q.quad_file_name();
@@ -526,6 +578,7 @@ void QuadToFile(const QuadDomain& q) {
    }
    ofs << q << std::endl;
 }
+
 
 static void HistToFile(const QuadDomain& q, const StdVector<History>& hist) {
    std::string file_path = std::string("results/history/hist_") + q.quad_file_name();
@@ -579,6 +632,7 @@ static void HistToFile(const QuadDomain& q, const StdVector<History>& hist) {
    std::fclose(file);
 }
 
+
 static void TimesToScreen(double total_time) {
    double lsq_time_total = LsqSolveTimer::lsq_time_total;
    double jacobian_time_total = EvalJacobian::jacobian_time_total;
@@ -614,6 +668,7 @@ static void TimesToScreen(double total_time) {
                minutes(total_time),
                seconds(total_time));
 }
+
 
 static void TimesToFile(double total_time, const QuadDomain& q) {
    std::string file_path = std::string("results/times/times_") + q.quad_file_name();
@@ -666,6 +721,7 @@ static void TimesToFile(double total_time, const QuadDomain& q) {
    std::fclose(file);
 }
 
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 static void OutputAll(double ttotal, QuadDomain& q, StdVector<History>& h) {
    QuadToFile(q);
@@ -674,6 +730,7 @@ static void OutputAll(double ttotal, QuadDomain& q, StdVector<History>& h) {
    TimesToScreen(ttotal);
    util::print(q.relative_exponential_residual(), "relative exponential residual");
 }
+
 
 template <typename F, typename... DimArgs>
 static gq_int ComputeAndOutputAll(F func_ptr, const StdVector<gq_int>& deg, DimArgs... dargs) {
@@ -705,6 +762,7 @@ static gq_int ComputeAndOutputAll(F func_ptr, const StdVector<gq_int>& deg, DimA
    return 1;
 }
 
+
 static void EfficiencyToFile(const std::pair<StdVector<double>, StdVector<std::string>>& data,
                              const std::string& dims_file_name) {
    std::string eff_path = std::string("results/efficiencies/" + dims_file_name);
@@ -726,18 +784,22 @@ static void EfficiencyToFile(const std::pair<StdVector<double>, StdVector<std::s
    ofs << "average efficiency index = " << ave_eff << std::endl << std::endl;
 }
 
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 static gq_int hours(double x) {
    return gq_int(x / 3600);
 }
 
+
 static gq_int minutes(double x) {
    return gq_int(x / 60) % 60;
 }
 
+
 static double seconds(double x) {
    return x - gq_int(x / 60) * 60;
 }
+
 
 static void reset_timers() {
    EvalFunction::function_time_total = 0;
@@ -745,6 +807,7 @@ static void reset_timers() {
    PredictorTimer::predictor_time_total = 0;
    LsqSolveTimer::lsq_time_total = 0;
 }
+
 
 }  // namespace gquad
 

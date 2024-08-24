@@ -6,13 +6,13 @@ compiler = gcc
 
 ifeq ($(compiler), gcc)
 CXX = g++
-CXXFLAGS =-fopenmp
+CXXFLAGS =-fopenmp -march=native
 else ifeq ($(compiler), clang)
 CXX = clang++
-CXXFLAGS =-fopenmp
+CXXFLAGS =-fopenmp=libomp -march=native
 else ifeq ($(compiler), icpx)
 CXX = icpx
-CXXFLAGS =-qopenmp -fp-model=precise
+CXXFLAGS =-qopenmp -xHost -fp-model=precise
 endif
 
 
@@ -24,7 +24,10 @@ VPATH = ./src/:./alglib/src/:./include/
 ODIR = ./src/objdir/
 
 ifeq ($(debug), 1)
-CXXFLAGS += -g -DGEN_QUAD_DEBUG_ON -D_GLIBCXX_DEBUG
+CXXFLAGS += -g -DGEN_QUAD_DEBUG_ON
+ifeq ($(compiler), gcc)
+CXXFLAGS += -D_GLIBCXX_DEBUG
+endif
 endif
 
 ifeq ($(debug), 2)

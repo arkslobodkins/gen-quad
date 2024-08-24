@@ -11,15 +11,17 @@
 
 namespace gquad {
 
-StdVector<gq_int> sequence(gq_int first, gq_int last, gq_int stride) {
-   GEN_QUAD_ASSERT_ALWAYS(last >= first);
+
+StdVector<gq_int> sequence(gq_int first, gq_int lst, gq_int stride) {
+   GEN_QUAD_ASSERT_ALWAYS(lst >= first);
    GEN_QUAD_ASSERT_ALWAYS(stride >= 1);
    StdVector<gq_int> seq{};
-   for(gq_int i = first; i <= last; i += stride) {
+   for(gq_int i = first; i <= lst; i += stride) {
       seq.push_back(i);
    }
    return seq;
 }
+
 
 bool is_reasonable_degree_and_dimension(gq_int deg, gq_int dim) {
    GEN_QUAD_ASSERT_ALWAYS(deg > 0);
@@ -47,6 +49,7 @@ bool is_reasonable_degree_and_dimension(gq_int deg, gq_int dim) {
    }
 }
 
+
 #ifdef _OPENMP
 bool omp_condition(gq_int deg, gq_int dim) {
    if(dim == 2 && deg >= 17) {
@@ -66,6 +69,7 @@ bool omp_condition(gq_int deg, gq_int dim) {
    }
 }
 #endif
+
 
 }  // namespace gquad
 

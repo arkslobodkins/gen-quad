@@ -10,25 +10,29 @@
 #include "../include/node_elimination.hpp"
 
 #include "../include/function.hpp"
-#include "../include/math_func.hpp"
 #include "../include/nonlinear_solve.hpp"
 #include "../include/util.hpp"
 
 namespace gquad {
 
+
 double PredictorTimer::predictor_time_total = 0.;
+
 
 struct Distance {
    gq_int index;
    double val;
 };
 
+
 static void InitialSearch(QuadDomain& q, Basis& basis);
+
 
 static std::pair<SolFlag, ElimData> WideLsqSearch(QuadPolytope& q, Basis& basis, gq_int search_width);
 static std::pair<Matrix2D, StdVector<Distance>> Predictor(const QuadDomain& q, Basis& basis);
 static Matrix2D MK_Update(const QuadDomain& q, Matrix2D J);
 static void ExtractFromPredictor(gq_int array_index, const Matrix2D& Z, QuadDomain& q);
+
 
 static History InitHist(const QuadDomain& q, Basis& basis);
 static void IncrementHist(const ElimData& elim_data, History& h);
@@ -36,8 +40,10 @@ static void FinalizeHist(const QuadDomain& q, Basis& basis, History& h);
 static void PrintElimInfo(const QuadDomain& q);
 static void PrintNotFoundInfo();
 
+
 static std::ostream& operator<<(std::ostream& os, const Distance& d);
 static std::ostream& operator<<(std::ostream& os, const StdVector<Distance>& d);
+
 
 std::pair<std::unique_ptr<QuadDomain>, History> NodeElimination(const QuadDomain& quad_init,
                                                                 gq_int search_width) {
@@ -90,11 +96,11 @@ std::pair<std::unique_ptr<QuadDomain>, History> NodeElimination(const QuadDomain
    return {std::move(quad_new), h};
 }
 
+
 // test accuracy of the initial quadrature
 // if residual is too large, attempt to find quadrature using Newton's method.
-// if Newton's method finds a solution, proceed to Node elimination, otherwise return.
 static void InitialSearch(QuadDomain& q, Basis& basis) {
-   const double tol = quad_tol;  // 10^(-14);
+   const double tol = constants::quad_tol;  // 10^(-14);
    const double res = function_residual(q, basis, monomial);
    util::print(res, "initial monomial basis residual in node_elimination");
    if(std::fabs(res) > tol) {
@@ -104,6 +110,7 @@ static void InitialSearch(QuadDomain& q, Basis& basis) {
       }
    }
 }
+
 
 static std::pair<SolFlag, ElimData> WideLsqSearch(QuadPolytope& q, Basis& basis, gq_int search_width) {
    const gq_int n_cur{q.num_nodes()};
@@ -125,20 +132,19 @@ static std::pair<SolFlag, ElimData> WideLsqSearch(QuadPolytope& q, Basis& basis,
    gq_int good_count = 0;
    gq_int fail_count = 0;
    for(gq_int i = 0; i < n_cur; ++i) {
-      if(dst[i].val > quad_huge) {
+      if(dst[i].val > constants::quad_huge) {
          continue;  // catches large dz and not in domain
       }
       ExtractFromPredictor(dst[i].index, Z, *q_temp);
       auto lsq_cur = LeastSquaresNewton(*q_temp, basis);
 
       if(lsq_cur.sol_flag == SolFlag::found) {
-         GEN_QUAD_ASSERT_DEBUG(
-             in_constraint(*q_temp));  // ensure all found solutions are inside of the domain
+         GEN_QUAD_ASSERT_DEBUG(in_constraint(*q_temp));
 
-         // discard really small weights to avoid complications
-         // neither good_count nor fail_count are incremented
+         // discard really small weights to avoid complications; neither good_count nor fail_count are
+         // incremented
          if(q_temp->weights().minCoeff() < 1.e-12) {
-            std::cerr << "Warning: Found solution containing one or more small weights" << std::endl;
+            util::print("Warning: Found solution containing one or more small weights");
             continue;
          }
 
@@ -178,6 +184,7 @@ static std::pair<SolFlag, ElimData> WideLsqSearch(QuadPolytope& q, Basis& basis,
 
    return {SolFlag::found, data};
 }
+
 
 // Calculates all predictors obtained by setting each weight to zero.
 // Returns a matrix that contains in its rows the z-vectors of predicted values
@@ -224,10 +231,10 @@ static std::pair<Matrix2D, StdVector<Distance>> Predictor(const QuadDomain& q, B
    return {Z, dst};
 }
 
+
 static Matrix2D MK_Update(const QuadDomain& q, Matrix2D J) {
    GEN_QUAD_ASSERT_ALWAYS(J.cols() > J.rows());
 
-   gq_int num_nodes{q.num_nodes()};
    gq_int M{J.rows()};
    gq_int N{J.cols()};
 
@@ -238,6 +245,7 @@ static Matrix2D MK_Update(const QuadDomain& q, Matrix2D J) {
 
    return Q2;
 }
+
 
 static void ExtractFromPredictor(const gq_int array_index, const Matrix2D& Z, QuadDomain& q) {
    GEN_QUAD_ASSERT_DEBUG(array_index > -1 && array_index < Z.cols());
@@ -268,6 +276,7 @@ static void ExtractFromPredictor(const gq_int array_index, const Matrix2D& Z, Qu
    }
 }
 
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 static History InitHist(const QuadDomain& q, Basis& basis) {
    History h{};
@@ -282,16 +291,19 @@ static History InitHist(const QuadDomain& q, Basis& basis) {
    return h;
 }
 
+
 static void IncrementHist(const ElimData& elim_data, History& h) {
    h.hlist.push_back(elim_data);
    ++h.total_elims;
 }
+
 
 static void FinalizeHist(const QuadDomain& q, Basis& basis, History& h) {
    h.nodes_final = q.num_nodes();
    h.efficiency = double(h.nodes_optimal) / h.nodes_final;
    h.res = function_residual(q, basis, monomial);
 }
+
 
 static void PrintElimInfo(const QuadDomain& q) {
    gq_int dim{q.dim()};
@@ -305,15 +317,18 @@ static void PrintElimInfo(const QuadDomain& q) {
                efficiency);
 }
 
+
 static void PrintNotFoundInfo() {
    util::print("Last iteration did not converge");
 }
+
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 static std::ostream& operator<<(std::ostream& os, const Distance& d) {
    std::cout << "index: " << d.index << " value: " << d.val << std::endl;
    return os;
 }
+
 
 static std::ostream& operator<<(std::ostream& os, const StdVector<Distance>& dist) {
    os << std::scientific << std::showpoint << std::setprecision(3);
@@ -326,6 +341,7 @@ static std::ostream& operator<<(std::ostream& os, const StdVector<Distance>& dis
    }
    return os;
 }
+
 
 }  // namespace gquad
 

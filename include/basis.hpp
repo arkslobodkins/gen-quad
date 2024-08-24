@@ -15,6 +15,7 @@
 
 namespace gquad {
 
+
 // BasisTable class is a matrix of type int. Its purpose is to store
 // indexes that are used throughout the entire duration of Basis objects,
 // thus avoiding recomputing them when Basis routines are called.
@@ -22,55 +23,57 @@ class BasisTable {
 public:
    explicit BasisTable(gq_int deg,
                        gq_int dim);  // number of rows will be set to the number of basis functions
-   explicit BasisTable(gq_int deg, gq_int dim, gq_int num_elem);  // number of rows will be set to num_elem
-   BasisTable(const BasisTable& t) = default;
-   BasisTable& operator=(const BasisTable& t) = delete;
+
+   explicit BasisTable(gq_int deg, gq_int dim, gq_int num_bfuncs);  // number of rows will be set to num_bfuncs
+
+   BasisTable(const BasisTable&) = default;
+   BasisTable& operator=(const BasisTable) = delete;
 
    int& operator()(gq_int d, gq_int j) {
-      return data(d, j);
+      return data_(d, j);
    }
 
    const int& operator()(gq_int d, gq_int j) const {
-      return data(d, j);
+      return data_(d, j);
    }
 
    gq_int deg() const {
-      return m_deg;
+      return deg_;
    }
 
    gq_int dim() const {
-      return m_dim;
+      return dim_;
    }
 
-   gq_int num_elem() const {
-      return m_num_elem;
-   }
-
-   auto& array() {
-      return data;
+   gq_int num_bfuncs() const {
+      return num_bfuncs_;
    }
 
    const auto& array() const {
-      return data;
+      return data_;
    }
 
 private:
-   const gq_int m_deg;
-   const gq_int m_dim;
-   const gq_int m_num_elem;
+   const gq_int deg_;
+   const gq_int dim_;
+   const gq_int num_bfuncs_;
 
-   ArrayInt2D data;  // dim x num_elem table
+   ArrayInt2D data_;  // dim x num_bfuncs table
 };
+
 
 gq_int StandardBasisSize(gq_int deg, gq_int dim);
 void StandardBasisIndices(BasisTable& table);
 
-std::ostream& operator<<(std::ostream& os, const BasisTable& t);
+
+std::ostream& operator<<(std::ostream& os, const BasisTable& table);
+
 
 namespace internal {
 template <typename BasisType>
 void fourth_order_difference(BasisType& basis, const Array1D& x);
 }
+
 
 // Abstract base class for all bases.
 // Functions, their derivatives, and their integrals are
@@ -92,31 +95,32 @@ public:
    virtual const Array2D& monomial_der(const Array1D& x) = 0;
    virtual const Array1D& monomial_integrals() = 0;
 
-   gq_int size() const {
-      return m_num_funcs;
-   }
-
    gq_int deg() const {
-      return m_deg;
+      return deg_;
    }
 
    gq_int dim() const {
-      return m_dim;
+      return dim_;
+   }
+
+   gq_int size() const {
+      return num_funcs_;
    }
 
 protected:
-   const gq_int m_deg;
-   const gq_int m_dim;
-   const gq_int m_num_funcs;
+   const gq_int deg_;
+   const gq_int dim_;
+   const gq_int num_funcs_;
 
-   Array1D functions;
-   Array2D derivatives;
-   Array1D integrals;
+   Array1D functions_;
+   Array2D derivatives_;
+   Array1D integrals_;
 
    Basis(gq_int deg, gq_int dim, gq_int num_funcs);
    Basis(const Basis&) = default;
    Basis& operator=(const Basis&) = delete;
 };
+
 
 // Abstract base class for all polytopes.
 class PolytopeBasis : public Basis {
@@ -128,6 +132,7 @@ protected:
    PolytopeBasis(const PolytopeBasis&) = default;
    PolytopeBasis& operator=(const PolytopeBasis&) = delete;
 };
+
 
 class CubeBasis : public PolytopeBasis {
 public:
@@ -147,8 +152,8 @@ public:
    const Array1D& monomial_integrals() final;
 
 private:
-   BasisTable index_table;
-   Array1D fdiff[4];
+   BasisTable index_table_;
+   Array1D fdiff_[4];
 
    void orthog_basis_internal(const Array1D& x, Array1D& buff);
 
@@ -156,7 +161,9 @@ private:
    friend void internal::fourth_order_difference(BasisType& basis, const Array1D& x);
 };
 
+
 gq_int CubeBasisSize(gq_int deg, gq_int dim);
+
 
 // Besides precomputing index_table, all Bases that contain Simplex
 // also precompute power_table, which are used to efficiently compute
@@ -179,9 +186,9 @@ public:
    const Array1D& monomial_integrals() final;
 
 private:
-   BasisTable power_table;
-   BasisTable index_table;
-   Array1D fdiff[4];
+   BasisTable power_table_;
+   BasisTable index_table_;
+   Array1D fdiff_[4];
 
    void orthog_basis_internal(const Array1D& x, Array1D& buff);
 
@@ -189,7 +196,9 @@ private:
    friend void internal::fourth_order_difference(BasisType& basis, const Array1D& x);
 };
 
+
 gq_int SimplexBasisSize(gq_int deg, gq_int dim);
+
 
 class CubeSimplexBasis : public PolytopeBasis {
 public:
@@ -209,10 +218,10 @@ public:
    const Array1D& monomial_integrals() final;
 
 private:
-   std::array<gq_int, 2> m_dims;
-   BasisTable power_table_second;
-   BasisTable index_table;
-   Array1D fdiff[4];
+   std::array<gq_int, 2> dims_;
+   BasisTable power_table_second_;
+   BasisTable index_table_;
+   Array1D fdiff_[4];
 
    void orthog_basis_internal(const Array1D& x, Array1D& buff);
    void orthog_basis_polytopic_two_internal(const Array1D& x, Array1D& buff);
@@ -221,7 +230,9 @@ private:
    friend void internal::fourth_order_difference(BasisType& basis, const Array1D& x);
 };
 
+
 gq_int CubeSimplexBasisSize(gq_int deg, gq_int dim);
+
 
 class SimplexSimplexBasis : public PolytopeBasis {
 public:
@@ -241,14 +252,14 @@ public:
    const Array1D& monomial_integrals() final;
 
 private:
-   std::array<gq_int, 2> m_dims;
-   BasisTable power_table_first;
-   BasisTable power_table_second;
-   BasisTable index_table;
+   std::array<gq_int, 2> dims_;
+   BasisTable power_table_first_;
+   BasisTable power_table_second_;
+   BasisTable index_table_;
 
-   Array1D poly_buff1;
-   Array1D poly_buff2;
-   Array1D fdiff[4];
+   Array1D poly_buff1_;
+   Array1D poly_buff2_;
+   Array1D fdiff_[4];
 
    void orthog_basis_internal(const Array1D& x, Array1D& buff);
    void orthog_basis_polytopic_one_internal(const Array1D& x, Array1D& buff);
@@ -258,7 +269,9 @@ private:
    friend void internal::fourth_order_difference(BasisType& basis, const Array1D& x);
 };
 
+
 gq_int SimplexSimplexBasisSize(gq_int deg, gq_int dim);
+
 
 class PyramidBasis3D : public PolytopeBasis {
 public:
@@ -278,8 +291,8 @@ public:
    const Array1D& monomial_integrals() final;
 
 private:
-   BasisTable index_table;
-   Array1D fdiff[4];
+   BasisTable index_table_;
+   Array1D fdiff_[4];
 
    void orthog_basis_internal(const Array1D& x, Array1D& buff);
 
@@ -287,11 +300,14 @@ private:
    friend void internal::fourth_order_difference(BasisType& basis, const Array1D& x);
 };
 
+
 gq_int Pyramid3DBasisSize(gq_int deg);
+
 
 // forward declare and include quadrature header in basis.cpp
 class QuadSimplex;
 class QuadOmega2D;
+
 
 class OmegaBasis2D : public Basis {
 public:
@@ -310,18 +326,18 @@ public:
    const Array2D& monomial_der(const Array1D& x) final;
    const Array1D& monomial_integrals() final;
 
-   void TestOrthogonal(gq_int max_deg, bool verbose);
+   void test_orthogonal(gq_int max_deg, bool verbose = false);
 
 private:
    // types are incomplete so pointers are used
-   QuadSimplex* qts;
-   QuadOmega2D* qt_omega;
-   const Omega2D omega;
-   BasisTable index_table;
-   Array1D fdiff[4];
-   std::vector<Matrix2D> A, B, C, D;
-   ArrayInt1D phi_pos;
-   double phi0;
+   QuadSimplex* quad_simplex_;
+   QuadOmega2D* quad_omega_;
+   const Omega2D omega_;
+   BasisTable index_table_;
+   Array1D fdiff_[4];
+   StdVector<Matrix2D> A_, B_, C_, D_;
+   ArrayInt1D phi_pos_;
+   double phi0_;
 
    void recurrence_coeffs(gq_int n);
    void orthog_basis_internal(const Array1D& x, Array1D& buff);
@@ -331,7 +347,9 @@ private:
    friend void internal::fourth_order_difference(BasisType& basis, const Array1D& x);
 };
 
+
 gq_int Omega2DBasisSize(gq_int deg);
+
 
 }  // namespace gquad
 

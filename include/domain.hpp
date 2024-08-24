@@ -13,6 +13,7 @@
 
 namespace gquad {
 
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 class Domain {
 public:
@@ -27,8 +28,11 @@ protected:
    Domain& operator=(const Domain&) = delete;
 };
 
+
 class Polytope : public Domain {
 public:
+   virtual ~Polytope() = default;
+
    virtual double dist_from_boundary(const Array1D& x) const = 0;
 
 protected:
@@ -36,6 +40,7 @@ protected:
    Polytope(const Polytope&) = default;
    Polytope& operator=(const Polytope&) = delete;
 };
+
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 class IdealPolytope : public Polytope {
@@ -46,30 +51,23 @@ public:
    bool in_domain(const Array1D& x) const override;
    double dist_from_boundary(const Array1D& x) const override;
 
-   const Matrix2D& get_constraint_matrix() const& {
-      return A;
+   const Matrix2D& get_constraint_matrix() const {
+      return A_;
    }
 
-   const Vector1D& get_constraint_vector() const& {
-      return b;
-   }
-
-   Matrix2D get_constraint_matrix() && {
-      return std::move(A);
-   }
-
-   Vector1D get_constraint_vector() && {
-      return std::move(b);
+   const Vector1D& get_constraint_vector() const {
+      return b_;
    }
 
 protected:
-   Matrix2D A;
-   Vector1D b;
+   Matrix2D A_;
+   Vector1D b_;
 
    explicit IdealPolytope(Constraints C);
    IdealPolytope(const IdealPolytope&) = default;
    IdealPolytope& operator=(const IdealPolytope&) = delete;
 };
+
 
 class Interval : public IdealPolytope {
 public:
@@ -80,17 +78,18 @@ public:
       return *this;
    }
 
-   gq_int dim() const {
-      return 1;
-   }
-
    std::string domain_name() const override {
       return "interval";
+   }
+
+   static gq_int dim() {
+      return 1;
    }
 
 private:
    Constraints ConstructConstraints();
 };
+
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 class Cube : public IdealPolytope {
@@ -99,20 +98,21 @@ public:
    Cube(const Cube&) = default;
    Cube& operator=(const Cube&);
 
-   gq_int dim() const {
-      return m_dim;
-   }
-
    std::string domain_name() const override {
       return "cube";
+   }
+
+   gq_int dim() const {
+      return dim_;
    }
 
    void reinit(gq_int dim);
 
 private:
-   gq_int m_dim;
+   gq_int dim_;
    Constraints ConstructConstraints(gq_int dim);
 };
+
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 class Simplex : public IdealPolytope {
@@ -124,20 +124,21 @@ public:
    // implements in_domain differently to completely avoid roundoff errors
    bool in_domain(const Array1D& x) const override;
 
-   gq_int dim() const {
-      return m_dim;
-   }
-
    std::string domain_name() const override {
       return "simplex";
+   }
+
+   gq_int dim() const {
+      return dim_;
    }
 
    void reinit(gq_int dim);
 
 private:
-   gq_int m_dim;
+   gq_int dim_;
    Constraints ConstructConstraints(gq_int dim);
 };
+
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 class CubeSimplex : public IdealPolytope {
@@ -153,24 +154,25 @@ public:
       return "cubesimplex";
    }
 
-   void reinit(gq_int dim1, gq_int dim2);
-
    gq_int dim() const {
-      return m_dims[0] + m_dims[1];
+      return dims_[0] + dims_[1];
    }
 
    gq_int dim1() const {
-      return m_dims[0];
+      return dims_[0];
    }
 
    gq_int dim2() const {
-      return m_dims[1];
+      return dims_[1];
    }
 
+   void reinit(gq_int dim1, gq_int dim2);
+
 private:
-   std::array<gq_int, 2> m_dims;
+   std::array<gq_int, 2> dims_;
    Constraints ConstructConstraints(gq_int dim1, gq_int dim2);
 };
+
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 class SimplexSimplex : public IdealPolytope {
@@ -186,24 +188,25 @@ public:
       return "simplexsimplex";
    }
 
-   void reinit(gq_int dim1, gq_int dim2);
-
    gq_int dim() const {
-      return m_dims[0] + m_dims[1];
+      return dims_[0] + dims_[1];
    }
 
    gq_int dim1() const {
-      return m_dims[0];
+      return dims_[0];
    }
 
    gq_int dim2() const {
-      return m_dims[1];
+      return dims_[1];
    }
 
+   void reinit(gq_int dim1, gq_int dim2);
+
 private:
-   std::array<gq_int, 2> m_dims;
+   std::array<gq_int, 2> dims_;
    Constraints ConstructConstraints(gq_int dim1, gq_int dim2);
 };
+
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 class Pyramid3D : public IdealPolytope {
@@ -218,17 +221,18 @@ public:
    // implements in_domain differently to completely avoid roundoff errors
    bool in_domain(const Array1D& x) const override;
 
-   gq_int dim() const {
-      return 3;
-   }
-
    std::string domain_name() const override {
       return "pyramid";
+   }
+
+   static gq_int dim() {
+      return 3;
    }
 
 private:
    Constraints ConstructConstraints();
 };
+
 
 }  // namespace gquad
 

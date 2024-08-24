@@ -14,14 +14,37 @@
 
 namespace gquad {
 
+
 double LsqSolveTimer::lsq_time_total = 0.;
+
 
 static void LsqUpdate(const Matrix2D& J, const Array1D& f, Array1D& dz, Array1D& dg);
 static auto ExcludeIndex(gq_int index, const Array1D& x);
 
+
+namespace {
+struct Penalty {
+   double factor;
+   double distance;
+};
+}  // namespace
+
+
+static Penalty PenaltyGradientFac(gq_int skip, const QuadIdealPolytope& q, double dz_fac, const QuadArray& dz,
+                                  const QuadArray& dg);
+static double PenaltyGradientFac(const QuadOmega2D& q, const QuadArray& dz, const QuadArray& dg);
+
+
+static QuadArray ComputePenaltyGradient(const QuadIdealPolytope& q);
+static QuadArray ComputePenaltyGradient(const QuadOmega2D& q, bool do_inner);
+
+
 static std::tuple<bool, gq_int, double> PolytopeLineSearch(gq_int m, double t_prev, const Array2D& alf,
                                                            const Array2D& bet);
+
+
 static Penalty OmegaLineSearch(gq_int nsteps, double tmax, const QuadOmega2D& q, const Array1D& dz);
+
 
 LsqOut LeastSquaresNewton(QuadDomain& q, Basis& basis) {
    GEN_QUAD_ASSERT_ALWAYS(q.num_nodes() >= 1);
@@ -43,7 +66,7 @@ LsqOut LeastSquaresNewton(QuadDomain& q, Basis& basis) {
    // return if input is a satisfactory quadrature
    F = eval_function(q);  // 0th iteration
    double error_norm = function_residual(q, basis, monomial);
-   if((error_norm <= quad_tol) && (in_constraint(q))) {
+   if((error_norm <= constants::quad_tol) && (in_constraint(q))) {
       return LsqOut{SolFlag::found, its, error_norm};
    }
 
@@ -56,7 +79,7 @@ LsqOut LeastSquaresNewton(QuadDomain& q, Basis& basis) {
       GQ_THROW_RUNTIME_ERROR_MSG("Attempted domain is currently not supported by LeastSquaresNewton");
    }
 
-   while((its < max_iter) && (error_norm > quad_tol)) {
+   while((its < max_iter) && (error_norm > constants::quad_tol)) {
       ++its;
 
       util::timer t;
@@ -105,12 +128,13 @@ LsqOut LeastSquaresNewton(QuadDomain& q, Basis& basis) {
       error_norm = function_residual(q, basis, monomial);  // numerically more accurate
    }
 
-   if((error_norm <= quad_tol) && (in_constraint(q))) {
+   if((error_norm <= constants::quad_tol) && (in_constraint(q))) {
       return {SolFlag::found, its, error_norm};
    } else {
       return {SolFlag::not_found, its, error_norm};
    }
 }
+
 
 static void LsqUpdate(const Matrix2D& J, const Array1D& f, Array1D& dz, Array1D& dg) {
    GEN_QUAD_ASSERT_DEBUG(J.rows() <= J.cols());
@@ -132,6 +156,7 @@ static void LsqUpdate(const Matrix2D& J, const Array1D& f, Array1D& dz, Array1D&
    dg -= gv.array();
 }
 
+
 static auto ExcludeIndex(gq_int index, const Array1D& x) {
    GEN_QUAD_ASSERT_DEBUG(index > -1 && index < x.size());
    StdVector<gq_int> indexes;
@@ -145,13 +170,14 @@ static auto ExcludeIndex(gq_int index, const Array1D& x) {
    return x(indexes);
 }
 
+
 // This routine tries to find g_fac for given dz_fac such that all nodes
 // are inside the domain for qnext = q - dz_fac * dz - g_fac * dg.
 // The returned value contains g_fac and the distance of the nearest node from
 // the nearest boundary(including the weights). If distance < 0, all nodes are
 // inside the domain, if distance > 0 then at least one node is outside of the domain.
-Penalty PenaltyGradientFac(gq_int skip, const QuadIdealPolytope& q, double dz_fac, const QuadArray& dz,
-                           const QuadArray& dg) {
+static Penalty PenaltyGradientFac(gq_int skip, const QuadIdealPolytope& q, double dz_fac, const QuadArray& dz,
+                                  const QuadArray& dg) {
    GEN_QUAD_ASSERT_DEBUG(skip >= -1 && skip <= q.num_nodes() - 1);
 
    const IdealPolytope& polytope = q.get_ideal_polytope();
@@ -203,7 +229,8 @@ Penalty PenaltyGradientFac(gq_int skip, const QuadIdealPolytope& q, double dz_fa
    return Penalty{t, distance};
 }
 
-double PenaltyGradientFac(const QuadOmega2D& q, const QuadArray& dz, const QuadArray& dg) {
+
+static double PenaltyGradientFac(const QuadOmega2D& q, const QuadArray& dz, const QuadArray& dg) {
    auto g = ComputePenaltyGradient(q, false);
    double g_norm = norm2(g.array());
    double dz_norm = norm2(dz.array());
@@ -221,7 +248,8 @@ double PenaltyGradientFac(const QuadOmega2D& q, const QuadArray& dz, const QuadA
    return factor;
 }
 
-QuadArray ComputePenaltyGradient(const QuadIdealPolytope& q) {
+
+static QuadArray ComputePenaltyGradient(const QuadIdealPolytope& q) {
    QuadArray g(q.deg(), q.dim(), q.num_nodes());
 
    const IdealPolytope& polytope = q.get_ideal_polytope();
@@ -241,7 +269,8 @@ QuadArray ComputePenaltyGradient(const QuadIdealPolytope& q) {
    return g;
 }
 
-QuadArray ComputePenaltyGradient(const QuadOmega2D& q, bool do_inner) {
+
+static QuadArray ComputePenaltyGradient(const QuadOmega2D& q, bool do_inner) {
    QuadArray grad(q.deg(), q.dim(), q.num_nodes());
    const Omega2D& omega = q.get_domain_loc();
 
@@ -299,6 +328,7 @@ QuadArray ComputePenaltyGradient(const QuadOmega2D& q, bool do_inner) {
    return grad;
 }
 
+
 static std::tuple<bool, gq_int, double> PolytopeLineSearch(gq_int m, double t_prev, const Array2D& alf,
                                                            const Array2D& bet) {
    bool flag = false;
@@ -319,6 +349,7 @@ static std::tuple<bool, gq_int, double> PolytopeLineSearch(gq_int m, double t_pr
    return {flag, m_new, t_new};
 }
 
+
 static Penalty OmegaLineSearch(gq_int nsteps, double tmax, const QuadOmega2D& q, const Array1D& dz) {
    double t_opt = 0.0;
    double dist_opt = dist_from_boundary_min(q);
@@ -336,6 +367,7 @@ static Penalty OmegaLineSearch(gq_int nsteps, double tmax, const QuadOmega2D& q,
 
    return {t_opt, dist_opt};
 }
+
 
 }  // namespace gquad
 

@@ -16,7 +16,17 @@
 #include <iostream>
 #include <string>
 
+
+#define GEN_QUAD_TIME(a)                                         \
+   do {                                                          \
+      gquad::util::timer t;                                      \
+      a;                                                         \
+      std::printf("%s took: %.4e seconds\n", #a, t.wall_time()); \
+   } while(0)
+
+
 namespace gquad { namespace util {
+
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 struct timer {
@@ -38,28 +48,26 @@ private:
    std::chrono::system_clock::time_point start;
 };
 
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 template <typename T>
 void print(const T x, const std::string& s) {
    std::cout << s << " = " << x << std::endl;
 }
 
+
 void print(const std::string& s);
 void print(const char* s);
+
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 std::string n_spaces(long int n);
 std::string index_of(std::string s, long int n);
 std::string smart_spaces(long int max_ind, long int ind);
 
+
 }}  // namespace gquad::util
 
-#define GEN_QUAD_TIME(a)                                         \
-   do {                                                          \
-      gquad::util::timer t;                                      \
-      a;                                                         \
-      std::printf("%s took: %.4e seconds\n", #a, t.wall_time()); \
-   } while(0)
 
 #endif
 
