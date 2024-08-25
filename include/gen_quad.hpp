@@ -55,9 +55,9 @@ using Eigen::seqN;
 class Array3D {
 public:
    Array3D(gq_int d1, gq_int d2, gq_int d3) : dims_{d1, d2, d3}, data_(d1 * d2 * d3) {
-      GEN_QUAD_ASSERT_DEBUG(i >= 0);
-      GEN_QUAD_ASSERT_DEBUG(j >= 0);
-      GEN_QUAD_ASSERT_DEBUG(k >= 0);
+      GEN_QUAD_ASSERT_DEBUG(d1 >= 0);
+      GEN_QUAD_ASSERT_DEBUG(d2 >= 0);
+      GEN_QUAD_ASSERT_DEBUG(d3 >= 0);
    }
 
    auto operator()(gq_int i, gq_int j) {

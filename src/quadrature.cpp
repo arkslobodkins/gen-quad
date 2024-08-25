@@ -45,13 +45,10 @@ QuadArray::QuadArray(const QuadArray& q) : QuadArray{q.deg(), q.dim(), q.num_nod
 
 QuadArray::QuadArray(QuadArray&& q)
     : array_{std::move(q.array_)},
-      deg_{q.deg_},
-      dim_{q.dim_},
-      num_nodes_{q.num_nodes_} {
+      deg_{std::exchange(q.deg_, {})},
+      dim_{std::exchange(q.dim_, {})},
+      num_nodes_{std::exchange(q.num_nodes_, {})} {
    q.array_ = {};
-   q.deg_ = 0;
-   q.dim_ = 0;
-   q.num_nodes_ = 0;
 }
 
 
