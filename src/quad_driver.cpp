@@ -16,73 +16,57 @@
 #include "../include/util.hpp"
 
 
-#define GEN_QUAD_CHECK_AND_TRACE_DEG_DIMS(degree, dimension)            \
-   for(auto d : degree) {                                               \
-      if(!is_reasonable_degree_and_dimension(d, dimension)) {           \
-         std::cerr << trace_err(__FILE__, __func__, __LINE__)           \
-                   << ": Specified degree and/or dimension"             \
-                      " is outside of currently acceptable range.\n\n"; \
-         return 1;                                                      \
-      }                                                                 \
+#define GEN_QUAD_ASSERT_DEG_DIM_RANGE(degree, dimension)                             \
+   GEN_QUAD_ASSERT_ALWAYS_MSG(is_reasonable_degree_and_dimension(degree, dimension), \
+                              "Specified degree and/or dimension is "                \
+                              "outside of currently acceptable range.\n\n");
+
+
+#define GEN_QUAD_ASSERT_DEG_DIM_RANGE_VECTOR(degree, dimension) \
+   for(auto dg : degree) {                                      \
+      GEN_QUAD_ASSERT_DEG_DIM_RANGE(dg, dimension);             \
    }
 
 
-#define GEN_QUAD_CHECK_AND_TRACE_DEG_DIM(degree, dimension)      \
-   if(!is_reasonable_degree_and_dimension(degree, dimension)) {  \
-      std::cerr << trace_err(__FILE__, __func__, __LINE__)       \
-                << ": Specified degree and/or dimension is "     \
-                   "outside of currently acceptable range.\n\n"; \
-      return nullptr;                                            \
-   }
-
-
-#define GEN_QUAD_COMPUTE_AND_OUTPUT_ALL(function, ...)                                          \
-   if(ComputeAndOutputAll(&function, __VA_ARGS__) != 0) {                                       \
-      std::cerr << "file: " << __FILE__ << ", function: " << __func__ << ", line: " << __LINE__ \
-                << ": did not successfully compute all quadratures" << std::endl                \
-                << std::endl;                                                                   \
-      return 1;                                                                                 \
-   }                                                                                            \
-   std::cout << std::endl << std::endl;                                                         \
+#define GEN_QUAD_INVOKE_DRIVER_ALL(is_interval, function, ...)                                     \
+   try {                                                                                           \
+      if(gen_quad_generate_driver_all<is_interval>(&function, __VA_ARGS__) != 0) {                 \
+         std::cerr << "file: " << __FILE__ << ", function: " << __func__ << ", line: " << __LINE__ \
+                   << ": did not successfully compute all quadratures" << std::endl                \
+                   << std::endl;                                                                   \
+         return 1;                                                                                 \
+      } else {                                                                                     \
+         std::cout << std::endl << std::endl;                                                      \
+         return 0;                                                                                 \
+      }                                                                                            \
+   }                                                                                               \
+   GQ_CATCH_LAST_LEVEL();                                                                          \
    return 0;
 
 
-#define GEN_QUAD_INVOKE_DRIVER(function, object, ...)  \
-   try {                                               \
-      auto qh = function(__VA_ARGS__);                 \
-      if(!qh) {                                        \
-         return nullptr;                               \
-      } else {                                         \
-         std::cout << std::endl << std::endl;          \
-         auto q = std::make_unique<object>(qh->first); \
-         return q;                                     \
-      }                                                \
-   }                                                   \
-   GQ_CATCH_LAST_LEVEL();                              \
+#define GEN_QUAD_INVOKE_DRIVER(function, object, ...)                                              \
+   try {                                                                                           \
+      auto qh = function(__VA_ARGS__);                                                             \
+      if(!qh) {                                                                                    \
+         std::cerr << "file: " << __FILE__ << ", function: " << __func__ << ", line: " << __LINE__ \
+                   << ": did not successfully compute quadrature" << std::endl                     \
+                   << std::endl;                                                                   \
+         return nullptr;                                                                           \
+      } else {                                                                                     \
+         std::cout << std::endl << std::endl;                                                      \
+         auto q = std::make_unique<object>(qh->first);                                             \
+         return q;                                                                                 \
+      }                                                                                            \
+   }                                                                                               \
+   GQ_CATCH_LAST_LEVEL();                                                                          \
    return nullptr;
-
-
-#define GEN_QUAD_GENERATE_DRIVER(function, degree, dimension, domain, ...)             \
-   std::cout << "\n\n";                                                                \
-   PrintDebugAndOmpInfo();                                                             \
-   GEN_QUAD_CHECK_AND_TRACE_DEG_DIM(degree, dimension);                                \
-                                                                                       \
-   std::cout << "computing quadrature rule for " << domain << " with deg = " << degree \
-             << " dim = " << dimension << std::endl;                                   \
-   std::cout << "search_width = " << search_width.width << std::endl;                  \
-   reset_timers();                                                                     \
-   auto quad_hist = function(__VA_ARGS__);                                             \
-   return std::make_unique<decltype(quad_hist)>(quad_hist);
 
 
 namespace gquad {
 
 
-static std::unique_ptr<QuadInterval> QuadDriverInterval(gq_int deg);
-
-
-static std::unique_ptr<std::pair<QuadPyramid3D, StdVector<History>>> QuadDriverPyramid3D(
-    gq_int deg, SearchWidth search_width);
+////////////////////////////////////////////////////////////////////////////////////////////////////
+static std::unique_ptr<std::pair<QuadInterval, StdVector<History>>> QuadDriverInterval(gq_int deg);
 
 
 static std::unique_ptr<std::pair<QuadCube, StdVector<History>>> QuadDriverCube(gq_int deg, gq_int dim,
@@ -90,6 +74,10 @@ static std::unique_ptr<std::pair<QuadCube, StdVector<History>>> QuadDriverCube(g
 
 static std::unique_ptr<std::pair<QuadSimplex, StdVector<History>>> QuadDriverSimplex(
     gq_int deg, gq_int dim, SearchWidth search_width);
+
+
+static std::unique_ptr<std::pair<QuadPyramid3D, StdVector<History>>> QuadDriverPyramid3D(
+    gq_int deg, SearchWidth search_width);
 
 
 static std::unique_ptr<std::pair<QuadCubeSimplex, StdVector<History>>> QuadDriverCubeSimplex(
@@ -112,101 +100,92 @@ static std::unique_ptr<std::pair<QuadOmega2D, StdVector<History>>> QuadDriverOme
     gq_int deg, Omega2D omega, SearchWidth search_width);
 
 
-template <typename F, typename... DimArgs>
-static gq_int ComputeAndOutputAll(F func_ptr, const StdVector<gq_int>& deg, DimArgs... dargs);
+////////////////////////////////////////////////////////////////////////////////////////////////////
+template <typename D, typename F, typename... Fargs>
+static std::unique_ptr<std::pair<D, StdVector<History>>> gen_quad_generate_driver(F f, Fargs&&... fargs);
 
 
+template <bool is_interval, typename F, typename... DimArgs>
+static gq_int gen_quad_generate_driver_all(F func_ptr, const StdVector<gq_int>& deg, DimArgs... dargs);
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
 static void OutputAll(double ttotal, QuadDomain& q, StdVector<History>& h);
-
-
 static void HistToFile(const QuadDomain& q, const StdVector<History>& hist);
 static void TimesToFile(double total_time, const QuadDomain& q);
 static void TimesToScreen(double total_time);
 static void EfficiencyToFile(const std::pair<StdVector<double>, StdVector<std::string>>&, const std::string&);
 
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
+static void PrintDriverInfo(gq_int deg, gq_int dim, SearchWidth search_width, std::string domain_name);
 static void PrintDebugAndOmpInfo();
 static gq_int hours(double x);
 static gq_int minutes(double x);
 static double seconds(double x);
-static void reset_timers();
+static void ResetTimers();
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 gq_int ComputeAndOutputIntervals(const StdVector<gq_int>& deg) {
-   GEN_QUAD_CHECK_AND_TRACE_DEG_DIMS(deg, 1);
-
-   try {
-      for(auto dg : deg) {
-         auto q = QuadDriverInterval(dg);
-         if(!q) {
-            return 1;
-         }
-         QuadToFile(*q);
-         util::print((*q).relative_exponential_residual(), "relative exponential residual");
-      }
-      return 0;
-   }
-   GQ_CATCH_LAST_LEVEL();
-   return 1;
+   GEN_QUAD_ASSERT_DEG_DIM_RANGE_VECTOR(deg, 1);
+   GEN_QUAD_INVOKE_DRIVER_ALL(true, QuadDriverInterval, deg);
 }
 
 
 gq_int ComputeAndOutputCubes(const StdVector<gq_int>& deg, gq_int dim, SearchWidth search_width) {
-   GEN_QUAD_CHECK_AND_TRACE_DEG_DIMS(deg, dim);
-   GEN_QUAD_COMPUTE_AND_OUTPUT_ALL(QuadDriverCube, deg, dim, search_width);
+   GEN_QUAD_ASSERT_DEG_DIM_RANGE_VECTOR(deg, dim);
+   GEN_QUAD_INVOKE_DRIVER_ALL(false, QuadDriverCube, deg, dim, search_width);
 }
 
 
 gq_int ComputeAndOutputSimplexes(const StdVector<gq_int>& deg, gq_int dim, SearchWidth search_width) {
-   GEN_QUAD_CHECK_AND_TRACE_DEG_DIMS(deg, dim);
-   GEN_QUAD_COMPUTE_AND_OUTPUT_ALL(QuadDriverSimplex, deg, dim, search_width);
+   GEN_QUAD_ASSERT_DEG_DIM_RANGE_VECTOR(deg, dim);
+   GEN_QUAD_INVOKE_DRIVER_ALL(false, QuadDriverSimplex, deg, dim, search_width);
 }
 
 
 gq_int ComputeAndOutputPyramids3D(const StdVector<gq_int>& deg, SearchWidth search_width) {
-   GEN_QUAD_CHECK_AND_TRACE_DEG_DIMS(deg, 3);
-   GEN_QUAD_COMPUTE_AND_OUTPUT_ALL(QuadDriverPyramid3D, deg, search_width);
+   GEN_QUAD_ASSERT_DEG_DIM_RANGE_VECTOR(deg, 3);
+   GEN_QUAD_INVOKE_DRIVER_ALL(false, QuadDriverPyramid3D, deg, search_width);
 }
 
 
 gq_int ComputeAndOutputCubeSimplexes(const StdVector<gq_int>& deg, gq_int dim1, gq_int dim2,
                                      SearchWidth search_width) {
-   GEN_QUAD_CHECK_AND_TRACE_DEG_DIMS(deg, dim1 + dim2);
-   GEN_QUAD_COMPUTE_AND_OUTPUT_ALL(QuadDriverCubeSimplex, deg, dim1, dim2, search_width);
+   GEN_QUAD_ASSERT_DEG_DIM_RANGE_VECTOR(deg, dim1 + dim2);
+   GEN_QUAD_INVOKE_DRIVER_ALL(false, QuadDriverCubeSimplex, deg, dim1, dim2, search_width);
 }
 
 
 gq_int ComputeAndOutputSimplexSimplexes(const StdVector<gq_int>& deg, gq_int dim1, gq_int dim2,
                                         SearchWidth search_width) {
-   GEN_QUAD_CHECK_AND_TRACE_DEG_DIMS(deg, dim1 + dim2);
-   GEN_QUAD_COMPUTE_AND_OUTPUT_ALL(QuadDriverSimplexSimplex, deg, dim1, dim2, search_width);
+   GEN_QUAD_ASSERT_DEG_DIM_RANGE_VECTOR(deg, dim1 + dim2);
+   GEN_QUAD_INVOKE_DRIVER_ALL(false, QuadDriverSimplexSimplex, deg, dim1, dim2, search_width);
 }
 
 
 gq_int ComputeAndOutputPentagons(const StdVector<gq_int>& deg, SearchWidth search_width) {
-   GEN_QUAD_CHECK_AND_TRACE_DEG_DIMS(deg, 2);
-   GEN_QUAD_COMPUTE_AND_OUTPUT_ALL(QuadDriverPentagon, deg, search_width);
+   GEN_QUAD_ASSERT_DEG_DIM_RANGE_VECTOR(deg, 2);
+   GEN_QUAD_INVOKE_DRIVER_ALL(false, QuadDriverPentagon, deg, search_width);
 }
 
 
 gq_int ComputeAndOutputHexagons(const StdVector<gq_int>& deg, SearchWidth search_width) {
-   GEN_QUAD_CHECK_AND_TRACE_DEG_DIMS(deg, 2);
-   GEN_QUAD_COMPUTE_AND_OUTPUT_ALL(QuadDriverHexagon, deg, search_width);
+   GEN_QUAD_ASSERT_DEG_DIM_RANGE_VECTOR(deg, 2);
+   GEN_QUAD_INVOKE_DRIVER_ALL(false, QuadDriverHexagon, deg, search_width);
 }
 
 
 gq_int ComputeAndOutputOmega2D(Omega2D omega, const StdVector<gq_int>& deg, SearchWidth search_width) {
-   GEN_QUAD_CHECK_AND_TRACE_DEG_DIMS(deg, 2);
-   GEN_QUAD_COMPUTE_AND_OUTPUT_ALL(QuadDriverOmega2D, deg, std::move(omega), search_width);
+   GEN_QUAD_ASSERT_DEG_DIM_RANGE_VECTOR(deg, 2);
+   GEN_QUAD_INVOKE_DRIVER_ALL(false, QuadDriverOmega2D, deg, std::move(omega), search_width);
 }
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 std::unique_ptr<QuadInterval> Quadrature_Interval(gq_int deg) {
-   auto q = QuadDriverInterval(deg);
-   std::cout << std::endl << std::endl;
-   return q;
+   GEN_QUAD_INVOKE_DRIVER(QuadDriverInterval, QuadInterval, deg);
 }
 
 
@@ -253,13 +232,13 @@ std::unique_ptr<QuadOmega2D> Quadrature_Omega2D(Omega2D omega, gq_int deg, Searc
 
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
-static std::unique_ptr<QuadInterval> QuadDriverInterval(gq_int deg) {
+static std::unique_ptr<std::pair<QuadInterval, StdVector<History>>> QuadDriverInterval(gq_int deg) {
    GEN_QUAD_ASSERT_ALWAYS(deg > 0);
-   GEN_QUAD_CHECK_AND_TRACE_DEG_DIM(deg, 1);
-   PrintDebugAndOmpInfo();
-
-   reset_timers();
-   return std::make_unique<QuadInterval>(QuadInterval{ComputeInterval(deg)});
+   GEN_QUAD_ASSERT_DEG_DIM_RANGE(deg, 1);
+   PrintDriverInfo(deg, 1, SearchWidth{1}, "interval");
+   ResetTimers();
+   return std::make_unique<std::pair<QuadInterval, StdVector<History>>>(
+       std::pair<QuadInterval, StdVector<History>>{QuadInterval{ComputeInterval(deg)}, StdVector<History>{}});
 }
 
 
@@ -267,7 +246,10 @@ static std::unique_ptr<std::pair<QuadCube, StdVector<History>>> QuadDriverCube(g
                                                                                SearchWidth search_width) {
    GEN_QUAD_ASSERT_ALWAYS(deg > 0);
    GEN_QUAD_ASSERT_ALWAYS(dim > 1);
-   GEN_QUAD_GENERATE_DRIVER(ComputeCube, deg, dim, "cube", deg, dim, search_width.width);
+   GEN_QUAD_ASSERT_DEG_DIM_RANGE(deg, dim);
+   PrintDriverInfo(deg, dim, search_width, "cube");
+   ResetTimers();
+   return gen_quad_generate_driver<QuadCube>(ComputeCube, deg, dim, search_width.width);
 }
 
 
@@ -275,14 +257,20 @@ static std::unique_ptr<std::pair<QuadSimplex, StdVector<History>>> QuadDriverSim
     gq_int deg, gq_int dim, SearchWidth search_width) {
    GEN_QUAD_ASSERT_ALWAYS(deg > 0);
    GEN_QUAD_ASSERT_ALWAYS(dim > 1);
-   GEN_QUAD_GENERATE_DRIVER(ComputeSimplex, deg, dim, "simplex", deg, dim, search_width.width);
+   GEN_QUAD_ASSERT_DEG_DIM_RANGE(deg, dim);
+   PrintDriverInfo(deg, dim, search_width, "simplex");
+   ResetTimers();
+   return gen_quad_generate_driver<QuadSimplex>(ComputeSimplex, deg, dim, search_width.width);
 }
 
 
 static std::unique_ptr<std::pair<QuadPyramid3D, StdVector<History>>> QuadDriverPyramid3D(
     gq_int deg, SearchWidth search_width) {
    GEN_QUAD_ASSERT_ALWAYS(deg > 0);
-   GEN_QUAD_GENERATE_DRIVER(ComputePyramid3D, deg, 3, "pyramid3D", deg, search_width.width);
+   GEN_QUAD_ASSERT_DEG_DIM_RANGE(deg, 3);
+   PrintDriverInfo(deg, 3, search_width, "pyramid3D");
+   ResetTimers();
+   return gen_quad_generate_driver<QuadPyramid3D>(ComputePyramid3D, deg, search_width.width);
 }
 
 
@@ -291,8 +279,10 @@ static std::unique_ptr<std::pair<QuadCubeSimplex, StdVector<History>>> QuadDrive
    GEN_QUAD_ASSERT_ALWAYS(deg > 0);
    GEN_QUAD_ASSERT_ALWAYS(dim1 > 0);
    GEN_QUAD_ASSERT_ALWAYS(dim2 > 1);
-   GEN_QUAD_GENERATE_DRIVER(
-       ComputeCubeSimplex, deg, dim1 + dim2, "cubesimplex", deg, dim1, dim2, search_width.width);
+   GEN_QUAD_ASSERT_DEG_DIM_RANGE(deg, dim1 + dim2);
+   PrintDriverInfo(deg, dim1 + dim2, search_width, "cubesimplex");
+   ResetTimers();
+   return gen_quad_generate_driver<QuadCubeSimplex>(ComputeCubeSimplex, deg, dim1, dim2, search_width.width);
 }
 
 
@@ -301,71 +291,79 @@ static std::unique_ptr<std::pair<QuadSimplexSimplex, StdVector<History>>> QuadDr
    GEN_QUAD_ASSERT_ALWAYS(deg > 0);
    GEN_QUAD_ASSERT_ALWAYS(dim1 > 1);
    GEN_QUAD_ASSERT_ALWAYS(dim2 > 1);
-   GEN_QUAD_GENERATE_DRIVER(
-       ComputeSimplexSimplex, deg, dim1 + dim2, "simplexsimplex", deg, dim1, dim2, search_width.width);
+   GEN_QUAD_ASSERT_DEG_DIM_RANGE(deg, dim1 + dim2);
+   PrintDriverInfo(deg, dim1 + dim2, search_width, "simplexsimplex");
+   ResetTimers();
+   return gen_quad_generate_driver<QuadSimplexSimplex>(
+       ComputeSimplexSimplex, deg, dim1, dim2, search_width.width);
 }
 
 
 static std::unique_ptr<std::pair<QuadOmega2D, StdVector<History>>> QuadDriverPentagon(
     gq_int deg, SearchWidth search_width) {
    GEN_QUAD_ASSERT_ALWAYS(deg > 0);
-   GEN_QUAD_GENERATE_DRIVER(ComputePentagon, deg, 2, "pentagon", deg, search_width.width);
+   GEN_QUAD_ASSERT_DEG_DIM_RANGE(deg, 2);
+   PrintDriverInfo(deg, 2, search_width, "pentagon");
+   ResetTimers();
+   return gen_quad_generate_driver<QuadOmega2D>(ComputePentagon, deg, search_width.width);
 }
 
 
 static std::unique_ptr<std::pair<QuadOmega2D, StdVector<History>>> QuadDriverHexagon(
     gq_int deg, SearchWidth search_width) {
    GEN_QUAD_ASSERT_ALWAYS(deg > 0);
-   GEN_QUAD_GENERATE_DRIVER(ComputeHexagon, deg, 2, "hexagon", deg, search_width.width);
+   GEN_QUAD_ASSERT_DEG_DIM_RANGE(deg, 2);
+   PrintDriverInfo(deg, 2, search_width, "hexagon");
+   ResetTimers();
+   return gen_quad_generate_driver<QuadOmega2D>(ComputeHexagon, deg, search_width.width);
 }
 
 
 static std::unique_ptr<std::pair<QuadOmega2D, StdVector<History>>> QuadDriverOmega2D(
     gq_int deg, Omega2D omega, SearchWidth search_width) {
    GEN_QUAD_ASSERT_ALWAYS(deg > 0);
-   GEN_QUAD_GENERATE_DRIVER(
-       ComputeOmega2D, deg, 2, omega.domain_name(), std::move(omega), deg, search_width.width);
+   GEN_QUAD_ASSERT_DEG_DIM_RANGE(deg, 2);
+   PrintDriverInfo(deg, 2, search_width, omega.domain_name());
+   ResetTimers();
+   return gen_quad_generate_driver<QuadOmega2D>(ComputeOmega2D, std::move(omega), deg, search_width.width);
 }
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
-template <typename F, typename... DimArgs>
-static gq_int ComputeAndOutputAll(F func_ptr, const StdVector<gq_int>& deg, DimArgs... dargs) {
-   try {
-      StdVector<double> eff_indexes;
-      StdVector<std::string> quad_names;
-      std::string dims_file_name;
-
-      for(auto dg : deg) {
-         util::timer t;
-         auto qh = (*func_ptr)(dg, dargs...);
-         double ttotal = t.wall_time();
-
-         if(!qh) {
-            return 1;
-         }
-
-         OutputAll(ttotal, qh->first, qh->second);
-
-         eff_indexes.push_back(qh->first.efficiency());
-         quad_names.push_back(qh->first.quad_file_name());
-         dims_file_name = qh->first.quad_dims_file_name();
-      }
-      EfficiencyToFile({eff_indexes, quad_names}, dims_file_name);
-      return 0;
-   }
-
-   GQ_CATCH_LAST_LEVEL();
-   return 1;
+template <typename D, typename F, typename... Fargs>
+static std::unique_ptr<std::pair<D, StdVector<History>>> gen_quad_generate_driver(F f, Fargs&&... fargs) {
+   auto quad_hist = f(std::forward<Fargs>(fargs)...);
+   return std::make_unique<decltype(quad_hist)>(quad_hist);
 }
 
 
-static void OutputAll(double ttotal, QuadDomain& q, StdVector<History>& h) {
-   QuadToFile(q);
-   HistToFile(q, h);
-   TimesToFile(ttotal, q);
-   TimesToScreen(ttotal);
-   util::print(q.relative_exponential_residual(), "relative exponential residual");
+template <bool is_interval, typename F, typename... DimArgs>
+static gq_int gen_quad_generate_driver_all(F func_ptr, const StdVector<gq_int>& deg, DimArgs... dargs) {
+   StdVector<double> eff_indexes;
+   StdVector<std::string> quad_names;
+   std::string dims_file_name;
+
+   for(auto dg : deg) {
+      util::timer t;
+      auto qh = (*func_ptr)(dg, dargs...);
+      double ttotal = t.wall_time();
+
+      if(!qh) {
+         return 1;
+      }
+
+      if(!is_interval) {
+         OutputAll(ttotal, qh->first, qh->second);
+      } else {
+         QuadToFile(qh->first);
+      }
+
+      eff_indexes.push_back(qh->first.efficiency());
+      quad_names.push_back(qh->first.quad_file_name());
+      dims_file_name = qh->first.quad_dims_file_name();
+   }
+   EfficiencyToFile({eff_indexes, quad_names}, dims_file_name);
+   return 0;
 }
 
 
@@ -377,6 +375,15 @@ void QuadToFile(const QuadDomain& q) {
       GQ_THROW_RUNTIME_ERROR_MSG("could not open file for writing quadrature");
    }
    ofs << q << std::endl;
+}
+
+
+static void OutputAll(double ttotal, QuadDomain& q, StdVector<History>& h) {
+   QuadToFile(q);
+   HistToFile(q, h);
+   TimesToFile(ttotal, q);
+   TimesToScreen(ttotal);
+   util::print(q.relative_exponential_residual(), "relative exponential residual");
 }
 
 
@@ -545,6 +552,18 @@ static void EfficiencyToFile(const std::pair<StdVector<double>, StdVector<std::s
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
+static void PrintDriverInfo(gq_int deg, gq_int dim, SearchWidth search_width, std::string domain_name) {
+   std::cout << "\n\n";
+   PrintDebugAndOmpInfo();
+
+   std::cout << "computing quadrature rule for " << domain_name << " with deg = " << deg << " dim = " << dim
+             << std::endl;
+   if(domain_name != "interval") {
+      std::cout << "search_width = " << search_width.width << std::endl;
+   }
+}
+
+
 void PrintDebugAndOmpInfo() {
    static bool printed{false};
    if(!printed) {
@@ -584,7 +603,7 @@ static double seconds(double x) {
 }
 
 
-static void reset_timers() {
+static void ResetTimers() {
    EvalFunction::function_time_total = 0;
    EvalJacobian::jacobian_time_total = 0;
    PredictorTimer::predictor_time_total = 0;
