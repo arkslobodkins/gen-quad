@@ -72,6 +72,7 @@ static std::unique_ptr<std::pair<QuadInterval, StdVector<History>>> QuadDriverIn
 static std::unique_ptr<std::pair<QuadCube, StdVector<History>>> QuadDriverCube(gq_int deg, gq_int dim,
                                                                                SearchWidth search_width);
 
+
 static std::unique_ptr<std::pair<QuadSimplex, StdVector<History>>> QuadDriverSimplex(
     gq_int deg, gq_int dim, SearchWidth search_width);
 
