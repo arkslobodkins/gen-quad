@@ -20,20 +20,19 @@ int main() {
    // Another option is to call ReadOmega()(also in mesh.cpp) routine and supply 3 files that contain
    // appropriate arguments to constructor of Omega2D.
 
-   assert(ComputeAndOutputIntervals(degrees) == 0);
-//   assert(ComputeAndOutputOmega2D(CreateIrreg5(), degrees, SearchWidth{1}) == 0);
-//   assert(ComputeAndOutputPentagons(degrees, SearchWidth{1}) == 0);
-//   assert(ComputeAndOutputHexagons(degrees, SearchWidth{1}) == 0);
-//
-//   gq_int dim = 3;
-//   assert(ComputeAndOutputPyramids3D(degrees) == 0);
-//   assert(ComputeAndOutputCubes(degrees, dim) == 0);
-//   assert(ComputeAndOutputSimplexes(degrees, dim) == 0);
-//
-//   gq_int dim1 = 2;
-//   gq_int dim2 = 2;
-//   assert(ComputeAndOutputCubeSimplexes(degrees, dim1, dim2) == 0);     // C2 x T2
-//   assert(ComputeAndOutputSimplexSimplexes(degrees, dim1, dim2) == 0);  // T2 x T2
-//
+   assert(ComputeAndOutputOmega2D(CreateIrreg5(), degrees, SearchWidth{1}) == 0);
+   assert(ComputeAndOutputPentagons(degrees, SearchWidth{1}) == 0);
+   assert(ComputeAndOutputHexagons(degrees, SearchWidth{1}) == 0);
+
+   gq_int dim = 3;
+   assert(ComputeAndOutputPyramids3D(degrees) == 0);
+   assert(ComputeAndOutputCubes(degrees, dim) == 0);
+   assert(ComputeAndOutputSimplexes(degrees, dim) == 0);
+
+   gq_int dim1 = 2;
+   gq_int dim2 = 2;
+   assert(ComputeAndOutputCubeSimplexes(degrees, dim1, dim2) == 0);     // C2 x T2
+   assert(ComputeAndOutputSimplexSimplexes(degrees, dim1, dim2) == 0);  // T2 x T2
+
    return EXIT_SUCCESS;
 }
