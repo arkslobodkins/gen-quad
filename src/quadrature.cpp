@@ -129,13 +129,29 @@ std::unique_ptr<Basis> QuadDomain::create_basis() const {
 
 
 double QuadDomain::efficiency() const {
-   return double(num_nodes_optimal()) / num_nodes();
+   return double(num_nodes_optimal()) / QA::num_nodes();
 }
 
 
 QuadDomain& QuadDomain::resize_and_assign(const QuadDomain& q) {
-   QuadArray::resize_and_assign(q);
+   QA::resize_and_assign(q);
    return *this;
+}
+
+
+double quad_exp_approx(const QuadDomain& q) {
+   Array1D eval(q.num_nodes());
+   for(gq_int i = 0; i < q.num_nodes(); ++i) {
+      gq_int offset = q.dim() * i;
+      eval[i] = math::expNDim(q.dim(), q.x_ptr() + offset);
+   }
+
+   return stable_dot_prod(eval, q.weights());
+}
+
+
+gq_int mult_nodes(const QuadDomain& q1, const QuadDomain& q2) {
+   return q1.num_nodes() * q2.num_nodes();
 }
 
 
@@ -156,6 +172,11 @@ bool in_domain(const QuadDomain& q) {
 }
 
 
+bool in_constraint(const QuadDomain& q) {
+   return in_domain(q) && pos_weights(q);
+}
+
+
 bool pos_weights(const QuadDomain& q) {
    GEN_QUAD_ASSERT_DEBUG(q.num_nodes() > 0);
    for(gq_int i = 0; i < q.num_nodes(); ++i) {
@@ -167,13 +188,9 @@ bool pos_weights(const QuadDomain& q) {
 }
 
 
-bool in_constraint(const QuadDomain& q) {
-   return in_domain(q) && pos_weights(q);
-}
-
-
 std::ostream& operator<<(std::ostream& os, const QuadDomain& q) {
-   os << QuadArray(q);
+   const QuadArray& qa = q;
+   os << QuadArray(qa);
    return os;
 }
 
@@ -186,7 +203,7 @@ QuadPolytope::QuadPolytope(gq_int deg, gq_int dim, gq_int num_nodes) : QuadDomai
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // abstract class
-QuadIdealPolytope::QuadIdealPolytope(gq_int deg, gq_int dim, gq_int num_nodes)
+QuadConvexPolytope::QuadConvexPolytope(gq_int deg, gq_int dim, gq_int num_nodes)
     : QuadPolytope(deg, dim, num_nodes) {
 }
 
@@ -211,16 +228,17 @@ double dist_from_constr_min(const QuadPolytope& q) {
       return std::numeric_limits<double>::infinity();
    }
 
-   double weight_dist
-       = -q.weights().minCoeff() * q.num_nodes() * q.dim() * q.dim();  // scale the smallest weight
+   // scale the smallest weight
+   double weight_dist = -q.weights().minCoeff() * q.num_nodes() * q.dim() * q.dim();
    double domain_dist = dist_from_boundary_min(q);
-   return std::max(weight_dist,
-                   domain_dist);  // max of two negative values, i.e. min of their absolute values
+
+   // max of two negative values, i.e. min of their absolute values
+   return std::max(weight_dist, domain_dist);
 }
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-QuadInterval::QuadInterval(gq_int deg, gq_int num_nodes) : QuadIdealPolytope(deg, 1, num_nodes) {
+QuadInterval::QuadInterval(gq_int deg, gq_int num_nodes) : QuadConvexPolytope(deg, 1, num_nodes) {
 }
 
 
@@ -244,7 +262,7 @@ const Polytope& QuadInterval::get_polytope() const {
 }
 
 
-const IdealPolytope& QuadInterval::get_ideal_polytope() const {
+const ConvexPolytope& QuadInterval::get_convex_polytope() const {
    return interval;
 }
 
@@ -257,7 +275,7 @@ double QuadInterval::relative_exponential_residual() const {
 std::string QuadInterval::quad_file_name() const {
    using std::string;
    using std::to_string;
-   return string("quad_") + interval.domain_name() + string("_deg") + to_string(this->deg()) + ".txt";
+   return string("quad_") + interval.domain_name() + string("_deg") + to_string(QA::deg()) + ".txt";
 }
 
 
@@ -267,7 +285,7 @@ std::string QuadInterval::quad_dims_file_name() const {
 
 
 gq_int QuadInterval::num_nodes_optimal() const {
-   return 1 + deg() / 2;
+   return 1 + QA::deg() / 2;
 }
 
 
@@ -286,7 +304,7 @@ QuadInterval quadrature_gauss_jacobi(gq_int deg, gq_int alpha, gq_int beta) {
    w.setlength(n);
 
    alglib::gqgenerategaussjacobi(alglib::ae_int_t(n), double(alpha), double(beta), info, x, w);
-   assert(info == 1);
+   GEN_QUAD_ASSERT_ALWAYS(info == 1);
 
    double c = std::pow(2., double(alpha + beta + 1));
    for(alglib::ae_int_t i = 0; i < n; ++i) {
@@ -300,7 +318,7 @@ QuadInterval quadrature_gauss_jacobi(gq_int deg, gq_int alpha, gq_int beta) {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 QuadCube::QuadCube(gq_int deg, gq_int dim, gq_int num_nodes)
-    : QuadIdealPolytope(deg, dim, num_nodes),
+    : QuadConvexPolytope(deg, dim, num_nodes),
       cube_(dim) {
    GEN_QUAD_ASSERT_DEBUG(dim >= 2);
 }
@@ -326,60 +344,58 @@ const Polytope& QuadCube::get_polytope() const {
 }
 
 
-const IdealPolytope& QuadCube::get_ideal_polytope() const {
+const ConvexPolytope& QuadCube::get_convex_polytope() const {
    return cube_;
 }
 
 
 std::unique_ptr<Basis> QuadCube::create_basis() const {
-   return std::make_unique<CubeBasis>(CubeBasis{this->deg(), this->dim()});
+   return std::make_unique<CubeBasis>(CubeBasis{QA::deg(), QA::dim()});
 }
 
 
 double QuadCube::relative_exponential_residual() const {
-   return rel_error(quad_exp_approx(*this), expIntegralNDimCube(this->dim()));
+   return rel_error(quad_exp_approx(*this), expIntegralNDimCube(QA::dim()));
 }
 
 
 std::string QuadCube::quad_file_name() const {
    using std::string;
    using std::to_string;
-   return string("quad_") + cube_.domain_name() + string("_deg") + to_string(this->deg()) + string("_dim")
-        + to_string(this->dim()) + ".txt";
+   return string("quad_") + cube_.domain_name() + string("_deg") + to_string(QA::deg()) + string("_dim")
+        + to_string(QA::dim()) + ".txt";
 }
 
 
 std::string QuadCube::quad_dims_file_name() const {
    using std::string;
    using std::to_string;
-   return cube_.domain_name() + string("_dim") + to_string(this->dim()) + ".txt";
+   return cube_.domain_name() + string("_dim") + to_string(QA::dim()) + ".txt";
 }
 
 
-QuadCube& QuadCube::reinit(gq_int dim, gq_int num_nodes) {
+void QuadCube::reinit(gq_int dim, gq_int num_nodes) {
    GEN_QUAD_ASSERT_DEBUG(dim > 1);
-   QuadArray::reinit(dim, num_nodes);
+   QA::reinit(dim, num_nodes);
    cube_.reinit(dim);
-   return *this;
 }
 
 
-QuadCube& QuadCube::reinit_copy(const QuadCube& qc) {
-   reinit(qc.dim(), qc.num_nodes());
+void QuadCube::reinit_copy(const QuadCube& qc) {
+   this->reinit(qc.dim(), qc.num_nodes());
    *this = qc;
-   return *this;
 }
 
 
 gq_int QuadCube::num_nodes_optimal() const {
-   gq_int basis_size = CubeBasisSize(deg(), dim());
-   return (basis_size + dim()) / (dim() + 1);
+   gq_int basis_size = CubeBasisSize(QA::deg(), QA::dim());
+   return (basis_size + QA::dim()) / (QA::dim() + 1);
 }
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 QuadSimplex::QuadSimplex(gq_int deg, gq_int dim, gq_int num_nodes)
-    : QuadIdealPolytope(deg, dim, num_nodes),
+    : QuadConvexPolytope(deg, dim, num_nodes),
       simplex_(dim) {
    GEN_QUAD_ASSERT_DEBUG(dim >= 2);
 }
@@ -405,60 +421,58 @@ const Polytope& QuadSimplex::get_polytope() const {
 }
 
 
-const IdealPolytope& QuadSimplex::get_ideal_polytope() const {
+const ConvexPolytope& QuadSimplex::get_convex_polytope() const {
    return simplex_;
 }
 
 
 std::unique_ptr<Basis> QuadSimplex::create_basis() const {
-   return std::make_unique<SimplexBasis>(SimplexBasis{this->deg(), this->dim()});
+   return std::make_unique<SimplexBasis>(SimplexBasis{QA::deg(), QA::dim()});
 }
 
 
 double QuadSimplex::relative_exponential_residual() const {
-   return rel_error(quad_exp_approx(*this), expIntegralNDimSimplex(this->dim()));
+   return rel_error(quad_exp_approx(*this), expIntegralNDimSimplex(QA::dim()));
 }
 
 
 std::string QuadSimplex::quad_file_name() const {
    using std::string;
    using std::to_string;
-   return string("quad_") + simplex_.domain_name() + string("_deg") + to_string(this->deg()) + string("_dim")
-        + to_string(this->dim()) + ".txt";
+   return string("quad_") + simplex_.domain_name() + string("_deg") + to_string(QA::deg()) + string("_dim")
+        + to_string(QA::dim()) + ".txt";
 }
 
 
 std::string QuadSimplex::quad_dims_file_name() const {
    using std::string;
    using std::to_string;
-   return simplex_.domain_name() + string("_dim") + to_string(this->dim()) + ".txt";
+   return simplex_.domain_name() + string("_dim") + to_string(QA::dim()) + ".txt";
 }
 
 
-QuadSimplex& QuadSimplex::reinit(gq_int dim, gq_int num_nodes) {
+void QuadSimplex::reinit(gq_int dim, gq_int num_nodes) {
    GEN_QUAD_ASSERT_DEBUG(dim > 1);
-   QuadArray::reinit(dim, num_nodes);
+   QA::reinit(dim, num_nodes);
    simplex_.reinit(dim);
-   return *this;
 }
 
 
-QuadSimplex& QuadSimplex::reinit_copy(const QuadSimplex& qs) {
-   reinit(qs.dim(), qs.num_nodes());
+void QuadSimplex::reinit_copy(const QuadSimplex& qs) {
+   this->reinit(qs.dim(), qs.num_nodes());
    *this = qs;
-   return *this;
 }
 
 
 gq_int QuadSimplex::num_nodes_optimal() const {
-   gq_int basis_size = SimplexBasisSize(deg(), dim());
-   return (basis_size + dim()) / (dim() + 1);
+   gq_int basis_size = SimplexBasisSize(QA::deg(), QA::dim());
+   return (basis_size + QA::dim()) / (QA::dim() + 1);
 }
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 QuadCubeSimplex::QuadCubeSimplex(gq_int deg, gq_int dim1, gq_int dim2, gq_int num_nodes)
-    : QuadIdealPolytope(deg, dim1 + dim2, num_nodes),
+    : QuadConvexPolytope(deg, dim1 + dim2, num_nodes),
       cubesimplex_({dim1, dim2}) {
    GEN_QUAD_ASSERT_DEBUG(dim1 >= 1);
    GEN_QUAD_ASSERT_DEBUG(dim2 >= 2);
@@ -485,13 +499,13 @@ const Polytope& QuadCubeSimplex::get_polytope() const {
 }
 
 
-const IdealPolytope& QuadCubeSimplex::get_ideal_polytope() const {
+const ConvexPolytope& QuadCubeSimplex::get_convex_polytope() const {
    return cubesimplex_;
 }
 
 
 std::unique_ptr<Basis> QuadCubeSimplex::create_basis() const {
-   return std::make_unique<CubeSimplexBasis>(CubeSimplexBasis{this->deg(), this->dim1(), this->dim2()});
+   return std::make_unique<CubeSimplexBasis>(CubeSimplexBasis{QA::deg(), this->dim1(), this->dim2()});
 }
 
 
@@ -504,7 +518,7 @@ double QuadCubeSimplex::relative_exponential_residual() const {
 std::string QuadCubeSimplex::quad_file_name() const {
    using std::string;
    using std::to_string;
-   return string("quad_") + cubesimplex_.domain_name() + string("_deg") + to_string(this->deg())
+   return string("quad_") + cubesimplex_.domain_name() + string("_deg") + to_string(QA::deg())
         + string("_dims_") + to_string(this->dim1()) + string("_") + to_string(this->dim2()) + ".txt";
 }
 
@@ -517,31 +531,29 @@ std::string QuadCubeSimplex::quad_dims_file_name() const {
 }
 
 
-QuadCubeSimplex& QuadCubeSimplex::reinit(gq_int dim1, gq_int dim2, gq_int num_nodes) {
+void QuadCubeSimplex::reinit(gq_int dim1, gq_int dim2, gq_int num_nodes) {
    GEN_QUAD_ASSERT_DEBUG(dim1 > 0);
    GEN_QUAD_ASSERT_DEBUG(dim2 > 1);
-   QuadArray::reinit(dim1 + dim2, num_nodes);
+   QA::reinit(dim1 + dim2, num_nodes);
    cubesimplex_.reinit(dim1, dim2);
-   return *this;
 }
 
 
-QuadCubeSimplex& QuadCubeSimplex::reinit_copy(const QuadCubeSimplex& qcs) {
-   reinit(qcs.dim1(), qcs.dim2(), qcs.num_nodes());
+void QuadCubeSimplex::reinit_copy(const QuadCubeSimplex& qcs) {
+   this->reinit(qcs.dim1(), qcs.dim2(), qcs.num_nodes());
    *this = qcs;
-   return *this;
 }
 
 
 gq_int QuadCubeSimplex::num_nodes_optimal() const {
-   gq_int basis_size = CubeSimplexBasisSize(deg(), dim());
-   return (basis_size + dim()) / (dim() + 1);
+   gq_int basis_size = CubeSimplexBasisSize(QA::deg(), QA::dim());
+   return (basis_size + QA::dim()) / (QA::dim() + 1);
 }
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 QuadSimplexSimplex::QuadSimplexSimplex(gq_int deg, gq_int dim1, gq_int dim2, gq_int num_nodes)
-    : QuadIdealPolytope(deg, dim1 + dim2, num_nodes),
+    : QuadConvexPolytope(deg, dim1 + dim2, num_nodes),
       simplexsimplex_({dim1, dim2}) {
    GEN_QUAD_ASSERT_DEBUG(dim1 >= 2);
    GEN_QUAD_ASSERT_DEBUG(dim2 >= 2);
@@ -568,13 +580,13 @@ const Polytope& QuadSimplexSimplex::get_polytope() const {
 }
 
 
-const IdealPolytope& QuadSimplexSimplex::get_ideal_polytope() const {
+const ConvexPolytope& QuadSimplexSimplex::get_convex_polytope() const {
    return simplexsimplex_;
 }
 
 
 std::unique_ptr<Basis> QuadSimplexSimplex::create_basis() const {
-   return std::make_unique<SimplexSimplexBasis>(SimplexSimplexBasis{this->deg(), this->dim1(), this->dim2()});
+   return std::make_unique<SimplexSimplexBasis>(SimplexSimplexBasis{QA::deg(), this->dim1(), this->dim2()});
 }
 
 
@@ -587,7 +599,7 @@ double QuadSimplexSimplex::relative_exponential_residual() const {
 std::string QuadSimplexSimplex::quad_file_name() const {
    using std::string;
    using std::to_string;
-   return string("quad_") + simplexsimplex_.domain_name() + string("_deg") + to_string(this->deg())
+   return string("quad_") + simplexsimplex_.domain_name() + string("_deg") + to_string(QA::deg())
         + string("_dims_") + to_string(this->dim1()) + string("_") + to_string(this->dim2()) + ".txt";
 }
 
@@ -600,31 +612,29 @@ std::string QuadSimplexSimplex::quad_dims_file_name() const {
 }
 
 
-QuadSimplexSimplex& QuadSimplexSimplex::reinit(gq_int dim1, gq_int dim2, gq_int num_nodes) {
+void QuadSimplexSimplex::reinit(gq_int dim1, gq_int dim2, gq_int num_nodes) {
    GEN_QUAD_ASSERT_DEBUG(dim1 > 1);
    GEN_QUAD_ASSERT_DEBUG(dim2 > 1);
-   QuadArray::reinit(dim1 + dim2, num_nodes);
+   QA::reinit(dim1 + dim2, num_nodes);
    simplexsimplex_.reinit(dim1, dim2);
-   return *this;
 }
 
 
-QuadSimplexSimplex& QuadSimplexSimplex::reinit_copy(const QuadSimplexSimplex& qss) {
-   reinit(qss.dim1(), qss.dim2(), qss.num_nodes());
+void QuadSimplexSimplex::reinit_copy(const QuadSimplexSimplex& qss) {
+   this->reinit(qss.dim1(), qss.dim2(), qss.num_nodes());
    *this = qss;
-   return *this;
 }
 
 
 gq_int QuadSimplexSimplex::num_nodes_optimal() const {
-   gq_int basis_size = SimplexSimplexBasisSize(deg(), dim());
-   return (basis_size + dim()) / (dim() + 1);
+   gq_int basis_size = SimplexSimplexBasisSize(QA::deg(), QA::dim());
+   return (basis_size + QA::dim()) / (QA::dim() + 1);
 }
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 QuadPyramid3D::QuadPyramid3D(gq_int deg, gq_int num_nodes)
-    : QuadIdealPolytope(deg, 3, num_nodes),
+    : QuadConvexPolytope(deg, 3, num_nodes),
       pyramid3D_{} {
 }
 
@@ -649,13 +659,13 @@ const Polytope& QuadPyramid3D::get_polytope() const {
 }
 
 
-const IdealPolytope& QuadPyramid3D::get_ideal_polytope() const {
+const ConvexPolytope& QuadPyramid3D::get_convex_polytope() const {
    return pyramid3D_;
 }
 
 
 std::unique_ptr<Basis> QuadPyramid3D::create_basis() const {
-   return std::make_unique<PyramidBasis3D>(PyramidBasis3D{this->deg()});
+   return std::make_unique<PyramidBasis3D>(PyramidBasis3D{QA::deg()});
 }
 
 
@@ -667,7 +677,7 @@ double QuadPyramid3D::relative_exponential_residual() const {
 std::string QuadPyramid3D::quad_file_name() const {
    using std::string;
    using std::to_string;
-   return string("quad_") + pyramid3D_.domain_name() + string("_deg") + to_string(this->deg()) + ".txt";
+   return string("quad_") + pyramid3D_.domain_name() + string("_deg") + to_string(QA::deg()) + ".txt";
 }
 
 
@@ -677,8 +687,8 @@ std::string QuadPyramid3D::quad_dims_file_name() const {
 
 
 gq_int QuadPyramid3D::num_nodes_optimal() const {
-   gq_int basis_size = Pyramid3DBasisSize(deg());
-   return (basis_size + dim()) / (dim() + 1);
+   gq_int basis_size = Pyramid3DBasisSize(QA::deg());
+   return (basis_size + QA::dim()) / (QA::dim() + 1);
 }
 
 
@@ -709,23 +719,23 @@ const Polytope& QuadOmega2D::get_polytope() const {
 }
 
 
-const Omega2D& QuadOmega2D::get_domain_loc() const {
+const Omega2D& QuadOmega2D::get_domain_self() const {
    return omega_;
 }
 
 
 std::unique_ptr<Basis> QuadOmega2D::create_basis() const {
-   return std::make_unique<OmegaBasis2D>(OmegaBasis2D{omega_, this->deg()});
+   return std::make_unique<OmegaBasis2D>(OmegaBasis2D{omega_, QA::deg()});
 }
 
 
-std::unique_ptr<OmegaBasis2D> QuadOmega2D::create_basis_loc() const {
-   return std::make_unique<OmegaBasis2D>(OmegaBasis2D{omega_, this->deg()});
+std::unique_ptr<OmegaBasis2D> QuadOmega2D::create_basis_self() const {
+   return std::make_unique<OmegaBasis2D>(OmegaBasis2D{omega_, QA::deg()});
 }
 
 
 double QuadOmega2D::relative_exponential_residual() const {
-   QuadOmega2D qe = CreateOmegaComposite(omega_, GaussTensorSimplex(2 * deg() + 1, 2));
+   QuadOmega2D qe = CreateOmegaComposite(omega_, GaussTensorSimplex(2 * QA::deg() + 1, 2));
    return rel_error(quad_exp_approx(*this), quad_exp_approx(qe));
 }
 
@@ -733,7 +743,7 @@ double QuadOmega2D::relative_exponential_residual() const {
 std::string QuadOmega2D::quad_file_name() const {
    using std::string;
    using std::to_string;
-   return string("quad_") + omega_.domain_name() + string("_deg") + to_string(this->deg()) + ".txt";
+   return string("quad_") + omega_.domain_name() + string("_deg") + to_string(QA::deg()) + ".txt";
 }
 
 
@@ -743,8 +753,8 @@ std::string QuadOmega2D::quad_dims_file_name() const {
 
 
 gq_int QuadOmega2D::num_nodes_optimal() const {
-   gq_int basis_size = Omega2DBasisSize(deg());
-   return (basis_size + dim()) / (dim() + 1);
+   gq_int basis_size = Omega2DBasisSize(QA::deg());
+   return (basis_size + QA::dim()) / (QA::dim() + 1);
 }
 
 
@@ -807,17 +817,6 @@ static long double expIntegralNDimSimplex(gq_int dim) {
    expI /= (long double)math::factorial(dim);
 
    return expI;
-}
-
-
-double quad_exp_approx(const QuadDomain& q) {
-   Array1D eval(q.num_nodes());
-   for(gq_int i = 0; i < q.num_nodes(); ++i) {
-      gq_int offset = q.dim() * i;
-      eval[i] = math::expNDim(q.dim(), q.x_ptr() + offset);
-   }
-
-   return stable_dot_prod(eval, q.weights());
 }
 
 

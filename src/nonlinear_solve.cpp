@@ -30,12 +30,12 @@ struct Penalty {
 }  // namespace
 
 
-static Penalty PenaltyGradientFac(gq_int skip, const QuadIdealPolytope& q, double dz_fac, const QuadArray& dz,
-                                  const QuadArray& dg);
+static Penalty PenaltyGradientFac(gq_int skip, const QuadConvexPolytope& q, double dz_fac,
+                                  const QuadArray& dz, const QuadArray& dg);
 static double PenaltyGradientFac(const QuadOmega2D& q, const QuadArray& dz, const QuadArray& dg);
 
 
-static QuadArray ComputePenaltyGradient(const QuadIdealPolytope& q);
+static QuadArray ComputePenaltyGradient(const QuadConvexPolytope& q);
 static QuadArray ComputePenaltyGradient(const QuadOmega2D& q, bool do_inner);
 
 
@@ -71,7 +71,7 @@ LsqOut LeastSquaresNewton(QuadDomain& q, Basis& basis) {
    }
 
    eval_jacobian(q, J);  // 0th iteration, function for 0th iteration already computed above
-   if(auto q_poly = dynamic_cast<QuadIdealPolytope*>(&q)) {
+   if(auto q_poly = dynamic_cast<QuadConvexPolytope*>(&q)) {
       dg = ComputePenaltyGradient(*q_poly);  // 0th iteration
    } else if(auto q_omega = dynamic_cast<QuadOmega2D*>(&q)) {
       dg = ComputePenaltyGradient(*q_omega, false);
@@ -90,7 +90,7 @@ LsqOut LeastSquaresNewton(QuadDomain& q, Basis& basis) {
       double dz_fac = 1.;
       double dist_domain = 1.;
       // for polytopes with inequality constraints
-      if(auto q_poly = dynamic_cast<QuadIdealPolytope*>(&q)) {
+      if(auto q_poly = dynamic_cast<QuadConvexPolytope*>(&q)) {
          dz_fac = 2.;
          do {
             dz_fac *= 0.5;
@@ -117,9 +117,9 @@ LsqOut LeastSquaresNewton(QuadDomain& q, Basis& basis) {
 
       q.array() -= dz_fac * dz.array() + dg_fac * dg.array();
 
-      eval_jacobian(q, J);                                      // update J
-      F = eval_function(q);                                     // update F
-      if(auto q_poly = dynamic_cast<QuadIdealPolytope*>(&q)) {  // update G
+      eval_jacobian(q, J);                                       // update J
+      F = eval_function(q);                                      // update F
+      if(auto q_poly = dynamic_cast<QuadConvexPolytope*>(&q)) {  // update G
          dg = ComputePenaltyGradient(*q_poly);
       } else if(auto q_omega = dynamic_cast<QuadOmega2D*>(&q)) {
          dg = ComputePenaltyGradient(*q_omega, false);
@@ -176,11 +176,11 @@ static auto ExcludeIndex(gq_int index, const Array1D& x) {
 // The returned value contains g_fac and the distance of the nearest node from
 // the nearest boundary(including the weights). If distance < 0, all nodes are
 // inside the domain, if distance > 0 then at least one node is outside of the domain.
-static Penalty PenaltyGradientFac(gq_int skip, const QuadIdealPolytope& q, double dz_fac, const QuadArray& dz,
-                                  const QuadArray& dg) {
+static Penalty PenaltyGradientFac(gq_int skip, const QuadConvexPolytope& q, double dz_fac,
+                                  const QuadArray& dz, const QuadArray& dg) {
    GEN_QUAD_ASSERT_DEBUG(skip >= -1 && skip <= q.num_nodes() - 1);
 
-   const IdealPolytope& polytope = q.get_ideal_polytope();
+   const ConvexPolytope& polytope = q.get_convex_polytope();
    const Matrix2D& A = polytope.get_constraint_matrix();
    const Vector1D& b = polytope.get_constraint_vector();
 
@@ -249,10 +249,10 @@ static double PenaltyGradientFac(const QuadOmega2D& q, const QuadArray& dz, cons
 }
 
 
-static QuadArray ComputePenaltyGradient(const QuadIdealPolytope& q) {
+static QuadArray ComputePenaltyGradient(const QuadConvexPolytope& q) {
    QuadArray g(q.deg(), q.dim(), q.num_nodes());
 
-   const IdealPolytope& polytope = q.get_ideal_polytope();
+   const ConvexPolytope& polytope = q.get_convex_polytope();
    const Matrix2D& A = polytope.get_constraint_matrix();
    const Vector1D& b = polytope.get_constraint_vector();
    Vector1D denom(A.rows());
@@ -272,7 +272,7 @@ static QuadArray ComputePenaltyGradient(const QuadIdealPolytope& q) {
 
 static QuadArray ComputePenaltyGradient(const QuadOmega2D& q, bool do_inner) {
    QuadArray grad(q.deg(), q.dim(), q.num_nodes());
-   const Omega2D& omega = q.get_domain_loc();
+   const Omega2D& omega = q.get_domain_self();
 
    for(gq_int n = 0; n < q.num_nodes(); ++n) {
       const auto xn = q.node(n);

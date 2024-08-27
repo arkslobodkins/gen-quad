@@ -12,16 +12,16 @@
 namespace gquad {
 
 
-static IdealPolytope::Constraints CubeOrLineConstraints(gq_int dim);
+static ConvexPolytope::Constraints CubeOrLineConstraints(gq_int dim);
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-IdealPolytope::IdealPolytope(Constraints c) : Polytope{}, A_(std::move(c.first)), b_(std::move(c.second)) {
+ConvexPolytope::ConvexPolytope(Constraints c) : Polytope{}, A_(std::move(c.first)), b_(std::move(c.second)) {
 }
 
 
 // Applies to all polytopes determined by linear inequality constraints
-bool IdealPolytope::in_domain(const Array1D& x) const {
+bool ConvexPolytope::in_domain(const Array1D& x) const {
    for(gq_int i = 0; i < A_.rows(); ++i) {
       if(dot_prod(A_.row(i), x) > b_[i]) {
          return false;
@@ -31,7 +31,7 @@ bool IdealPolytope::in_domain(const Array1D& x) const {
 }
 
 
-double IdealPolytope::dist_from_boundary(const Array1D& x) const {
+double ConvexPolytope::dist_from_boundary(const Array1D& x) const {
    auto dist = A_ * x.matrix() - b_;
    auto max = dist.maxCoeff();
    if(max > 0.) {
@@ -42,22 +42,22 @@ double IdealPolytope::dist_from_boundary(const Array1D& x) const {
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-IdealPolytope::Constraints Interval::ConstructConstraints() {
+ConvexPolytope::Constraints Interval::ConstructConstraints() {
    return CubeOrLineConstraints(1);
 }
 
 
-Interval::Interval() : IdealPolytope(ConstructConstraints()) {
+Interval::Interval() : ConvexPolytope(ConstructConstraints()) {
 }
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-IdealPolytope::Constraints Cube::ConstructConstraints(gq_int dim) {
+ConvexPolytope::Constraints Cube::ConstructConstraints(gq_int dim) {
    return CubeOrLineConstraints(dim);
 }
 
 
-Cube::Cube(gq_int dim) : IdealPolytope{ConstructConstraints(dim)}, dim_{dim} {
+Cube::Cube(gq_int dim) : ConvexPolytope{ConstructConstraints(dim)}, dim_{dim} {
    GEN_QUAD_ASSERT_DEBUG(dim_ > 1);
 }
 
@@ -77,7 +77,7 @@ void Cube::reinit(gq_int dim) {
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-IdealPolytope::Constraints Simplex::ConstructConstraints(gq_int dim) {
+ConvexPolytope::Constraints Simplex::ConstructConstraints(gq_int dim) {
    Matrix2D A(dim + 1, dim);
    A(0, 0) = 1.;
    for(gq_int i = 1; i < A.rows() - 1; ++i) {
@@ -92,7 +92,7 @@ IdealPolytope::Constraints Simplex::ConstructConstraints(gq_int dim) {
 }
 
 
-Simplex::Simplex(gq_int dim) : IdealPolytope{ConstructConstraints(dim)}, dim_{dim} {
+Simplex::Simplex(gq_int dim) : ConvexPolytope{ConstructConstraints(dim)}, dim_{dim} {
    GEN_QUAD_ASSERT_DEBUG(dim_ > 1);
 }
 
@@ -127,7 +127,7 @@ void Simplex::reinit(gq_int dim) {
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-IdealPolytope::Constraints CubeSimplex::ConstructConstraints(gq_int dim1, gq_int dim2) {
+ConvexPolytope::Constraints CubeSimplex::ConstructConstraints(gq_int dim1, gq_int dim2) {
    Constraints cube_or_line = CubeOrLineConstraints(dim1);
    Simplex S{dim2};
    const auto& C_A = cube_or_line.first;
@@ -155,7 +155,7 @@ IdealPolytope::Constraints CubeSimplex::ConstructConstraints(gq_int dim1, gq_int
 
 
 CubeSimplex::CubeSimplex(std::array<gq_int, 2> dims)
-    : IdealPolytope{ConstructConstraints(dims[0], dims[1])},
+    : ConvexPolytope{ConstructConstraints(dims[0], dims[1])},
       dims_(dims) {
    GEN_QUAD_ASSERT_DEBUG(dims_[0] > 0);
    GEN_QUAD_ASSERT_DEBUG(dims_[1] > 1);
@@ -200,7 +200,7 @@ void CubeSimplex::reinit(gq_int dim1, gq_int dim2) {
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-IdealPolytope::Constraints SimplexSimplex::ConstructConstraints(gq_int dim1, gq_int dim2) {
+ConvexPolytope::Constraints SimplexSimplex::ConstructConstraints(gq_int dim1, gq_int dim2) {
    Simplex S1{dim1};
    Simplex S2{dim2};
    const auto& S1_A = S1.get_constraint_matrix();
@@ -228,7 +228,7 @@ IdealPolytope::Constraints SimplexSimplex::ConstructConstraints(gq_int dim1, gq_
 
 
 SimplexSimplex::SimplexSimplex(std::array<gq_int, 2> dims)
-    : IdealPolytope{ConstructConstraints(dims[0], dims[1])},
+    : ConvexPolytope{ConstructConstraints(dims[0], dims[1])},
       dims_(dims) {
    GEN_QUAD_ASSERT_DEBUG(dims_[0] > 1);
    GEN_QUAD_ASSERT_DEBUG(dims_[1] > 1);
@@ -277,7 +277,7 @@ void SimplexSimplex::reinit(gq_int dim1, gq_int dim2) {
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-IdealPolytope::Constraints Pyramid3D::ConstructConstraints() {
+ConvexPolytope::Constraints Pyramid3D::ConstructConstraints() {
    Matrix2D A(6, 3);
 
    // [-1 +0 +0] x >= 0
@@ -302,7 +302,7 @@ IdealPolytope::Constraints Pyramid3D::ConstructConstraints() {
 }
 
 
-Pyramid3D::Pyramid3D() : IdealPolytope{ConstructConstraints()} {
+Pyramid3D::Pyramid3D() : ConvexPolytope{ConstructConstraints()} {
 }
 
 
@@ -314,7 +314,7 @@ bool Pyramid3D::in_domain(const Array1D& x) const {
 }
 
 
-static IdealPolytope::Constraints CubeOrLineConstraints(gq_int dim) {
+static ConvexPolytope::Constraints CubeOrLineConstraints(gq_int dim) {
    Matrix2D A(2 * dim, dim);
    Vector1D b(2 * dim);
 

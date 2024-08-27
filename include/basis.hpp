@@ -21,10 +21,11 @@ namespace gquad {
 // thus avoiding recomputing them when Basis routines are called.
 class BasisTable {
 public:
-   explicit BasisTable(gq_int deg,
-                       gq_int dim);  // number of rows will be set to the number of basis functions
+   // number of rows will be set to the number of basis functions
+   explicit BasisTable(gq_int deg, gq_int dim);
 
-   explicit BasisTable(gq_int deg, gq_int dim, gq_int num_bfuncs);  // number of rows will be set to num_bfuncs
+   // number of rows will be set to num_elem
+   explicit BasisTable(gq_int deg, gq_int dim, gq_int num_elem);
 
    BasisTable(const BasisTable&) = default;
    BasisTable& operator=(const BasisTable) = delete;
@@ -45,8 +46,8 @@ public:
       return dim_;
    }
 
-   gq_int num_bfuncs() const {
-      return num_bfuncs_;
+   gq_int num_elem() const {
+      return num_elem_;
    }
 
    const auto& array() const {
@@ -56,9 +57,9 @@ public:
 private:
    const gq_int deg_;
    const gq_int dim_;
-   const gq_int num_bfuncs_;
+   const gq_int num_elem_;
 
-   ArrayInt2D data_;  // dim x num_bfuncs table
+   ArrayInt2D data_;  // dim x num_elem table
 };
 
 

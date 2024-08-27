@@ -43,10 +43,11 @@ protected:
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-class IdealPolytope : public Polytope {
+class ConvexPolytope : public Polytope {
 public:
-   using Constraints = std::pair<Matrix2D, Vector1D>;  // Linear inequality constraints
-   virtual ~IdealPolytope() = default;
+   // Linear inequality constraints
+   using Constraints = std::pair<Matrix2D, Vector1D>;
+   virtual ~ConvexPolytope() = default;
 
    bool in_domain(const Array1D& x) const override;
    double dist_from_boundary(const Array1D& x) const override;
@@ -63,13 +64,13 @@ protected:
    Matrix2D A_;
    Vector1D b_;
 
-   explicit IdealPolytope(Constraints C);
-   IdealPolytope(const IdealPolytope&) = default;
-   IdealPolytope& operator=(const IdealPolytope&) = delete;
+   explicit ConvexPolytope(Constraints C);
+   ConvexPolytope(const ConvexPolytope&) = default;
+   ConvexPolytope& operator=(const ConvexPolytope&) = delete;
 };
 
 
-class Interval : public IdealPolytope {
+class Interval : public ConvexPolytope {
 public:
    explicit Interval();
    Interval(const Interval&) = default;
@@ -92,7 +93,7 @@ private:
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-class Cube : public IdealPolytope {
+class Cube : public ConvexPolytope {
 public:
    explicit Cube(gq_int dim);
    Cube(const Cube&) = default;
@@ -115,7 +116,7 @@ private:
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-class Simplex : public IdealPolytope {
+class Simplex : public ConvexPolytope {
 public:
    explicit Simplex(gq_int dim);
    Simplex(const Simplex&) = default;
@@ -141,7 +142,7 @@ private:
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-class CubeSimplex : public IdealPolytope {
+class CubeSimplex : public ConvexPolytope {
 public:
    explicit CubeSimplex(std::array<gq_int, 2> dims);
    CubeSimplex(const CubeSimplex&) = default;
@@ -175,7 +176,7 @@ private:
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-class SimplexSimplex : public IdealPolytope {
+class SimplexSimplex : public ConvexPolytope {
 public:
    explicit SimplexSimplex(std::array<gq_int, 2> dims);
    SimplexSimplex(const SimplexSimplex&) = default;
@@ -209,7 +210,7 @@ private:
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-class Pyramid3D : public IdealPolytope {
+class Pyramid3D : public ConvexPolytope {
 public:
    explicit Pyramid3D();
    Pyramid3D(const Pyramid3D&) = default;

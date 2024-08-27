@@ -53,35 +53,35 @@ gq_int ComputeAndOutputOmega2D(Omega2D omega, const StdVector<gq_int>& deg,
 
 
 // Returns null pointer if computation has been terminated due to illegal input, exceptions, etc.
-std::unique_ptr<QuadInterval> Quadrature_Interval(gq_int deg);
+std::unique_ptr<QuadInterval> QuadratureInterval(gq_int deg);
 
 
-std::unique_ptr<QuadPyramid3D> Quadrature_Pyramid3D(gq_int deg, SearchWidth search_width = SearchWidth{1});
+std::unique_ptr<QuadPyramid3D> QuadraturePyramid3D(gq_int deg, SearchWidth search_width = SearchWidth{1});
 
 
-std::unique_ptr<QuadCube> Quadrature_Cube(gq_int deg, gq_int dim, SearchWidth search_width = SearchWidth{1});
+std::unique_ptr<QuadCube> QuadratureCube(gq_int deg, gq_int dim, SearchWidth search_width = SearchWidth{1});
 
 
-std::unique_ptr<QuadSimplex> Quadrature_Simplex(gq_int deg, gq_int dim,
-                                                SearchWidth search_width = SearchWidth{1});
+std::unique_ptr<QuadSimplex> QuadratureSimplex(gq_int deg, gq_int dim,
+                                               SearchWidth search_width = SearchWidth{1});
 
 
-std::unique_ptr<QuadCubeSimplex> Quadrature_CubeSimplex(gq_int deg, gq_int dim1, gq_int dim2,
-                                                        SearchWidth search_width = SearchWidth{1});
+std::unique_ptr<QuadCubeSimplex> QuadratureCubeSimplex(gq_int deg, gq_int dim1, gq_int dim2,
+                                                       SearchWidth search_width = SearchWidth{1});
 
 
-std::unique_ptr<QuadSimplexSimplex> Quadrature_SimplexSimplex(gq_int deg, gq_int dim1, gq_int dim2,
-                                                              SearchWidth search_width = SearchWidth{1});
+std::unique_ptr<QuadSimplexSimplex> QuadratureSimplexSimplex(gq_int deg, gq_int dim1, gq_int dim2,
+                                                             SearchWidth search_width = SearchWidth{1});
 
 
-std::unique_ptr<QuadOmega2D> Quadrature_Pentagon(gq_int deg, SearchWidth search_width = SearchWidth{1});
+std::unique_ptr<QuadOmega2D> QuadraturePentagon(gq_int deg, SearchWidth search_width = SearchWidth{1});
 
 
-std::unique_ptr<QuadOmega2D> Quadrature_Hexagon(gq_int deg, SearchWidth search_width = SearchWidth{1});
+std::unique_ptr<QuadOmega2D> QuadratureHexagon(gq_int deg, SearchWidth search_width = SearchWidth{1});
 
 
-std::unique_ptr<QuadOmega2D> Quadrature_Omega2D(Omega2D omega, gq_int deg,
-                                                SearchWidth search_width = SearchWidth{1});
+std::unique_ptr<QuadOmega2D> QuadratureOmega2D(Omega2D omega, gq_int deg,
+                                               SearchWidth search_width = SearchWidth{1});
 
 
 // Generates file in results/quad_rules directory.

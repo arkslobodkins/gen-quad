@@ -117,8 +117,9 @@ const Array2D& CubeBasis::monomial_der(const Array1D& x) {
 
 const Array1D& CubeBasis::monomial_integrals() {
    for(gq_int k = 0; k < num_funcs_; ++k) {
-      gq_int prod = 1;  // use integer instead of double and perform multiplication instead of division
-                        // to avoid error associated with intermediary divisions
+      // use integer instead of double and perform multiplication instead of division
+      // to avoid error associated with intermediary divisions
+      gq_int prod = 1;
       for(gq_int d = 0; d < dim_; ++d) {
          prod *= (index_table_(d, k) + 1);
       }
@@ -363,7 +364,8 @@ void CubeSimplexBasis::orthog_basis_polytopic_two_internal(const Array1D& x, Arr
    gq_int dim_two{dim1 + dim2};
 
    Array1D legendre(deg_ + 1);
-   Legendre((x[dim_two - 2] - x[dim_two - 1]) / x[dim_two - 2], legendre);  // mapped (2y-x)/x to (x-y)/x
+   // mapped (2y-x)/x to (x-y)/x
+   Legendre((x[dim_two - 2] - x[dim_two - 1]) / x[dim_two - 2], legendre);
 
    ArrayLong1D xCoord(dim2 - 1);
    for(gq_int d = 0; d < dim2 - 2; ++d) {
@@ -528,7 +530,8 @@ void SimplexSimplexBasis::orthog_basis_polytopic_one_internal(const Array1D& x, 
    gq_int dim1{dims_[0]};
 
    Array1D legendre(deg_ + 1);
-   Legendre((x[dim1 - 2] - x[dim1 - 1]) / x[dim1 - 2], legendre);  // mapped (2y-x)/x to (x-y)/x
+   // mapped (2y-x)/x to (x-y)/x
+   Legendre((x[dim1 - 2] - x[dim1 - 1]) / x[dim1 - 2], legendre);
 
    ArrayLong1D xCoord(dim1 - 1);
    for(gq_int d = 0; d < dim1 - 2; ++d) {
@@ -761,7 +764,7 @@ OmegaBasis2D::OmegaBasis2D(Omega2D omega, gq_int deg)
       if(n > 0) {
          D_[n].resize(n, (n + 2));
       }
-      recurrence_coeffs(n);
+      this->recurrence_coeffs(n);
    }
 
    StandardBasisIndices(index_table_);
@@ -993,21 +996,21 @@ gq_int Omega2DBasisSize(gq_int deg) {
 BasisTable::BasisTable(gq_int deg, gq_int dim)
     : deg_{deg},
       dim_{dim},
-      num_bfuncs_{StandardBasisSize(deg, dim)},
-      data_(dim_, num_bfuncs_) {
+      num_elem_{StandardBasisSize(deg, dim)},
+      data_(dim_, num_elem_) {
    GEN_QUAD_ASSERT_DEBUG(deg_ >= 0);
    GEN_QUAD_ASSERT_DEBUG(dim_ >= 1);
 }
 
 
-BasisTable::BasisTable(gq_int deg, gq_int dim, gq_int num_bfuncs)
+BasisTable::BasisTable(gq_int deg, gq_int dim, gq_int num_elem)
     : deg_{deg},
       dim_{dim},
-      num_bfuncs_{num_bfuncs},
-      data_(dim_, num_bfuncs_) {
+      num_elem_{num_elem},
+      data_(dim_, num_elem_) {
    GEN_QUAD_ASSERT_DEBUG(deg_ >= 0);
    GEN_QUAD_ASSERT_DEBUG(dim_ >= 1);
-   GEN_QUAD_ASSERT_DEBUG(num_bfuncs_ >= 1);
+   GEN_QUAD_ASSERT_DEBUG(num_elem_ >= 1);
 }
 
 
@@ -1088,15 +1091,15 @@ void StandardBasisIndices(BasisTable& table) {
       StandardBasisIndices(table_cur);
 
       for(gq_int d = 0; d < dim - 1; ++d) {
-         for(gq_int k = 0; k < table_cur.num_bfuncs(); ++k) {
+         for(gq_int k = 0; k < table_cur.num_elem(); ++k) {
             table(d, elem_count + k) = table_cur(d, k);
          }
       }
-      for(gq_int k = 0; k < table_cur.num_bfuncs(); ++k) {
+      for(gq_int k = 0; k < table_cur.num_elem(); ++k) {
          table(dim - 1, elem_count + k) = deg_cur;
       }
 
-      elem_count += table_cur.num_bfuncs();
+      elem_count += table_cur.num_elem();
    }
 }
 
@@ -1164,7 +1167,7 @@ static void Jacobi(gq_int alpha, double x, EigenType&& p) {
 static void StandardMonomialFunctions(const BasisTable& index_table, const Array1D& x, Array1D& functions) {
    gq_int deg{index_table.deg()};
    gq_int dim{index_table.dim()};
-   gq_int num_funcs{index_table.num_bfuncs()};
+   gq_int num_funcs{index_table.num_elem()};
 
    Array2D monomial(dim, deg + 1);
    for(gq_int d = 0; d < dim; ++d) {
@@ -1183,7 +1186,7 @@ static void StandardMonomialFunctions(const BasisTable& index_table, const Array
 static void StandardMonomialDerivatives(const BasisTable& index_table, const Array1D& x,
                                         Array2D& derivatives) {
    gq_int dim{index_table.dim()};
-   gq_int num_funcs{index_table.num_bfuncs()};
+   gq_int num_funcs{index_table.num_elem()};
    constexpr double h{5.e-5};
 
    Array1D fdiff[4];

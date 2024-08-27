@@ -110,28 +110,7 @@ public:
 };
 
 
-inline auto QuadArray::node(gq_int i) & {
-   GEN_QUAD_ASSERT_DEBUG(i > -1 && i < num_nodes_);
-   gq_int cur_index = num_nodes_ + i * dim_;
-   return array_(seqN(cur_index, dim_));
-}
-
-
-inline const auto QuadArray::node(gq_int i) const& {
-   GEN_QUAD_ASSERT_DEBUG(i > -1 && i < num_nodes_);
-   gq_int cur_index = num_nodes_ + i * dim_;
-   return array_(seqN(cur_index, dim_));
-}
-
-
-inline auto QuadArray::node_v(gq_int i) & {
-   return node(i).matrix();
-}
-
-
-inline const auto QuadArray::node_v(gq_int i) const& {
-   return node(i).matrix();
-}
+std::ostream& operator<<(std::ostream& os, const QuadArray& q);
 
 
 inline double& QuadArray::w(gq_int i) & {
@@ -143,6 +122,30 @@ inline double& QuadArray::w(gq_int i) & {
 inline const double& QuadArray::w(gq_int i) const& {
    GEN_QUAD_ASSERT_DEBUG(i > -1 && i < num_nodes_);
    return array_[i];
+}
+
+
+inline auto QuadArray::node(gq_int i) & {
+   GEN_QUAD_ASSERT_DEBUG(i > -1 && i < num_nodes_);
+   gq_int offset = num_nodes_ + i * dim_;
+   return array_(seqN(offset, dim_));
+}
+
+
+inline const auto QuadArray::node(gq_int i) const& {
+   GEN_QUAD_ASSERT_DEBUG(i > -1 && i < num_nodes_);
+   gq_int offset = num_nodes_ + i * dim_;
+   return array_(seqN(offset, dim_));
+}
+
+
+inline auto QuadArray::node_v(gq_int i) & {
+   return node(i).matrix();
+}
+
+
+inline const auto QuadArray::node_v(gq_int i) const& {
+   return node(i).matrix();
 }
 
 
@@ -183,6 +186,8 @@ public:
    QuadDomain& resize_and_assign(const QuadDomain& q);
 
 protected:
+   using QA = QuadArray;
+
    explicit QuadDomain(gq_int deg, gq_int dim, gq_int num_nodes);
    QuadDomain(const QuadDomain&) = default;
    QuadDomain(QuadDomain&&) = default;
@@ -191,9 +196,6 @@ protected:
 
    friend std::ostream& operator<<(std::ostream& os, const QuadDomain& q);
 };
-
-
-double quad_exp_approx(const QuadDomain& q);
 
 
 template <typename F>
@@ -207,9 +209,10 @@ double quad_approx(const QuadDomain& q, F f) {
 }
 
 
-inline gq_int mult_nodes(const QuadDomain& q1, const QuadDomain& q2) {
-   return q1.num_nodes() * q2.num_nodes();
-}
+double quad_exp_approx(const QuadDomain& q);
+
+
+gq_int mult_nodes(const QuadDomain& q1, const QuadDomain& q2);
 
 
 bool in_domain_elem(const QuadDomain& q, gq_int i);
@@ -218,7 +221,6 @@ bool in_constraint(const QuadDomain& q);
 bool pos_weights(const QuadDomain& q);
 
 
-std::ostream& operator<<(std::ostream& os, const QuadArray& q);
 std::ostream& operator<<(std::ostream& os, const QuadDomain& q);
 
 
@@ -238,17 +240,17 @@ protected:
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-class QuadIdealPolytope : public QuadPolytope {
+class QuadConvexPolytope : public QuadPolytope {
 public:
-   virtual ~QuadIdealPolytope() = default;
-   virtual const IdealPolytope& get_ideal_polytope() const = 0;
+   virtual ~QuadConvexPolytope() = default;
+   virtual const ConvexPolytope& get_convex_polytope() const = 0;
 
 protected:
-   explicit QuadIdealPolytope(gq_int deg, gq_int dim, gq_int num_nodes);
-   QuadIdealPolytope(const QuadIdealPolytope&) = default;
-   QuadIdealPolytope(QuadIdealPolytope&&) = default;
-   QuadIdealPolytope& operator=(const QuadIdealPolytope&) = default;
-   QuadIdealPolytope& operator=(QuadIdealPolytope&&) = default;
+   explicit QuadConvexPolytope(gq_int deg, gq_int dim, gq_int num_nodes);
+   QuadConvexPolytope(const QuadConvexPolytope&) = default;
+   QuadConvexPolytope(QuadConvexPolytope&&) = default;
+   QuadConvexPolytope& operator=(const QuadConvexPolytope&) = default;
+   QuadConvexPolytope& operator=(QuadConvexPolytope&&) = default;
 };
 
 
@@ -257,7 +259,7 @@ double dist_from_constr_min(const QuadPolytope& q);
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-class QuadInterval : public QuadIdealPolytope {
+class QuadInterval : public QuadConvexPolytope {
 public:
    explicit QuadInterval(gq_int deg, gq_int num_nodes = 0);
 
@@ -266,7 +268,7 @@ public:
 
    const Domain& get_domain() const override;
    const Polytope& get_polytope() const override;
-   const IdealPolytope& get_ideal_polytope() const override;
+   const ConvexPolytope& get_convex_polytope() const override;
 
    double relative_exponential_residual() const override;
    std::string quad_file_name() const override;
@@ -284,19 +286,19 @@ QuadInterval quadrature_gauss_jacobi(gq_int deg, gq_int alpha, gq_int beta);
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-class QuadCube : public QuadIdealPolytope {
+class QuadCube : public QuadConvexPolytope {
 public:
    explicit QuadCube(gq_int deg, gq_int dim, gq_int num_nodes = 0);
 
    std::unique_ptr<QuadDomain> clone_quad_domain() const override;
    std::unique_ptr<QuadPolytope> clone_quad_polytope() const override;
 
-   QuadCube& reinit(gq_int dim, gq_int num_nodes);
-   QuadCube& reinit_copy(const QuadCube& qc);
+   void reinit(gq_int dim, gq_int num_nodes);
+   void reinit_copy(const QuadCube& qc);
 
    const Domain& get_domain() const override;
    const Polytope& get_polytope() const override;
-   const IdealPolytope& get_ideal_polytope() const override;
+   const ConvexPolytope& get_convex_polytope() const override;
    std::unique_ptr<Basis> create_basis() const override;
 
    double relative_exponential_residual() const override;
@@ -311,19 +313,19 @@ private:
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-class QuadSimplex : public QuadIdealPolytope {
+class QuadSimplex : public QuadConvexPolytope {
 public:
    QuadSimplex(gq_int deg, gq_int dim, gq_int num_nodes = 0);
 
    std::unique_ptr<QuadDomain> clone_quad_domain() const override;
    std::unique_ptr<QuadPolytope> clone_quad_polytope() const override;
 
-   QuadSimplex& reinit(gq_int dim, gq_int num_nodes);
-   QuadSimplex& reinit_copy(const QuadSimplex& qs);
+   void reinit(gq_int dim, gq_int num_nodes);
+   void reinit_copy(const QuadSimplex& qs);
 
    const Domain& get_domain() const override;
    const Polytope& get_polytope() const override;
-   const IdealPolytope& get_ideal_polytope() const override;
+   const ConvexPolytope& get_convex_polytope() const override;
    std::unique_ptr<Basis> create_basis() const override;
 
    double relative_exponential_residual() const override;
@@ -338,19 +340,19 @@ private:
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-class QuadCubeSimplex : public QuadIdealPolytope {
+class QuadCubeSimplex : public QuadConvexPolytope {
 public:
    QuadCubeSimplex(gq_int deg, gq_int dim1, gq_int dim2, gq_int num_nodes = 0);
 
    std::unique_ptr<QuadDomain> clone_quad_domain() const override;
    std::unique_ptr<QuadPolytope> clone_quad_polytope() const override;
 
-   QuadCubeSimplex& reinit(gq_int dim1, gq_int dim2, gq_int num_nodes);
-   QuadCubeSimplex& reinit_copy(const QuadCubeSimplex& qcs);
+   void reinit(gq_int dim1, gq_int dim2, gq_int num_nodes);
+   void reinit_copy(const QuadCubeSimplex& qcs);
 
    const Domain& get_domain() const override;
    const Polytope& get_polytope() const override;
-   const IdealPolytope& get_ideal_polytope() const override;
+   const ConvexPolytope& get_convex_polytope() const override;
    std::unique_ptr<Basis> create_basis() const override;
 
    double relative_exponential_residual() const override;
@@ -373,19 +375,19 @@ private:
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-class QuadSimplexSimplex : public QuadIdealPolytope {
+class QuadSimplexSimplex : public QuadConvexPolytope {
 public:
    QuadSimplexSimplex(gq_int deg, gq_int dim1, gq_int dim2, gq_int num_nodes = 0);
 
    std::unique_ptr<QuadDomain> clone_quad_domain() const override;
    std::unique_ptr<QuadPolytope> clone_quad_polytope() const override;
 
-   QuadSimplexSimplex& reinit(gq_int dim1, gq_int dim2, gq_int num_nodes);
-   QuadSimplexSimplex& reinit_copy(const QuadSimplexSimplex& qss);
+   void reinit(gq_int dim1, gq_int dim2, gq_int num_nodes);
+   void reinit_copy(const QuadSimplexSimplex& qss);
 
    const Domain& get_domain() const override;
    const Polytope& get_polytope() const override;
-   const IdealPolytope& get_ideal_polytope() const override;
+   const ConvexPolytope& get_convex_polytope() const override;
    std::unique_ptr<Basis> create_basis() const override;
 
    double relative_exponential_residual() const override;
@@ -407,8 +409,10 @@ private:
 };
 
 
+// remaining classes do not have reinit and reinit_copy functions, since their
+// dimension never changes
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-class QuadPyramid3D : public QuadIdealPolytope {
+class QuadPyramid3D : public QuadConvexPolytope {
 public:
    explicit QuadPyramid3D(gq_int deg, gq_int num_nodes = 0);
 
@@ -417,7 +421,7 @@ public:
 
    const Domain& get_domain() const override;
    const Polytope& get_polytope() const override;
-   const IdealPolytope& get_ideal_polytope() const override;
+   const ConvexPolytope& get_convex_polytope() const override;
    std::unique_ptr<Basis> create_basis() const override;
 
    double relative_exponential_residual() const override;
@@ -440,10 +444,10 @@ public:
 
    const Domain& get_domain() const override;
    const Polytope& get_polytope() const override;
-   const Omega2D& get_domain_loc() const;
+   const Omega2D& get_domain_self() const;
 
    std::unique_ptr<Basis> create_basis() const override;
-   std::unique_ptr<OmegaBasis2D> create_basis_loc() const;
+   std::unique_ptr<OmegaBasis2D> create_basis_self() const;
 
    double relative_exponential_residual() const override;
    std::string quad_file_name() const override;

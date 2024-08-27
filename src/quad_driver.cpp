@@ -16,15 +16,15 @@
 #include "../include/util.hpp"
 
 
-#define GEN_QUAD_ASSERT_DEG_DIM_RANGE(degree, dimension)                             \
-   GEN_QUAD_ASSERT_ALWAYS_MSG(is_reasonable_degree_and_dimension(degree, dimension), \
-                              "Specified degree and/or dimension is "                \
+#define GEN_QUAD_ASSERT_DEG_DIM_RANGE(deg, dim)                             \
+   GEN_QUAD_ASSERT_ALWAYS_MSG(is_reasonable_degree_and_dimension(deg, dim), \
+                              "Specified degree and/or dimension is "       \
                               "outside of currently acceptable range.\n\n");
 
 
-#define GEN_QUAD_ASSERT_DEG_DIM_RANGE_VECTOR(degree, dimension) \
-   for(auto dg : degree) {                                      \
-      GEN_QUAD_ASSERT_DEG_DIM_RANGE(dg, dimension);             \
+#define GEN_QUAD_ASSERT_DEG_DIM_RANGE_VECTOR(degrees, dim) \
+   for(auto deg : degrees) {                               \
+      GEN_QUAD_ASSERT_DEG_DIM_RANGE(deg, dim);             \
    }
 
 
@@ -185,49 +185,49 @@ gq_int ComputeAndOutputOmega2D(Omega2D omega, const StdVector<gq_int>& deg, Sear
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-std::unique_ptr<QuadInterval> Quadrature_Interval(gq_int deg) {
+std::unique_ptr<QuadInterval> QuadratureInterval(gq_int deg) {
    GEN_QUAD_INVOKE_DRIVER(QuadDriverInterval, QuadInterval, deg);
 }
 
 
-std::unique_ptr<QuadPyramid3D> Quadrature_Pyramid3D(gq_int deg, SearchWidth search_width) {
+std::unique_ptr<QuadPyramid3D> QuadraturePyramid3D(gq_int deg, SearchWidth search_width) {
    GEN_QUAD_INVOKE_DRIVER(QuadDriverPyramid3D, QuadPyramid3D, deg, search_width);
 }
 
 
-std::unique_ptr<QuadCube> Quadrature_Cube(gq_int deg, gq_int dim, SearchWidth search_width) {
+std::unique_ptr<QuadCube> QuadratureCube(gq_int deg, gq_int dim, SearchWidth search_width) {
    GEN_QUAD_INVOKE_DRIVER(QuadDriverCube, QuadCube, deg, dim, search_width);
 }
 
 
-std::unique_ptr<QuadSimplex> Quadrature_Simplex(gq_int deg, gq_int dim, SearchWidth search_width) {
+std::unique_ptr<QuadSimplex> QuadratureSimplex(gq_int deg, gq_int dim, SearchWidth search_width) {
    GEN_QUAD_INVOKE_DRIVER(QuadDriverSimplex, QuadSimplex, deg, dim, search_width);
 }
 
 
-std::unique_ptr<QuadCubeSimplex> Quadrature_CubeSimplex(gq_int deg, gq_int dim1, gq_int dim2,
-                                                        SearchWidth search_width) {
+std::unique_ptr<QuadCubeSimplex> QuadratureCubeSimplex(gq_int deg, gq_int dim1, gq_int dim2,
+                                                       SearchWidth search_width) {
    GEN_QUAD_INVOKE_DRIVER(QuadDriverCubeSimplex, QuadCubeSimplex, deg, dim1, dim2, search_width);
 }
 
 
-std::unique_ptr<QuadSimplexSimplex> Quadrature_SimplexSimplex(gq_int deg, gq_int dim1, gq_int dim2,
-                                                              SearchWidth search_width) {
+std::unique_ptr<QuadSimplexSimplex> QuadratureSimplexSimplex(gq_int deg, gq_int dim1, gq_int dim2,
+                                                             SearchWidth search_width) {
    GEN_QUAD_INVOKE_DRIVER(QuadDriverSimplexSimplex, QuadSimplexSimplex, deg, dim1, dim2, search_width);
 }
 
 
-std::unique_ptr<QuadOmega2D> Quadrature_Pentagon(gq_int deg, SearchWidth search_width) {
+std::unique_ptr<QuadOmega2D> QuadraturePentagon(gq_int deg, SearchWidth search_width) {
    GEN_QUAD_INVOKE_DRIVER(QuadDriverPentagon, QuadOmega2D, deg, search_width);
 }
 
 
-std::unique_ptr<QuadOmega2D> Quadrature_Hexagon(gq_int deg, SearchWidth search_width) {
+std::unique_ptr<QuadOmega2D> QuadratureHexagon(gq_int deg, SearchWidth search_width) {
    GEN_QUAD_INVOKE_DRIVER(QuadDriverHexagon, QuadOmega2D, deg, search_width);
 }
 
 
-std::unique_ptr<QuadOmega2D> Quadrature_Omega2D(Omega2D omega, gq_int deg, SearchWidth search_width) {
+std::unique_ptr<QuadOmega2D> QuadratureOmega2D(Omega2D omega, gq_int deg, SearchWidth search_width) {
    GEN_QUAD_INVOKE_DRIVER(QuadDriverOmega2D, QuadOmega2D, deg, std::move(omega), search_width);
 }
 
