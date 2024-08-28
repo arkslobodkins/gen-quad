@@ -40,7 +40,9 @@ To make an executable, type "make" in the main project directory
 By default "make" uses gcc compiler, but other compilers can be used also.  
 For example, use "make compiler=clang" or "make compiler=icpx" for clang and intel compilers, respectively.  
 Similarly, "make -j8 compiler=clang" will compile in parallel.  
-To enable debug mode: "make -j8 compiler=gcc debug=1".
+To compile debug mode: "make -j8 compiler=gcc debug=1". It enables many assertions within gen-quad, as well as Eigen. 
+One can also additionally enable address sanitizer by setting "debug=2", but should be used only for testing purposes, 
+since it will greatly reduce performance.  
 Has been tested with GCC and intel compilers on multiple Linux platforms.    
  
 
