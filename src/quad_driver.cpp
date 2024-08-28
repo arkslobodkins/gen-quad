@@ -375,6 +375,7 @@ void QuadToFile(const QuadDomain& q) {
    if(!ofs) {
       GQ_THROW_RUNTIME_ERROR_MSG("could not open file for writing quadrature");
    }
+   ofs << "efficiency: " << q.efficiency() << std::endl;
    ofs << q << std::endl;
 }
 

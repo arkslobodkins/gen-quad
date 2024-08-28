@@ -28,20 +28,20 @@ rapidly with the increase in degree of accuracy and dimension. To address that, 
 Use instructions:   
 **gen-quad has no dependencies besides Eigen and ALGLIB, which are included in the directory. Therefore, nothing needs to be installed.
 However, if MKL is available on your system, Eigen is linked to MKL library, which speeds up linear algebra routines.
-MKL support can be disabled by setting MKL=0 at the beginning of Makefile.
+MKL support can be disabled by setting MKL=0 at the beginning of Makefile or passing it from command line: make MKL=0.
 Requires C++14 compiler support.**  
 
 To obtain quadrature rule for a particular domain, degree, and dimension,   
 appropriate driver routines must be called. Examples are provided in main.cpp.  
 **Final quadrature rules are stored in .txt files in results/quad_rules directory.**   
 
-To make an executable, type "make all" in the main project directory  
+To make an executable, type "make" in the main project directory  
 (executable will be produced in the same directory).   
-By default "make all" uses gcc compiler, but other compilers can be used also.  
-For example, use "make all compiler=clang" or "make all compiler=icpx" for clang and intel compilers, respectively.  
-Similarly, "make all -j8 compiler=clang" will compile in parallel.  
-Makefile contains instructions for enabling/disabling debugging mode.  
-Has been tested with GCC and Clang compilers on multiple Linux platforms.    
+By default "make" uses gcc compiler, but other compilers can be used also.  
+For example, use "make compiler=clang" or "make compiler=icpx" for clang and intel compilers, respectively.  
+Similarly, "make -j8 compiler=clang" will compile in parallel.  
+To enable debug mode: "make -j8 compiler=gcc debug=1".
+Has been tested with GCC and intel compilers on multiple Linux platforms.    
  
 
 Additional notes:

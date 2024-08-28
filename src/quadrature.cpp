@@ -106,10 +106,15 @@ std::ostream& operator<<(std::ostream& os, const QuadArray& q) {
 
    using namespace util;
    for(gq_int i = 0; i < q.num_nodes(); ++i) {
-      os << index_of("q", i) + ":" << smart_spaces(q.num_nodes() - 1, i) << q.w(i) << n_spaces(2);
-      for(gq_int d = 0; d < q.dim(); ++d) {
-         os << q.node(i)(d) << n_spaces(2);
+      // always non-negative, but print + for consistency
+      std::string sign_w = q.w(i) >= 0 ? "+" : "";
+      os << index_of("q", i) + ":" << smart_spaces(q.num_nodes() - 1, i) << sign_w << q.w(i) << n_spaces(2);
+      for(gq_int d = 0; d < q.dim() - 1; ++d) {
+         std::string sign_x = q.node(i)(d) >= 0 ? "+" : "";
+         os << sign_x << q.node(i)(d) << n_spaces(2);
       }
+      std::string sign_x = q.node(i)(last) >= 0 ? "+" : "";
+      os << sign_x << q.node(i)(last);
       os << std::endl;
    }
    return os;
